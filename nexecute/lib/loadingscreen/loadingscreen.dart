@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nexecute/home/home.dart';
 
 class LoadingScreen extends StatelessWidget {
   const LoadingScreen({Key? key}) : super(key: key);
@@ -9,17 +10,18 @@ class LoadingScreen extends StatelessWidget {
       //stream: AuthService().userStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Text('Loading...');
+          return const Center(
+            child: Text('Loading...'),
+          );
         } else if (snapshot.hasError) {
           return const Center(
             child: Text('Error'),
           );
         } else if (snapshot.hasData) {
-          //return const HomeScreen();
-          return const Text('Loading...');
+          return const HomeScreen();
         } else {
           //return const LoginScreen();
-          return const Text('Loading...');
+          return const HomeScreen();
         }
       },
     );
