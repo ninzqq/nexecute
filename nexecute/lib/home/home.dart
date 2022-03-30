@@ -1,23 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:nexecute/services/services.dart';
+import 'package:provider/provider.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends StatelessWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
+    Count count = Provider.of<Count>(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Execs'),
@@ -25,19 +15,18 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
+          children: [
             Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
+              'You have pushed the button this many times:',
+              style: Theme.of(context).textTheme.bodyText2,
             ),
+            Text(count.count.toString(),
+                style: Theme.of(context).textTheme.headline1),
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
+        onPressed: FirestoreService().updateUserPressCount,
         tooltip: 'Increment',
         child: const Icon(Icons.add),
       ),

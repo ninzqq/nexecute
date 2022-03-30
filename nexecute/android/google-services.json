@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "810257036214",
+    "firebase_url": "https://nexecute-49018-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "nexecute-49018",
+    "storage_bucket": "nexecute-49018.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:810257036214:android:a32e78f5b0b30f4a038717",
+        "android_client_info": {
+          "package_name": "com.example.nexecute"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "810257036214-t6duukkh5sblr9d94qs94kv4gom0l3q0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.nexecute",
+            "certificate_hash": "0ec807ce967d880eb218364ad91e2131b0784545"
+          }
+        },
+        {
+          "client_id": "810257036214-tm9t7f1ol6520cal65u85reuv7qvun7f.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCMF8b53Dqanld_AG4oJZbbwrLjlYimCfk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "810257036214-tm9t7f1ol6520cal65u85reuv7qvun7f.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "810257036214-5k1im8a6022m5r7tb3ap9tt43e4e0jlb.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "c"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

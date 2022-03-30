@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:nexecute/services/services.dart';
+import 'package:nexecute/themes.dart';
+import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'package:nexecute/routes.dart';
 
@@ -42,17 +45,14 @@ class _NexecuteState extends State<Nexecute> {
 
         // Once complete, show your application
         if (snapshot.connectionState == ConnectionState.done) {
-          //return StreamProvider(
-          //  create: (_) => FirestoreService().streamReport(),
-          //  catchError: (_, err) => Report(),
-          //  initialData: [],
-          //  child: MaterialApp(
-          //    routes: appRoutes,
-          //    theme: appTheme,
-          //  ),
-          //);
-          return MaterialApp(
-            routes: appRoutes,
+          return StreamProvider(
+            create: (_) => FirestoreService().streamCount(),
+            catchError: (_, err) => Count(),
+            initialData: Count(),
+            child: MaterialApp(
+              routes: appRoutes,
+              theme: appTheme,
+            ),
           );
         }
 
