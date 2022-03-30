@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/services/services.dart';
+import 'package:nexecute/shared/shared.dart';
 import 'package:provider/provider.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -12,6 +13,7 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Execs'),
       ),
+      drawer: const MainDrawer(),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -30,6 +32,7 @@ class HomeScreen extends StatelessWidget {
         tooltip: 'Increment',
         child: const Icon(Icons.add),
       ),
+      bottomNavigationBar: const BottomNavBar(),
     );
   }
 }

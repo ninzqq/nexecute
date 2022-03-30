@@ -43,6 +43,7 @@ dependencies:
   crypto: ^3.0.1
   rxdart: ^0.27.3
   provider: ^6.0.2
+  font_awesome_flutter: ^10.1.0
 
 dev_dependencies:
   flutter_test:
