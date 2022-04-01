@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nexecute/home/home.dart';
 import 'package:nexecute/login/loginscreen.dart';
 import 'package:nexecute/services/auth.dart';
+import 'package:nexecute/shared/loading.dart';
 
 class LoadingScreen extends StatelessWidget {
   const LoadingScreen({Key? key}) : super(key: key);
@@ -12,8 +13,13 @@ class LoadingScreen extends StatelessWidget {
       stream: AuthService().userStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: Text('Loading...'),
+          return Center(
+            child: Column(
+              children: const [
+                Loader(),
+                Text('Loading...'),
+              ],
+            ),
           );
         } else if (snapshot.hasError) {
           return const Center(

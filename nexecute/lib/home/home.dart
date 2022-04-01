@@ -14,17 +14,19 @@ class HomeScreen extends StatelessWidget {
         title: const Text('Execs'),
       ),
       drawer: const MainDrawer(),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'You have pushed the button this many times:',
-              style: Theme.of(context).textTheme.bodyText2,
-            ),
-            Text(count.count.toString(),
-                style: Theme.of(context).textTheme.headline1),
-          ],
+      body: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'You have pushed the button this many times:',
+                style: Theme.of(context).textTheme.bodyText2,
+              ),
+              Text(count.count.toString(),
+                  style: Theme.of(context).textTheme.headline1),
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
