@@ -34,7 +34,9 @@ class HomeScreen extends StatelessWidget {
         tooltip: 'Increment',
         child: const Icon(Icons.add),
       ),
-      bottomNavigationBar: const BottomNavBar(),
+      bottomNavigationBar: const BottomNavBar(
+        pageIndex: 1,
+      ),
     );
   }
 }

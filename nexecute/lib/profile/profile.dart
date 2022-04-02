@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/services/models.dart';
+import 'package:nexecute/shared/bottom_nav.dart';
 import 'package:nexecute/shared/loading.dart';
 import 'package:provider/provider.dart';
 import 'package:nexecute/services/auth.dart';
@@ -55,6 +56,9 @@ class ProfileScreen extends StatelessWidget {
               ],
             ),
           ),
+        ),
+        bottomNavigationBar: const BottomNavBar(
+          pageIndex: 2,
         ),
       );
     } else {

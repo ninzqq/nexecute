@@ -16,7 +16,7 @@ class MainDrawer extends StatelessWidget {
             Align(
               alignment: Alignment.topLeft,
               child: Padding(
-                padding: const EdgeInsets.all(5),
+                padding: const EdgeInsets.all(8),
                 child: Text(
                   'Nexecute',
                   style: Theme.of(context).textTheme.headline1,

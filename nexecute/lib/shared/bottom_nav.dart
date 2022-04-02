@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class BottomNavBar extends StatelessWidget {
-  const BottomNavBar({Key? key}) : super(key: key);
+  final int pageIndex;
+
+  const BottomNavBar({Key? key, required this.pageIndex}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return BottomNavigationBar(
+      currentIndex: pageIndex,
       items: const [
         BottomNavigationBarItem(
           icon: Icon(
@@ -30,18 +33,19 @@ class BottomNavBar extends StatelessWidget {
           label: 'Profile',
         ),
       ],
-      fixedColor: Colors.deepPurple[200],
       onTap: (int idx) {
-        switch (idx) {
-          case 0:
-            // do nothing
-            break;
-          case 1:
-            Navigator.pushNamed(context, '/home');
-            break;
-          case 2:
-            Navigator.pushNamed(context, '/profile');
-            break;
+        if (idx != pageIndex) {
+          switch (idx) {
+            case 0:
+              Navigator.popAndPushNamed(context, '/calendar');
+              break;
+            case 1:
+              Navigator.popAndPushNamed(context, '/home');
+              break;
+            case 2:
+              Navigator.popAndPushNamed(context, '/profile');
+              break;
+          }
         }
       },
     );
