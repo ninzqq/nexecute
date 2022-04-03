@@ -9,7 +9,7 @@ class AuthService {
     try {
       await FirebaseAuth.instance.signInAnonymously();
     } on FirebaseAuthException catch (e) {
-      print("no jo on vittu");
+      // handle error
     }
   }
 

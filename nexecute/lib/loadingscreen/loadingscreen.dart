@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:nexecute/home/home.dart';
-import 'package:nexecute/login/loginscreen.dart';
+import 'package:nexecute/home/homescreen.dart';
+import 'package:nexecute/loginscreen/loginscreen.dart';
 import 'package:nexecute/services/auth.dart';
 import 'package:nexecute/shared/loading.dart';
 

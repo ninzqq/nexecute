@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:nexecute/home/executepageview.dart';
-import 'package:nexecute/home/home.dart';
+import 'package:nexecute/home/homescreen.dart';
 import 'package:provider/provider.dart';
 
 class BottomNavBar extends StatelessWidget {
