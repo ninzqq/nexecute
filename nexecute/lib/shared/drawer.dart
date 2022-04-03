@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/services/services.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class MainDrawer extends StatelessWidget {
   const MainDrawer({Key? key}) : super(key: key);
@@ -44,17 +45,37 @@ class MainDrawer extends StatelessWidget {
             Expanded(
               child: Align(
                 alignment: Alignment.bottomCenter,
-                child: ListTile(
-                  title: Row(
-                    children: const [
-                      Icon(Icons.settings),
-                      Padding(
-                        padding: EdgeInsets.only(left: 15),
-                        child: Text('Settings'),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    ListTile(
+                      title: Row(
+                        children: const [
+                          Icon(FontAwesomeIcons.faceMeh),
+                          Padding(
+                            padding: EdgeInsets.only(left: 15),
+                            child: Text('Button pressinks'),
+                          )
+                        ],
                       ),
-                    ],
-                  ),
-                  tileColor: const Color.fromARGB(255, 32, 41, 41),
+                      tileColor: const Color.fromARGB(255, 40, 50, 50),
+                      onTap: () {
+                        Navigator.pushNamed(context, '/count');
+                      },
+                    ),
+                    ListTile(
+                      title: Row(
+                        children: const [
+                          Icon(Icons.settings),
+                          Padding(
+                            padding: EdgeInsets.only(left: 15),
+                            child: Text('Settings'),
+                          ),
+                        ],
+                      ),
+                      tileColor: const Color.fromARGB(255, 32, 41, 41),
+                    ),
+                  ],
                 ),
               ),
             ),

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/count/countpage.dart';
 
-class ExecutePagesPageView extends StatelessWidget {
-  const ExecutePagesPageView({Key? key}) : super(key: key);
+class ExecutesPagesPageView extends StatelessWidget {
+  const ExecutesPagesPageView({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +17,9 @@ class ExecutePagesPageView extends StatelessWidget {
             Center(
               child: Text('First Page'),
             ),
-            CountPage(),
+            Center(
+              child: Text('Second Page'),
+            ),
             Center(
               child: Text('Third Page'),
             ),

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 var appTheme = ThemeData(
   brightness: Brightness.dark,
-  primaryColor: Color.fromARGB(255, 32, 160, 160),
+  primaryColor: const Color.fromARGB(255, 32, 160, 160),
   canvasColor: const Color.fromARGB(255, 20, 20, 20),
   appBarTheme: const AppBarTheme(
     color: Color.fromARGB(255, 32, 41, 41),

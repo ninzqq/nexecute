@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:nexecute/home/executepageview.dart';
+import 'package:nexecute/home/home.dart';
+import 'package:provider/provider.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int pageIndex;
@@ -9,8 +11,9 @@ class BottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    int _selectedPage = 0;
     return BottomNavigationBar(
-      currentIndex: pageIndex,
+      currentIndex: _selectedPage,
       items: const [
         BottomNavigationBarItem(
           icon: Icon(
@@ -35,19 +38,7 @@ class BottomNavBar extends StatelessWidget {
         ),
       ],
       onTap: (int idx) {
-        if (idx != pageIndex) {
-          switch (idx) {
-            case 0:
-              Navigator.popAndPushNamed(context, '/calendar');
-              break;
-            case 1:
-              Navigator.popAndPushNamed(context, '/home');
-              break;
-            case 2:
-              Navigator.popAndPushNamed(context, '/profile');
-              break;
-          }
-        }
+        _selectedPage = idx;
       },
     );
   }
