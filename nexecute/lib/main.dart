@@ -45,10 +45,14 @@ class _NexecuteState extends State<Nexecute> {
 
         // Once complete, show your application
         if (snapshot.connectionState == ConnectionState.done) {
-          return StreamProvider(
-            create: (_) => FirestoreService().streamCount(),
-            catchError: (_, err) => Count(),
-            initialData: Count(),
+          return MultiProvider(
+            providers: [
+              StreamProvider(
+                create: (_) => FirestoreService().streamCount(),
+                catchError: (_, err) => Count(),
+                initialData: Count(),
+              ),
+            ],
             child: MaterialApp(
               routes: appRoutes,
               theme: appTheme,
