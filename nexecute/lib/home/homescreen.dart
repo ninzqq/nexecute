@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:nexecute/services/models.dart';
 import 'package:nexecute/shared/shared.dart';
+import 'package:provider/provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -15,6 +17,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    var asdf = Provider.of<Asdf>(context, listen: true);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Execs'),
@@ -27,14 +30,19 @@ class _HomeScreenState extends State<HomeScreen> {
             _selectedPage = page;
           });
         },
-        children: const [
-          Center(
+        children: [
+          const Center(
             child: Text('First'),
           ),
           Center(
-            child: Text('Second'),
+            child: Column(
+              children: [
+                Text(asdf.asd.toString()),
+                FloatingActionButton(onPressed: asdf.incAsd)
+              ],
+            ),
           ),
-          Center(
+          const Center(
             child: Text('Third'),
           ),
         ],

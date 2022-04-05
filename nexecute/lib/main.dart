@@ -52,6 +52,9 @@ class _NexecuteState extends State<Nexecute> {
                 catchError: (_, err) => Count(),
                 initialData: Count(),
               ),
+              ChangeNotifierProvider<Asdf>.value(
+                value: Asdf(),
+              ),
             ],
             child: MaterialApp(
               routes: appRoutes,
