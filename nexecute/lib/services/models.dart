@@ -32,3 +32,15 @@ class Asdf with ChangeNotifier {
     notifyListeners();
   }
 }
+
+class HomeTabIndex with ChangeNotifier {
+  int idx;
+  HomeTabIndex({
+    this.idx = 1,
+  });
+
+  void changeIndex(index) {
+    idx = index;
+    notifyListeners();
+  }
+}

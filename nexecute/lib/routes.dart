@@ -5,7 +5,7 @@ import 'package:nexecute/profile/profilescreen.dart';
 
 var appRoutes = {
   "/": (context) => const LoadingScreen(),
-  "/home": (context) => const HomeScreen(),
+  "/home": (context) => HomeScreen(),
   "/profile": (context) => const ProfileScreen(),
   "/count": (context) => const CountScreen(),
 };

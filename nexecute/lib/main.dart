@@ -55,6 +55,9 @@ class _NexecuteState extends State<Nexecute> {
               ChangeNotifierProvider<Asdf>.value(
                 value: Asdf(),
               ),
+              ChangeNotifierProvider<HomeTabIndex>.value(
+                value: HomeTabIndex(),
+              ),
             ],
             child: MaterialApp(
               routes: appRoutes,

@@ -4,20 +4,16 @@ import 'package:nexecute/services/models.dart';
 import 'package:nexecute/shared/shared.dart';
 import 'package:provider/provider.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+class HomeScreen extends StatelessWidget {
+  HomeScreen({Key? key}) : super(key: key);
 
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  int _selectedPage = 1;
   final PageController _pageController = PageController(initialPage: 1);
 
   @override
   Widget build(BuildContext context) {
     var asdf = Provider.of<Asdf>(context, listen: true);
+    var homePageIndex = Provider.of<HomeTabIndex>(context, listen: true);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Execs'),
@@ -26,9 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: PageView(
         controller: _pageController,
         onPageChanged: (page) {
-          setState(() {
-            _selectedPage = page;
-          });
+          homePageIndex.changeIndex(page);
         },
         children: [
           const Center(
@@ -50,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: SizedBox(
         height: 46,
         child: BottomNavigationBar(
-          currentIndex: _selectedPage,
+          currentIndex: homePageIndex.idx,
           selectedItemColor: const Color.fromARGB(255, 32, 160, 160),
           items: const [
             BottomNavigationBarItem(
@@ -76,9 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
           onTap: (int idx) {
-            setState(() {
-              _selectedPage = idx;
-            });
+            homePageIndex.changeIndex(idx);
             _pageController.jumpToPage(idx);
           },
         ),
