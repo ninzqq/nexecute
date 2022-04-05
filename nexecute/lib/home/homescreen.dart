@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:nexecute/services/models.dart';
+import 'package:nexecute/shared/colors.dart';
 import 'package:nexecute/shared/shared.dart';
 import 'package:provider/provider.dart';
 
@@ -25,8 +26,11 @@ class HomeScreen extends StatelessWidget {
           homePageIndex.changeIndex(page);
         },
         children: [
-          const Center(
-            child: Text('First'),
+          Container(
+            color: darkerCyan,
+            child: const Center(
+              child: Text('First'),
+            ),
           ),
           Center(
             child: Column(
