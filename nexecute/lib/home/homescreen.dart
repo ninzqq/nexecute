@@ -27,21 +27,27 @@ class HomeScreen extends StatelessWidget {
         },
         children: [
           Container(
-            color: darkerCyan,
+            color: darkGreen,
             child: const Center(
               child: Text('First'),
             ),
           ),
-          Center(
-            child: Column(
-              children: [
-                Text(asdf.asd.toString()),
-                FloatingActionButton(onPressed: asdf.incAsd)
-              ],
+          Container(
+            color: darkestCyan3,
+            child: Center(
+              child: Column(
+                children: [
+                  Text(asdf.asd.toString()),
+                  FloatingActionButton(onPressed: asdf.incAsd)
+                ],
+              ),
             ),
           ),
-          const Center(
-            child: Text('Third'),
+          Container(
+            color: darkestCyan2,
+            child: const Center(
+              child: Text('Third'),
+            ),
           ),
         ],
       ),
