@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:nexecute/home/executeslist.dart';
 import 'package:nexecute/services/models.dart';
+import 'package:nexecute/shared/bottomnavbar.dart';
 import 'package:nexecute/shared/colors.dart';
 import 'package:nexecute/shared/shared.dart';
 import 'package:provider/provider.dart';
@@ -8,7 +10,7 @@ import 'package:provider/provider.dart';
 class HomeScreen extends StatelessWidget {
   HomeScreen({Key? key}) : super(key: key);
 
-  final PageController _pageController = PageController(initialPage: 1);
+  final PageController pageController = PageController(initialPage: 1);
 
   @override
   Widget build(BuildContext context) {
@@ -20,70 +22,29 @@ class HomeScreen extends StatelessWidget {
         title: const Text('Execs'),
       ),
       drawer: const MainDrawer(),
-      body: PageView(
-        controller: _pageController,
-        onPageChanged: (page) {
-          homePageIndex.changeIndex(page);
-        },
+      body: Stack(
         children: [
-          Container(
-            color: darkGreen,
-            child: const Center(
-              child: Text('First'),
-            ),
-          ),
-          Container(
-            color: darkestCyan3,
-            child: Center(
-              child: Column(
-                children: [
-                  Text(asdf.asd.toString()),
-                  FloatingActionButton(onPressed: asdf.incAsd)
-                ],
+          PageView(
+            controller: pageController,
+            onPageChanged: (page) {
+              homePageIndex.changeIndex(page);
+            },
+            children: [
+              Container(
+                color: darkestCyan2,
+                child: const Center(
+                  child: Text('First'),
+                ),
               ),
-            ),
+              const ExecutesList(),
+            ],
           ),
-          Container(
-            color: darkestCyan2,
-            child: const Center(
-              child: Text('Third'),
-            ),
+          BottomNavBar(
+            changePage: () => pageController.animateToPage(1,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.linear),
           ),
         ],
-      ),
-      bottomNavigationBar: SizedBox(
-        height: 46,
-        child: BottomNavigationBar(
-          currentIndex: homePageIndex.idx,
-          selectedItemColor: const Color.fromARGB(255, 32, 160, 160),
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(
-                FontAwesomeIcons.calendarDays,
-                size: 15,
-              ),
-              label: 'Calendar',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(
-                FontAwesomeIcons.listCheck,
-                size: 15,
-              ),
-              label: 'Execs',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(
-                FontAwesomeIcons.userAstronaut,
-                size: 15,
-              ),
-              label: 'Profile',
-            ),
-          ],
-          onTap: (int idx) {
-            homePageIndex.changeIndex(idx);
-            _pageController.jumpToPage(idx);
-          },
-        ),
       ),
     );
   }
