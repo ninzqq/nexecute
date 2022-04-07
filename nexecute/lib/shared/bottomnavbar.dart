@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:nexecute/services/services.dart';
 import 'package:provider/provider.dart';
 import 'package:nexecute/shared/colors.dart';
-import 'package:nexecute/home/homescreen.dart';
 
 class BottomNavBar extends StatelessWidget {
   final Function changePage;
@@ -36,7 +35,9 @@ class BottomNavBar extends StatelessWidget {
                   backgroundColor: niceCyan,
                   child: const Icon(Icons.add_rounded),
                   elevation: 0.1,
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/newtask');
+                  },
                 ),
               ),
             ),

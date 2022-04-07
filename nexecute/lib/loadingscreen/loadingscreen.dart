@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/home/homescreen.dart';
 import 'package:nexecute/loginscreen/loginscreen.dart';
-import 'package:nexecute/services/auth.dart';
-import 'package:nexecute/shared/loading.dart';
+import 'package:nexecute/services/services.dart';
+import 'package:nexecute/shared/shared.dart';
 
 class LoadingScreen extends StatelessWidget {
   const LoadingScreen({Key? key}) : super(key: key);

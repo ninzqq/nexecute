@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nexecute/shared/colors.dart';
+import 'package:nexecute/shared/shared.dart';
 
 class ExecutesList extends StatelessWidget {
   const ExecutesList({Key? key}) : super(key: key);

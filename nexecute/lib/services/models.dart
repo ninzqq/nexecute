@@ -1,4 +1,4 @@
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
 part 'models.g.dart';
 
@@ -43,4 +43,27 @@ class HomeTabIndex with ChangeNotifier {
     idx = index;
     notifyListeners();
   }
+}
+
+@JsonSerializable()
+class Task with ChangeNotifier {
+  final DateTime created;
+  final String title;
+  final String description;
+  final bool inProgress;
+  final bool done;
+  final DateTime deadline;
+
+  Task({
+    DateTime? created,
+    this.title = '',
+    this.description = '',
+    this.inProgress = false,
+    this.done = false,
+    DateTime? deadline,
+  })  : this.created = created ?? DateTime.now(),
+        this.deadline = deadline ?? DateTime.now();
+
+  factory Task.fromJson(Map<String, dynamic> json) => _$TaskFromJson(json);
+  Map<String, dynamic> toJson() => _$TaskToJson(this);
 }
