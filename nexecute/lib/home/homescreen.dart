@@ -40,9 +40,7 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
           BottomNavBar(
-            changePage: () => pageController.animateToPage(1,
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.linear),
+            changePage: pageController.animateToPage,
           ),
         ],
       ),

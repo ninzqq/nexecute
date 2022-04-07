@@ -5,7 +5,7 @@ import 'package:nexecute/shared/colors.dart';
 import 'package:nexecute/home/homescreen.dart';
 
 class BottomNavBar extends StatelessWidget {
-  final VoidCallback changePage;
+  final Function changePage;
   const BottomNavBar({Key? key, required this.changePage}) : super(key: key);
 
   @override
@@ -49,7 +49,11 @@ class BottomNavBar extends StatelessWidget {
                   IconButton(
                     onPressed: () {
                       homePageIndex.changeIndex(0);
-                      changePage;
+                      changePage(
+                        0,
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.fastLinearToSlowEaseIn,
+                      );
                     },
                     icon: const Icon(Icons.calendar_month_outlined),
                     color: homePageIndex.idx == 0
@@ -57,12 +61,16 @@ class BottomNavBar extends StatelessWidget {
                         : Colors.grey.shade400,
                   ),
                   Container(
-                    width: size.width * 0.15,
+                    width: size.width * 0.12,
                   ),
                   IconButton(
                     onPressed: () {
                       homePageIndex.changeIndex(1);
-                      changePage();
+                      changePage(
+                        1,
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.fastLinearToSlowEaseIn,
+                      );
                     },
                     icon: const Icon(Icons.list_alt_sharp),
                     color: homePageIndex.idx == 1
