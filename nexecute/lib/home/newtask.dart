@@ -9,6 +9,7 @@ class CreateNewTaskScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Define a new execute'),
+        backgroundColor: darkestCyan,
       ),
       body: Container(
         color: darkestCyan3,
