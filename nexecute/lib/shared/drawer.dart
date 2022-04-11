@@ -9,74 +9,55 @@ class MainDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     var user = AuthService().user;
 
+    final List<Map<String, dynamic>> _menuItem = [
+      {
+        "title": const Text("Profile"),
+        "icon": const Icon(Icons.person),
+        "function": () => {
+              Navigator.pushNamed(context, "/profile"),
+            },
+        "selected": false,
+      },
+      {
+        "title": const Text("Button pressinks"),
+        "icon": const Icon(Icons.add),
+        "function": () => {
+              Navigator.pushNamed(context, "/count"),
+            },
+        "selected": false,
+      },
+      {
+        "title": const Text("Settings"),
+        "icon": const Icon(Icons.settings),
+        "function": () => {},
+        "selected": false,
+      }
+    ];
+
     return Drawer(
       child: SafeArea(
         child: Column(
-          mainAxisSize: MainAxisSize.max,
           children: [
-            Align(
-              alignment: Alignment.topLeft,
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Text(
-                  'Nexecute',
-                  style: Theme.of(context).textTheme.headline1,
-                ),
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Text(
+                'Nexecute',
+                style: Theme.of(context).textTheme.headline1,
               ),
             ),
-            UserAccountsDrawerHeader(
-              currentAccountPicture: CircleAvatar(
-                  backgroundImage: NetworkImage(user?.photoURL ?? '')),
-              accountName: Text(user?.displayName ?? 'Guest'),
-              accountEmail: const Text(''), // user?.email ?? ''
-            ),
-            const Divider(),
-            const ListTile(
-              title: Text('data'),
-            ),
-            const Divider(),
-            ListTile(
-              title: const Text('Profile'),
-              tileColor: Colors.deepPurple,
-              onTap: () {
-                Navigator.pushNamed(context, '/profile');
-              },
-            ),
             Expanded(
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    ListTile(
-                      title: Row(
-                        children: const [
-                          Icon(FontAwesomeIcons.faceMeh),
-                          Padding(
-                            padding: EdgeInsets.only(left: 15),
-                            child: Text('Button pressinks'),
-                          )
-                        ],
-                      ),
-                      tileColor: const Color.fromARGB(255, 40, 50, 50),
-                      onTap: () {
-                        Navigator.pushNamed(context, '/count');
-                      },
-                    ),
-                    ListTile(
-                      title: Row(
-                        children: const [
-                          Icon(Icons.settings),
-                          Padding(
-                            padding: EdgeInsets.only(left: 15),
-                            child: Text('Settings'),
-                          ),
-                        ],
-                      ),
-                      tileColor: const Color.fromARGB(255, 32, 41, 41),
-                    ),
-                  ],
-                ),
+              child: ListView.builder(
+                itemCount: _menuItem.length,
+                itemBuilder: (context, index) {
+                  return ListTile(
+                    leading: _menuItem[index]['icon'],
+                    title: _menuItem[index]['title'],
+                    onTap: () => {
+                      _menuItem[index]['function'](),
+                    },
+                    selected: _menuItem[index]['selected'],
+                  );
+                },
               ),
             ),
           ],
