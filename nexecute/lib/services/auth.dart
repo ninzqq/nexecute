@@ -14,6 +14,13 @@ class AuthService {
   }
 
   Future<void> signOut() async {
+    final googleCurrentUser =
+        GoogleSignIn().currentUser ?? await GoogleSignIn().signIn();
+    if (googleCurrentUser != null) {
+      await GoogleSignIn().disconnect().catchError((e, stack) {
+        // Handle error
+      });
+    }
     await FirebaseAuth.instance.signOut();
   }
 
