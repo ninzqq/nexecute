@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/services/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:nexecute/shared/shared.dart';
 
 class MainDrawer extends StatelessWidget {
   const MainDrawer({Key? key}) : super(key: key);
@@ -14,6 +15,7 @@ class MainDrawer extends StatelessWidget {
         "title": const Text("Profile"),
         "icon": const Icon(Icons.person),
         "function": () => {
+              Navigator.pop(context),
               Navigator.pushNamed(context, "/profile"),
             },
         "selected": false,
@@ -22,6 +24,7 @@ class MainDrawer extends StatelessWidget {
         "title": const Text("Button pressinks"),
         "icon": const Icon(Icons.add),
         "function": () => {
+              Navigator.pop(context),
               Navigator.pushNamed(context, "/count"),
             },
         "selected": false,
@@ -35,27 +38,34 @@ class MainDrawer extends StatelessWidget {
     ];
 
     return Drawer(
+      backgroundColor: drawerBgColor,
       child: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: Text(
-                'Nexecute',
-                style: Theme.of(context).textTheme.headline1,
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Text(
+                  'Nexecute',
+                  style: Theme.of(context).textTheme.headline1,
+                ),
               ),
             ),
             Expanded(
               child: ListView.builder(
                 itemCount: _menuItem.length,
                 itemBuilder: (context, index) {
-                  return ListTile(
-                    leading: _menuItem[index]['icon'],
-                    title: _menuItem[index]['title'],
-                    onTap: () => {
-                      _menuItem[index]['function'](),
-                    },
-                    selected: _menuItem[index]['selected'],
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 14.0, right: 14),
+                    child: ListTile(
+                      leading: _menuItem[index]['icon'],
+                      title: _menuItem[index]['title'],
+                      onTap: () => {
+                        _menuItem[index]['function'](),
+                      },
+                      selected: _menuItem[index]['selected'],
+                    ),
                   );
                 },
               ),

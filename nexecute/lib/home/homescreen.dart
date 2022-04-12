@@ -18,7 +18,7 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Execs'),
-        backgroundColor: darkestCyan,
+        backgroundColor: appBarDarkCyan,
       ),
       drawer: const MainDrawer(),
       body: Stack(

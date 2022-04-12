@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 Color niceCyan = const Color(0xFF2cccd1);
 Color darkCyan = const Color(0xFF053436);
+Color drawerBgColor = const Color(0xEE032224);
 Color darkerCyan = const Color(0xFF032224);
-Color darkestCyan = const Color(0xFF021314);
+Color appBarDarkCyan = const Color(0xFF021314);
 Color darkestCyan2 = const Color(0xFF040a0b);
 Color darkestCyan3 = const Color(0xFF000e0e);
 Color darkGreen = const Color(0xFF09110f);
