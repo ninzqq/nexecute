@@ -19,13 +19,13 @@ class FirestoreService {
     });
   }
 
-  Stream<Quicxec> streamQuicxec() {
+  Stream<QuicxecsList> streamQuicxecList() {
     return AuthService().userStream.switchMap((user) {
       if (user != null) {
         var ref = _db.collection('quicxecs').doc(user.uid);
-        return ref.snapshots().map((doc) => Quicxec.fromJson(doc.data()!));
+        return ref.snapshots().map((doc) => QuicxecsList.fromJson(doc.data()!));
       } else {
-        return Stream.fromIterable([Quicxec()]);
+        return Stream.fromIterable([QuicxecsList()]);
       }
     });
   }
@@ -36,7 +36,7 @@ class FirestoreService {
     var ref = _db.collection('quicxecs').doc(user.uid);
 
     var data = {
-      "$quicxec": true,
+      "$quicxec": false,
     };
 
     return ref.set(data, SetOptions(merge: true));

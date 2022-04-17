@@ -8,18 +8,22 @@ class ExecutesList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        StreamProvider(
-          create: (_) => FirestoreService().streamCount(),
-          catchError: (_, err) => Count(),
-          initialData: Count(),
-        ),
-      ],
-      child: Container(
-        color: darkestCyan2,
-        child: const Center(
-          child: Text('Second'),
+    var quicxecs = Provider.of<QuicxecsList>(context, listen: true);
+
+    return Container(
+      color: darkestCyan2,
+      child: Center(
+        child: ListView.builder(
+          itemCount: quicxecs.quicxecsList.length,
+          itemBuilder: (context, index) {
+            return Padding(
+              padding: const EdgeInsets.all(8),
+              child: ListTile(
+                title: Text(quicxecs.quicxecsList[index].title),
+                selected: quicxecs.quicxecsList[index].done,
+              ),
+            );
+          },
         ),
       ),
     );

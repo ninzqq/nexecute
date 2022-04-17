@@ -26,6 +26,18 @@ Map<String, dynamic> _$QuicxecToJson(Quicxec instance) => <String, dynamic>{
       'done': instance.done,
     };
 
+QuicxecsList _$QuicxecsListFromJson(Map<String, dynamic> json) => QuicxecsList(
+      quicxecsList: (json['quicxecsList'] as List<dynamic>?)
+              ?.map((e) => Quicxec.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+    );
+
+Map<String, dynamic> _$QuicxecsListToJson(QuicxecsList instance) =>
+    <String, dynamic>{
+      'quicxecsList': instance.quicxecsList,
+    };
+
 Task _$TaskFromJson(Map<String, dynamic> json) => Task(
       created: json['created'] == null
           ? null

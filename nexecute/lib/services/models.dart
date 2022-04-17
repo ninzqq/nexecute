@@ -61,6 +61,19 @@ class Quicxec with ChangeNotifier {
 }
 
 @JsonSerializable()
+class QuicxecsList {
+  List<Quicxec> quicxecsList;
+
+  QuicxecsList({
+    this.quicxecsList = const [],
+  });
+
+  factory QuicxecsList.fromJson(Map<String, dynamic> json) =>
+      _$QuicxecsListFromJson(json);
+  Map<String, dynamic> toJson() => _$QuicxecsListToJson(this);
+}
+
+@JsonSerializable()
 class Task with ChangeNotifier {
   final DateTime created;
   final String title;
