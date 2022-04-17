@@ -16,6 +16,16 @@ Map<String, dynamic> _$CountToJson(Count instance) => <String, dynamic>{
       'count': instance.count,
     };
 
+Quicxec _$QuicxecFromJson(Map<String, dynamic> json) => Quicxec(
+      title: json['title'] as String? ?? '',
+      done: json['done'] as bool? ?? false,
+    );
+
+Map<String, dynamic> _$QuicxecToJson(Quicxec instance) => <String, dynamic>{
+      'title': instance.title,
+      'done': instance.done,
+    };
+
 Task _$TaskFromJson(Map<String, dynamic> json) => Task(
       created: json['created'] == null
           ? null

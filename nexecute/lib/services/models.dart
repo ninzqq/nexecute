@@ -46,6 +46,21 @@ class HomeTabIndex with ChangeNotifier {
 }
 
 @JsonSerializable()
+class Quicxec with ChangeNotifier {
+  final String title;
+  final bool done;
+
+  Quicxec({
+    this.title = '',
+    this.done = false,
+  });
+
+  factory Quicxec.fromJson(Map<String, dynamic> json) =>
+      _$QuicxecFromJson(json);
+  Map<String, dynamic> toJson() => _$QuicxecToJson(this);
+}
+
+@JsonSerializable()
 class Task with ChangeNotifier {
   final DateTime created;
   final String title;

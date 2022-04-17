@@ -19,6 +19,33 @@ class FirestoreService {
     });
   }
 
+  Stream<Quicxec> streamQuicxec() {
+    return AuthService().userStream.switchMap((user) {
+      if (user != null) {
+        var ref = _db.collection('quicxecs').doc(user.uid);
+        return ref.snapshots().map((doc) => Quicxec.fromJson(doc.data()!));
+      } else {
+        return Stream.fromIterable([Quicxec()]);
+      }
+    });
+  }
+
+  /// Adds a new quicxec (quick task) for current user
+  Future<void> addNewQuicxec(quicxec) {
+    var user = AuthService().user!;
+    var ref = _db.collection('quicxecs').doc(user.uid);
+
+    var data = {
+      "$quicxec": true,
+    };
+
+    return ref.set(data, SetOptions(merge: true));
+
+    //return ref
+    //    .update(data)
+    //    .then((value) => print('[LOG] Quicxec added: $data'));
+  }
+
   /// Updates the current user's count document after pressing button
   Future<void> updateUserPressCount() {
     var user = AuthService().user!;
