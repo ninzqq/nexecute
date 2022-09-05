@@ -10,20 +10,22 @@ class CreateNewTaskScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('New execute'),
-        backgroundColor: darkerCyan,
+        backgroundColor: appBarDarkCyan,
       ),
       body: Container(
-        color: darkestCyan3,
+        color: bgDarkCyan,
         child: Center(
           child: Column(
             children: [
               FloatingActionButton(
                 child: const Icon(Icons.add_rounded),
+                backgroundColor: primaryButtonCyan,
                 onPressed: () => {
                   FirestoreService().addNewQuicxec('asdasfd'),
                 },
               ),
               FloatingActionButton(
+                backgroundColor: primaryButtonCyan,
                 onPressed: () => {
                   FirestoreService().getQuicxecs(),
                 },

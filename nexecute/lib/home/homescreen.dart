@@ -38,7 +38,7 @@ class HomeScreen extends StatelessWidget {
               },
               children: [
                 Container(
-                  color: darkestCyan2,
+                  color: bgDarkCyan,
                   child: const Center(
                     child: Text('First'),
                   ),

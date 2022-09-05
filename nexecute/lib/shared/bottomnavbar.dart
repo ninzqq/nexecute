@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/services/services.dart';
 import 'package:provider/provider.dart';
-import 'package:nexecute/shared/colors.dart';
+import 'package:nexecute/shared/shared.dart';
 
 class BottomNavBar extends StatelessWidget {
   final Function changePage;
@@ -32,7 +32,7 @@ class BottomNavBar extends StatelessWidget {
                 width: 63,
                 height: 63,
                 child: FloatingActionButton(
-                  backgroundColor: niceCyan,
+                  backgroundColor: primaryButtonCyan,
                   child: const Icon(Icons.add_rounded),
                   elevation: 0.1,
                   onPressed: () {
@@ -58,7 +58,7 @@ class BottomNavBar extends StatelessWidget {
                     },
                     icon: const Icon(Icons.calendar_month_outlined),
                     color: homePageIndex.idx == 0
-                        ? niceCyan
+                        ? primaryButtonCyan
                         : Colors.grey.shade400,
                   ),
                   Container(
@@ -75,7 +75,7 @@ class BottomNavBar extends StatelessWidget {
                     },
                     icon: const Icon(Icons.list_alt_sharp),
                     color: homePageIndex.idx == 1
-                        ? niceCyan
+                        ? primaryButtonCyan
                         : Colors.grey.shade400,
                   ),
                 ],

@@ -10,10 +10,10 @@ class EmptyScreenTemplate extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text(''),
-        backgroundColor: darkerCyan,
+        backgroundColor: appBarDarkCyan,
       ),
       body: Container(
-        color: darkestCyan3,
+        color: bgDarkCyan,
         child: const Center(
           child: Text('Jaahas.'),
         ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/services/models.dart';
-import 'package:nexecute/shared/loading.dart';
+import 'package:nexecute/shared/shared.dart';
 import 'package:provider/provider.dart';
 import 'package:nexecute/services/auth.dart';
 
@@ -58,7 +58,7 @@ class ProfileScreen extends StatelessWidget {
         ),
       );
     } else {
-      return const Loader();
+      return const Text('jaaaaa');
     }
   }
 }

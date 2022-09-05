@@ -16,8 +16,12 @@ class LoadingScreen extends StatelessWidget {
           return Center(
             child: Column(
               children: const [
-                Loader(),
-                //Text('HOMHO'),
+                Center(
+                  child: Text(
+                    'HOMHO',
+                    style: TextStyle(),
+                  ),
+                ),
               ],
             ),
           );

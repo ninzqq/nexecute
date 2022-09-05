@@ -11,7 +11,7 @@ class ExecutesList extends StatelessWidget {
     var quicxecs = Provider.of<QuicxecsList>(context, listen: true);
 
     return Container(
-      color: darkestCyan2,
+      color: bgDarkCyan,
       child: ListView.builder(
         itemCount: quicxecs.quicxecsList.length,
         itemBuilder: (context, index) {

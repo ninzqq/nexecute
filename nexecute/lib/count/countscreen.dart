@@ -15,7 +15,7 @@ class CountScreen extends StatelessWidget {
         backgroundColor: appBarDarkCyan,
       ),
       body: Container(
-        color: darkestCyan3,
+        color: bgDarkCyan,
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -41,7 +41,7 @@ class CountScreen extends StatelessWidget {
                     child: FloatingActionButton(
                       onPressed: FirestoreService().updateUserPressCount,
                       tooltip: 'Add +1 to your counter',
-                      backgroundColor: niceCyan,
+                      backgroundColor: primaryButtonCyan,
                       child: const Icon(Icons.add_sharp),
                     ),
                   ),
