@@ -46,13 +46,13 @@ class HomeTabIndex with ChangeNotifier {
 }
 
 @JsonSerializable()
-class Quicxec with ChangeNotifier {
+class Quicxec {
   final String title;
   final bool done;
 
-  Quicxec({
-    this.title = '',
-    this.done = false,
+  const Quicxec({
+    required this.title,
+    required this.done,
   });
 
   factory Quicxec.fromJson(Map<String, dynamic> json) =>
@@ -65,7 +65,11 @@ class QuicxecsList {
   List<Quicxec> quicxecsList;
 
   QuicxecsList({
-    this.quicxecsList = const [],
+    this.quicxecsList = const [
+      Quicxec(title: 'asdf', done: false),
+      Quicxec(title: 'ghjk', done: false),
+      Quicxec(title: 'jklö', done: false),
+    ],
   });
 
   factory QuicxecsList.fromJson(Map<String, dynamic> json) =>

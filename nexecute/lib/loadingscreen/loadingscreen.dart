@@ -17,7 +17,7 @@ class LoadingScreen extends StatelessWidget {
             child: Column(
               children: const [
                 Loader(),
-                Text('Loading...'),
+                //Text('HOMHO'),
               ],
             ),
           );

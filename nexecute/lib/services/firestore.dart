@@ -23,11 +23,23 @@ class FirestoreService {
     return AuthService().userStream.switchMap((user) {
       if (user != null) {
         var ref = _db.collection('quicxecs').doc(user.uid);
+        print(ref.snapshots());
         return ref.snapshots().map((doc) => QuicxecsList.fromJson(doc.data()!));
       } else {
         return Stream.fromIterable([QuicxecsList()]);
       }
     });
+  }
+
+  Future<Quicxec> getQuicxecs() async {
+    var user = AuthService().user!;
+    var ref = _db.collection('quicxecs').doc(user.uid);
+    var snapshot = await ref.get();
+    var data = snapshot.get(FieldPath(const ['quicxecs']));
+
+    print(data);
+    print(ref.snapshots().map((event) => Quicxec));
+    return Quicxec.fromJson(snapshot.data() ?? {});
   }
 
   /// Adds a new quicxec (quick task) for current user
@@ -36,7 +48,8 @@ class FirestoreService {
     var ref = _db.collection('quicxecs').doc(user.uid);
 
     var data = {
-      "$quicxec": false,
+      "title": "$quicxec",
+      "done": false,
     };
 
     return ref.set(data, SetOptions(merge: true));

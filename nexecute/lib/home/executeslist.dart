@@ -12,19 +12,16 @@ class ExecutesList extends StatelessWidget {
 
     return Container(
       color: darkestCyan2,
-      child: Center(
-        child: ListView.builder(
-          itemCount: quicxecs.quicxecsList.length,
-          itemBuilder: (context, index) {
-            return Padding(
-              padding: const EdgeInsets.all(8),
-              child: ListTile(
-                title: Text(quicxecs.quicxecsList[index].title),
-                selected: quicxecs.quicxecsList[index].done,
-              ),
-            );
-          },
-        ),
+      child: ListView.builder(
+        itemCount: quicxecs.quicxecsList.length,
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: const EdgeInsets.all(5),
+            child: ListTile(
+              title: Text(quicxecs.quicxecsList[index].title),
+            ),
+          );
+        },
       ),
     );
   }
