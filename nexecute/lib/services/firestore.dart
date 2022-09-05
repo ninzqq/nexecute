@@ -23,7 +23,7 @@ class FirestoreService {
     return AuthService().userStream.switchMap((user) {
       if (user != null) {
         var ref = _db.collection('quicxecs').doc(user.uid);
-        print(ref.snapshots());
+        //print(ref.snapshots());
         return ref.snapshots().map((doc) => QuicxecsList.fromJson(doc.data()!));
       } else {
         return Stream.fromIterable([QuicxecsList()]);
@@ -33,7 +33,7 @@ class FirestoreService {
 
   Future<Quicxec> getQuicxecs() async {
     var user = AuthService().user!;
-    var ref = _db.collection('quicxecs').doc(user.uid);
+    var ref = _db.collection('users').doc(user.uid);
     var snapshot = await ref.get();
     var data = snapshot.get(FieldPath(const ['quicxecs']));
 
@@ -53,10 +53,6 @@ class FirestoreService {
     };
 
     return ref.set(data, SetOptions(merge: true));
-
-    //return ref
-    //    .update(data)
-    //    .then((value) => print('[LOG] Quicxec added: $data'));
   }
 
   /// Updates the current user's count document after pressing button
