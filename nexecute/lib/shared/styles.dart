@@ -3,21 +3,28 @@ import 'package:flutter/material.dart';
 // Colors
 
 // Backgrounds
-Color bgDarkCyan = const Color(0xFF000e0e);
-Color bgDarkerCyan = const Color(0xFF040a0b);
+const bgDarkCyan = Color(0xFF000e0e);
+const bgDarkerCyan = Color(0xFF040a0b);
 // AppBar background
-Color appBarLighterDarkCyan = const Color(0xFF032224);
-Color appBarDarkCyan = const Color(0xFF021314);
+const appBarLighterDarkCyan = Color(0xFF032224);
+const appBarDarkCyan = Color(0xFF021314);
 // Drawer background
-Color drawerBgColor = const Color(0xEE032224);
+const drawerBgColor = Color(0xEE032224);
 
 // Buttons
-Color primaryButtonCyan = const Color(0xFF2cccd1);
+const primaryButtonCyan = Color(0xFF2cccd1);
 
 // Text
-Color almostWhite = const Color(0xFFb4dee0);
+const almostWhite = Color(0xFFb4dee0);
 
 // Some optional colors
-Color darkCyan = const Color(0xFF053436);
-Color darkGreen = const Color(0xFF09110f);
-Color niceGreen = const Color(0xFF39ad58);
+const darkCyan = Color(0xFF053436);
+const darkGreen = Color(0xFF09110f);
+const niceGreen = Color(0xFF39ad58);
+
+// Text styles
+const loadingText = TextStyle(
+  color: almostWhite,
+  fontSize: 32,
+  fontWeight: FontWeight.w500,
+);

@@ -4,8 +4,8 @@ import 'package:nexecute/loginscreen/loginscreen.dart';
 import 'package:nexecute/services/services.dart';
 import 'package:nexecute/shared/shared.dart';
 
-class LoadingScreen extends StatelessWidget {
-  const LoadingScreen({Key? key}) : super(key: key);
+class UserLogInStatusCheck extends StatelessWidget {
+  const UserLogInStatusCheck({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -18,8 +18,8 @@ class LoadingScreen extends StatelessWidget {
               children: const [
                 Center(
                   child: Text(
-                    'HOMHO',
-                    style: TextStyle(),
+                    'LATAAING',
+                    style: loadingText,
                   ),
                 ),
               ],

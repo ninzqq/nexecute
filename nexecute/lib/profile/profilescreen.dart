@@ -15,44 +15,47 @@ class ProfileScreen extends StatelessWidget {
     if (user != null) {
       return Scaffold(
         appBar: AppBar(
-          backgroundColor: Colors.deepPurple,
+          backgroundColor: appBarLighterDarkCyan,
           title: Text(user.displayName ?? 'Guest'),
         ),
         body: SafeArea(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Container(
-                  width: 100,
-                  height: 100,
-                  margin: const EdgeInsets.only(top: 50),
-                  child: const Center(
-                    child: Icon(
-                      Icons.question_mark_rounded,
-                      size: 100,
+          child: Container(
+            color: bgDarkCyan,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 100,
+                    height: 100,
+                    margin: const EdgeInsets.only(top: 50),
+                    child: const Center(
+                      child: Icon(
+                        Icons.question_mark_rounded,
+                        size: 100,
+                      ),
                     ),
                   ),
-                ),
-                Text(user.email ?? '',
-                    style: Theme.of(context).textTheme.headline6),
-                const Spacer(),
-                Text('${count.count}',
-                    style: Theme.of(context).textTheme.headline2),
-                Text('Buttons tapped',
-                    style: Theme.of(context).textTheme.subtitle2),
-                const Spacer(),
-                ElevatedButton(
-                  child: const Text('logout'),
-                  onPressed: () async {
-                    await AuthService().signOut();
-                    Navigator.of(context)
-                        .pushNamedAndRemoveUntil('/', (route) => false);
-                  },
-                ),
-                const Spacer(),
-              ],
+                  Text(user.email ?? '',
+                      style: Theme.of(context).textTheme.headline6),
+                  const Spacer(),
+                  Text('${count.count}',
+                      style: Theme.of(context).textTheme.headline2),
+                  Text('Buttons tapped',
+                      style: Theme.of(context).textTheme.subtitle2),
+                  const Spacer(),
+                  ElevatedButton(
+                    child: const Text('logout'),
+                    onPressed: () async {
+                      await AuthService().signOut();
+                      Navigator.of(context)
+                          .pushNamedAndRemoveUntil('/', (route) => false);
+                    },
+                  ),
+                  const Spacer(),
+                ],
+              ),
             ),
           ),
         ),
