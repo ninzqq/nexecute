@@ -3,6 +3,7 @@ import 'package:nexecute/home/homescreen.dart';
 import 'package:nexecute/loginscreen/loginscreen.dart';
 import 'package:nexecute/services/services.dart';
 import 'package:nexecute/shared/shared.dart';
+import 'package:nexecute/loadingscreen/loadingscreen.dart';
 
 class UserLogInStatusCheck extends StatelessWidget {
   const UserLogInStatusCheck({Key? key}) : super(key: key);
@@ -13,17 +14,8 @@ class UserLogInStatusCheck extends StatelessWidget {
       stream: AuthService().userStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(
-            child: Column(
-              children: const [
-                Center(
-                  child: Text(
-                    'LATAAING',
-                    style: loadingText,
-                  ),
-                ),
-              ],
-            ),
+          return const Center(
+            child: LoadingTextScreen(),
           );
         } else if (snapshot.hasError) {
           return const Center(
