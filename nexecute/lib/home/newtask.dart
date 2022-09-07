@@ -20,12 +20,14 @@ class CreateNewTaskScreen extends StatelessWidget {
               FloatingActionButton(
                 child: const Icon(Icons.add_rounded),
                 backgroundColor: primaryButtonCyan,
+                heroTag: 'addNewQuicxec_btn',
                 onPressed: () => {
-                  FirestoreService().addNewQuicxec('asdasfd'),
+                  FirestoreService().addNewQuicxec('joukahaane'),
                 },
               ),
               FloatingActionButton(
                 backgroundColor: primaryButtonCyan,
+                heroTag: 'getQuicxecs',
                 onPressed: () => {
                   FirestoreService().getQuicxecs(),
                 },

@@ -37,8 +37,12 @@ class FirestoreService {
     var snapshot = await ref.get();
     var data = snapshot.get(FieldPath(const ['quicxecs']));
 
-    print(data);
-    print(ref.snapshots().map((event) => Quicxec));
+    //print(data);
+    //print(data.length);
+
+    for (var i = 0; i < data.length; i++) {
+      print(data[i]);
+    }
     return Quicxec.fromJson(snapshot.data() ?? {});
   }
 
