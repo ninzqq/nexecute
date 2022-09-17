@@ -51,14 +51,14 @@ class FirestoreService {
     var snapshot = await ref.get();
     var quicxecs = snapshot.get(FieldPath(const ['quicxecs']));
 
-    print(ref.toString());
+    var data = [
+      {
+        'title': 'HOMOO',
+        'done': true,
+      }
+    ];
 
-    var data = {
-      'quicxecs[4][title]': '$quicxec',
-      'quicxecs[4][done]': false,
-    };
-
-    return ref.set(data, SetOptions(merge: true));
+    return ref.update({'quicxecs': FieldValue.arrayUnion(data)});
   }
 
   /// Updates the current user's count document after pressing button
