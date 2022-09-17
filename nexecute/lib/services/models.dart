@@ -61,15 +61,11 @@ class Quicxec {
 }
 
 @JsonSerializable()
-class QuicxecsList {
-  List<Quicxec> quicxecsList;
+class QuicxecsList with ChangeNotifier {
+  final List<Quicxec> quicxecsList;
 
   QuicxecsList({
-    this.quicxecsList = const [
-      Quicxec(title: 'asdf', done: false),
-      Quicxec(title: 'ghjk', done: false),
-      Quicxec(title: 'jklö', done: false),
-    ],
+    this.quicxecsList = const [],
   });
 
   factory QuicxecsList.fromJson(Map<String, dynamic> json) =>

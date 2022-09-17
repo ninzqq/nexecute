@@ -43,7 +43,7 @@ class HomeScreen extends StatelessWidget {
                     child: Text('First'),
                   ),
                 ),
-                const ExecutesList(),
+                const Quicxecs(),
               ],
             ),
             BottomNavBar(

@@ -19,41 +19,43 @@ class FirestoreService {
     });
   }
 
-  Stream<QuicxecsList> streamQuicxecList() {
+  Stream<List<Quicxec>> streamQuicxecList() {
     return AuthService().userStream.switchMap((user) {
       if (user != null) {
-        var ref = _db.collection('quicxecs').doc(user.uid);
-        //print(ref.snapshots());
-        return ref.snapshots().map((doc) => QuicxecsList.fromJson(doc.data()!));
+        Stream<DocumentSnapshot> ref =
+            _db.collection('users').doc(user.uid).snapshots();
+        var asdf = ref.map((doc) {
+          return Quicxec.fromJson(doc.data() as Map<String, dynamic>);
+        }).toList();
+        return asdf.asStream();
       } else {
-        return Stream.fromIterable([QuicxecsList()]);
+        return Stream.fromIterable([]);
       }
     });
   }
 
-  Future<Quicxec> getQuicxecs() async {
+  Future<List<Quicxec>> getQuicxecs() async {
     var user = AuthService().user!;
     var ref = _db.collection('users').doc(user.uid);
     var snapshot = await ref.get();
     var data = snapshot.get(FieldPath(const ['quicxecs']));
+    var quicxecs = data.map<Quicxec>((q) => Quicxec.fromJson(q));
 
-    //print(data);
-    //print(data.length);
-
-    for (var i = 0; i < data.length; i++) {
-      print(data[i]);
-    }
-    return Quicxec.fromJson(snapshot.data() ?? {});
+    return quicxecs.toList();
   }
 
   /// Adds a new quicxec (quick task) for current user
-  Future<void> addNewQuicxec(quicxec) {
+  Future<void> addNewQuicxec(quicxec) async {
     var user = AuthService().user!;
-    var ref = _db.collection('quicxecs').doc(user.uid);
+    var ref = _db.collection('users').doc(user.uid);
+    var snapshot = await ref.get();
+    var quicxecs = snapshot.get(FieldPath(const ['quicxecs']));
+
+    print(ref.toString());
 
     var data = {
-      "title": "$quicxec",
-      "done": false,
+      'quicxecs[4][title]': '$quicxec',
+      'quicxecs[4][done]': false,
     };
 
     return ref.set(data, SetOptions(merge: true));
