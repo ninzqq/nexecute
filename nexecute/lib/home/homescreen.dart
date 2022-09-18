@@ -25,7 +25,7 @@ class HomeScreen extends StatelessWidget {
       ],
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Execs'),
+          title: const Text('Quicxecs'),
           backgroundColor: appBarDarkCyan,
         ),
         drawer: const MainDrawer(),
