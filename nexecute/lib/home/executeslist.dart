@@ -28,6 +28,7 @@ class Quicxecs extends StatelessWidget {
           return Container(
             color: bgDarkerCyan,
             child: GridView.count(
+              childAspectRatio: 2,
               crossAxisCount: 2,
               crossAxisSpacing: 0,
               padding: const EdgeInsets.all(0),

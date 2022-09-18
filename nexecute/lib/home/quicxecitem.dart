@@ -9,10 +9,19 @@ class QuicxecItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(6),
       child: Container(
-        color: bgDarkCyan,
-        child: Text(quicxec.title),
+        decoration: BoxDecoration(
+            color: bgDarkCyan,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: Colors.cyan.shade100,
+              width: 1,
+            )),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(quicxec.title),
+        ),
       ),
     );
   }
