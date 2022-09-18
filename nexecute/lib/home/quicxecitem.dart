@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/services/services.dart';
+import 'package:nexecute/home/home.dart';
 import 'package:nexecute/shared/shared.dart';
 
 class QuicxecItem extends StatelessWidget {
@@ -8,19 +9,30 @@ class QuicxecItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(6),
-      child: Container(
-        decoration: BoxDecoration(
-            color: bgDarkCyan,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: Colors.cyan.shade100,
-              width: 1,
-            )),
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Text(quicxec.title),
+    return Hero(
+      tag: quicxec.title,
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        color: bgDarkCyan,
+        shape: RoundedRectangleBorder(
+          side: BorderSide(
+            color: Colors.cyan.shade100,
+          ),
+          borderRadius: const BorderRadius.all(Radius.circular(12)),
+        ),
+        child: InkWell(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (BuildContext context) =>
+                    QuicxecScreen(quicxec: quicxec),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(quicxec.title),
+          ),
         ),
       ),
     );
