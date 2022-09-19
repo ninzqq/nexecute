@@ -1,2 +1,2 @@
 # nexecute
- nexecute ToDo application
+ nexecute is a simple todo-application made with Flutter and Firebase.
