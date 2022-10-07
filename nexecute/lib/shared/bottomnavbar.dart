@@ -36,7 +36,7 @@ class BottomNavBar extends StatelessWidget {
                   child: const Icon(Icons.add_rounded),
                   elevation: 0.1,
                   onPressed: () {
-                    Navigator.pushNamed(context, '/newtask');
+                    Navigator.pushNamed(context, '/addnewquicxec');
                   },
                 ),
               ),

@@ -8,5 +8,5 @@ var appRoutes = {
   "/home": (context) => HomeScreen(),
   "/profile": (context) => const ProfileScreen(),
   "/count": (context) => const CountScreen(),
-  "/newtask": (context) => const CreateNewTaskScreen(),
+  "/addnewquicxec": (context) => const AddNewQuicxecScreen(),
 };
