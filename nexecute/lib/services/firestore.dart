@@ -53,8 +53,8 @@ class FirestoreService {
 
     var data = [
       {
-        'title': 'HOMOO',
-        'done': true,
+        'title': quicxec,
+        'done': false,
       }
     ];
 

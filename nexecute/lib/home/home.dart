@@ -1,4 +1,4 @@
 export 'executeslist.dart';
 export 'homescreen.dart';
-export 'newtask.dart';
+export 'addnewquicxecscreen.dart';
 export 'quicxecscreen.dart';
