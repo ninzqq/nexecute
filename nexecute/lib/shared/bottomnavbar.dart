@@ -36,7 +36,8 @@ class BottomNavBar extends StatelessWidget {
                   child: const Icon(Icons.add_rounded),
                   elevation: 0.1,
                   onPressed: () {
-                    Navigator.pushNamed(context, '/addnewquicxec');
+                    Navigator.pushNamed(context, '/addnewquicxec')
+                        .then((value) => FirestoreService().getQuicxecs());
                   },
                 ),
               ),

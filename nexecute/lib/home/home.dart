@@ -1,4 +1,4 @@
-export 'executeslist.dart';
-export 'homescreen.dart';
-export 'addnewquicxecscreen.dart';
-export 'quicxecscreen.dart';
+export 'widgets/executeslist.dart';
+export 'screens/homescreen.dart';
+export 'screens/addnewquicxecscreen.dart';
+export 'screens/quicxecscreen.dart';

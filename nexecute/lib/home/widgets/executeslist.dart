@@ -4,7 +4,7 @@ import 'package:nexecute/loadingscreen/loadingscreen.dart';
 import 'package:nexecute/services/services.dart';
 import 'package:nexecute/shared/shared.dart';
 import 'package:provider/provider.dart';
-import 'package:nexecute/home/quicxecitem.dart';
+import 'package:nexecute/home/widgets/quicxecitem.dart';
 
 class Quicxecs extends StatelessWidget {
   const Quicxecs({Key? key}) : super(key: key);
