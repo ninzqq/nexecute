@@ -10,8 +10,8 @@ class Quicxecs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var quicxecslist = Provider.of<QuicxecsList>(context, listen: true);
-    print(quicxecslist.quicxecsList);
+    //var quicxecs = Provider.of<QuicxecsList>(context, listen: true);
+    //print(quicxecs.quicxecsList);
     return FutureBuilder<List<Quicxec>>(
       future: FirestoreService().getQuicxecs(),
       builder: (context, snapshot) {

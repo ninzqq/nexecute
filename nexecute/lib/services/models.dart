@@ -45,6 +45,7 @@ class HomeTabIndex with ChangeNotifier {
   }
 }
 
+/// Single quicxec
 @JsonSerializable()
 class Quicxec {
   final String title;
@@ -60,6 +61,7 @@ class Quicxec {
   Map<String, dynamic> toJson() => _$QuicxecToJson(this);
 }
 
+/// List of quicxecs
 @JsonSerializable()
 class QuicxecsList with ChangeNotifier {
   final List<Quicxec> quicxecsList;

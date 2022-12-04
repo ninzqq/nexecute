@@ -22,9 +22,8 @@ class FirestoreService {
   Stream<List<Quicxec>> streamQuicxecList() {
     return AuthService().userStream.switchMap((user) {
       if (user != null) {
-        Stream<DocumentSnapshot> ref =
-            _db.collection('users').doc(user.uid).snapshots();
-        var asdf = ref.map((doc) {
+        var ref = _db.collection('users').doc(user.uid);
+        var asdf = ref.snapshots().map((doc) {
           return Quicxec.fromJson(doc.data() as Map<String, dynamic>);
         }).toList();
         return asdf.asStream();
@@ -39,17 +38,20 @@ class FirestoreService {
     var ref = _db.collection('users').doc(user.uid);
     var snapshot = await ref.get();
     var data = snapshot.get(FieldPath(const ['quicxecs']));
-    var quicxecs = data.map<Quicxec>((q) => Quicxec.fromJson(q));
-
-    return quicxecs.toList();
+    var quicxecs = data.map<Quicxec>((q) => Quicxec.fromJson(q)).toList();
+    print(
+        '------------------------------------------\n $data \n --------------------------------------------- ');
+    print(
+        '------------------------------------------\n $quicxecs \n --------------------------------------------- ');
+    return quicxecs;
   }
 
   /// Adds a new quicxec (quick task) for current user
   Future<void> addNewQuicxec(quicxec) async {
     var user = AuthService().user!;
     var ref = _db.collection('users').doc(user.uid);
-    var snapshot = await ref.get();
-    var quicxecs = snapshot.get(FieldPath(const ['quicxecs']));
+    //var snapshot = await ref.get();
+    ///var quicxecs = snapshot.get(FieldPath(const ['quicxecs']));
 
     var data = [
       {
@@ -57,8 +59,14 @@ class FirestoreService {
         'done': false,
       }
     ];
-
+    print('Adding new quicxec');
     return ref.update({'quicxecs': FieldValue.arrayUnion(data)});
+  }
+
+  /// Deletes currently opened quicxec
+  Future<void> deleteQuicxec() async {
+    var user = AuthService().user!;
+    var ref = _db.collection('users').doc(user.uid);
   }
 
   /// Updates the current user's count document after pressing button
