@@ -10,7 +10,7 @@ class AddNewQuicxecScreen extends StatelessWidget {
     final _controller = TextEditingController();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Add new execute'),
+        title: const Text('New execute'),
         backgroundColor: appBarDarkCyan,
       ),
       body: Container(
@@ -34,8 +34,8 @@ class AddNewQuicxecScreen extends StatelessWidget {
                         {}
                       else
                         {
-                          FirestoreService().getQuicxecs(),
                           FirestoreService().addNewQuicxec(_controller.text),
+                          FirestoreService().getQuicxecs(),
                         }
                     };
             },
