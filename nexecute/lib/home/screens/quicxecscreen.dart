@@ -14,6 +14,12 @@ class QuicxecScreen extends StatelessWidget {
         appBar: AppBar(
           title: const Text(''),
           backgroundColor: appBarDarkCyan,
+          actions: [
+            IconButton(
+              onPressed: () => {},
+              icon: const Icon(Icons.delete_forever_rounded),
+            )
+          ],
         ),
         body: Container(
           color: bgDarkCyan,

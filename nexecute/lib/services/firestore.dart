@@ -48,11 +48,12 @@ class FirestoreService {
   Future<void> addNewQuicxec(quicxec) async {
     var user = AuthService().user!;
     var ref = _db.collection('users').doc(user.uid);
-    var snapshot = await ref.get();
-    var quicxecs = snapshot.get(FieldPath(const ['quicxecs']));
+
+    var id = DateTime.now().millisecondsSinceEpoch.toInt();
 
     var data = [
       {
+        'id': id,
         'title': quicxec,
         'done': false,
       }
