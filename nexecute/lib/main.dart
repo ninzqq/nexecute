@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:nexecute/home/home.dart';
 import 'package:nexecute/services/services.dart';
 import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
@@ -52,11 +53,14 @@ class _NexecuteState extends State<Nexecute> {
                 catchError: (_, err) => Count(),
                 initialData: Count(),
               ),
-              ChangeNotifierProvider<Asdf>.value(
-                value: Asdf(),
+              ChangeNotifierProvider(
+                create: (context) => QuicxecsList(),
               ),
-              ChangeNotifierProvider<HomeTabIndex>.value(
-                value: HomeTabIndex(),
+              ChangeNotifierProvider(
+                create: (context) => Asdf(),
+              ),
+              ChangeNotifierProvider(
+                create: (context) => HomeTabIndex(),
               ),
             ],
             child: MaterialApp(
