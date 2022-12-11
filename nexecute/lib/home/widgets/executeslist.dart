@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:nexecute/loadingscreen/loadingscreen.dart';
 import 'package:nexecute/services/services.dart';
@@ -11,9 +10,9 @@ class Quicxecs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    //var quicxecs = Provider.of<QuicxecsList>(context, listen: true);
-    //print(quicxecs.quicxecsList);
-    return FutureBuilder<List<Quicxec>>(
+    var quicxecs = Provider.of<QuicxecsList>(context, listen: true);
+
+    return FutureBuilder<QuicxecsList>(
       future: FirestoreService().getQuicxecs(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -23,7 +22,8 @@ class Quicxecs extends StatelessWidget {
             child: ErrorMessage(message: snapshot.error.toString()),
           );
         } else if (snapshot.hasData) {
-          var quicxecs = snapshot.data!;
+          quicxecs = snapshot.data!;
+          //print(quicxecs.quicxecsList);
 
           return Container(
             color: bgDarkerCyan,
@@ -32,11 +32,12 @@ class Quicxecs extends StatelessWidget {
               crossAxisCount: 2,
               crossAxisSpacing: 0,
               padding: const EdgeInsets.all(0),
-              children: quicxecs
-                  .map((quicxec) => QuicxecItem(
-                        quicxec: quicxec,
-                      ))
-                  .toList(),
+              children: [],
+              //children: quicxecs
+              //    .map((quicxec) => QuicxecItem(
+              //          quicxec: quicxec,
+              //        ))
+              //    .toList(),
             ),
           );
         } else {
