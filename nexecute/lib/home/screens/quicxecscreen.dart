@@ -9,7 +9,7 @@ class QuicxecScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Hero(
-      tag: quicxec.title,
+      tag: quicxec.id,
       child: Scaffold(
         appBar: AppBar(
           title: const Text(''),
