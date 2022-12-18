@@ -73,6 +73,15 @@ class QuicxecsList with ChangeNotifier {
   factory QuicxecsList.fromJson(Map<String, dynamic> json) =>
       _$QuicxecsListFromJson(json);
   Map<String, dynamic> toJson() => _$QuicxecsListToJson(this);
+
+  readList() {
+    return quicxecsList;
+  }
+
+  void addQuicxecToList(quicxec) {
+    quicxecsList.add(quicxec);
+    notifyListeners();
+  }
 }
 
 @JsonSerializable()

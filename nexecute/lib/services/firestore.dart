@@ -32,13 +32,10 @@ class FirestoreService {
     return QuicxecsList(quicxecsList: quicxecs.toList());
   }
 
-  /// Adds a new quicxec (quick task) for current user
-  Future<void> addNewQuicxec(quicxec) async {
+  Future<void> addSingleNewQuicxec(quicxec) async {
     var user = AuthService().user!;
     var ref = _db.collection('users').doc(user.uid);
-
     var id = DateTime.now().millisecondsSinceEpoch.toInt();
-
     var data = [
       {
         'id': id,
@@ -46,8 +43,38 @@ class FirestoreService {
         'done': false,
       }
     ];
-
     return ref.update({'quicxecs': FieldValue.arrayUnion(data)});
+  }
+
+  /// Adds a new quicxec (quick task) for current user
+  Future<void> addNewQuicxec(quicxec) async {
+    var user = AuthService().user!;
+    var ref = _db.collection('users').doc(user.uid);
+    var snapshot = await ref.get();
+    var data = snapshot.get(FieldPath(const ['quicxecs']));
+    var quicxecs = data.map<Quicxec>((q) => Quicxec.fromJson(q));
+
+    var id = DateTime.now().millisecondsSinceEpoch.toInt();
+
+    var newQuicxec = Quicxec(id: id, title: quicxec, done: false);
+
+    var qlist = quicxecs.toList();
+    qlist.add(newQuicxec);
+
+    var dataToWrite = [];
+
+    for (var i = 0; i < qlist.length; i++) {
+      var quicxecitem = {
+        'id': qlist[i].id,
+        'title': qlist[i].title,
+        'done': false,
+      };
+      dataToWrite.add(quicxecitem);
+    }
+
+    ref.set({'quicxecs': dataToWrite}, SetOptions(merge: true));
+
+    return;
   }
 
   /// Updates the current user's count document after pressing button
