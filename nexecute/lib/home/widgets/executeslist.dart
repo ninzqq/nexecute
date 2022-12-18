@@ -27,17 +27,14 @@ class Quicxecs extends StatelessWidget {
 
           return Container(
             color: bgDarkerCyan,
-            child: GridView.count(
-              childAspectRatio: 2,
-              crossAxisCount: 2,
-              crossAxisSpacing: 0,
-              padding: const EdgeInsets.all(0),
-              children: [],
-              //children: quicxecs
-              //    .map((quicxec) => QuicxecItem(
-              //          quicxec: quicxec,
-              //        ))
-              //    .toList(),
+            child: GridView.builder(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+              ),
+              itemCount: quicxecs.quicxecsList.length,
+              itemBuilder: (context, index) {
+                return QuicxecItem(quicxec: quicxecs.quicxecsList[index]);
+              },
             ),
           );
         } else {
