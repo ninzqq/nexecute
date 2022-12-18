@@ -18,13 +18,6 @@ class AddNewQuicxecScreen extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(20.0),
           child: Focus(
-            child: TextField(
-              controller: _controller,
-              keyboardType: TextInputType.multiline,
-              maxLines: null,
-              expands: true,
-              keyboardAppearance: Brightness.dark,
-            ),
             autofocus: true,
             onFocusChange: (hasFocus) {
               hasFocus
@@ -35,10 +28,16 @@ class AddNewQuicxecScreen extends StatelessWidget {
                       else
                         {
                           FirestoreService().addNewQuicxec(_controller.text),
-                          FirestoreService().getQuicxecs(),
                         }
                     };
             },
+            child: TextField(
+              controller: _controller,
+              keyboardType: TextInputType.multiline,
+              maxLines: null,
+              expands: true,
+              keyboardAppearance: Brightness.dark,
+            ),
           ),
         ),
       ),
