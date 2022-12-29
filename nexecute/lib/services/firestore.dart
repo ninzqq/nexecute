@@ -77,6 +77,41 @@ class FirestoreService {
     return;
   }
 
+  /// Removes currently open quicxec
+  Future<void> removeCurrentlyOpenQuicxec(quicxec) async {
+    var user = AuthService().user!;
+    var ref = _db.collection('users').doc(user.uid);
+    var snapshot = await ref.get();
+    var data = snapshot.get(FieldPath(const ['quicxecs']));
+    var quicxecs = data.map<Quicxec>((q) => Quicxec.fromJson(q));
+
+    var qlist = quicxecs.toList();
+
+    // remove the correct quicxec
+    for (var i = 0; i < qlist.length; i++) {
+      if (qlist[i].id == quicxec.id) {
+        qlist.removeAt(i);
+        break;
+      }
+    }
+
+    // Recreate the list of quicxecs and format correctly for writing to FireStore
+    var dataToWrite = [];
+
+    for (var i = 0; i < qlist.length; i++) {
+      var quicxecitem = {
+        'id': qlist[i].id,
+        'title': qlist[i].title,
+        'done': false,
+      };
+      dataToWrite.add(quicxecitem);
+    }
+
+    ref.set({'quicxecs': dataToWrite}, SetOptions(merge: true));
+
+    return;
+  }
+
   /// Updates the current user's count document after pressing button
   Future<void> updateUserPressCount() {
     var user = AuthService().user!;

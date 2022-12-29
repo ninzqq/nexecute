@@ -16,7 +16,9 @@ class QuicxecScreen extends StatelessWidget {
           backgroundColor: appBarDarkCyan,
           actions: [
             IconButton(
-              onPressed: () => {},
+              onPressed: () {
+                FirestoreService().removeCurrentlyOpenQuicxec(quicxec);
+              },
               icon: const Icon(Icons.delete_forever_rounded),
             )
           ],

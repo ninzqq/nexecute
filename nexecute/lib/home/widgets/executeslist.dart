@@ -31,9 +31,9 @@ class Quicxecs extends StatelessWidget {
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
               ),
-              itemCount: quicxecs.quicxecsList.length,
+              itemCount: quicxecs.quicxecs.length,
               itemBuilder: (context, index) {
-                return QuicxecItem(quicxec: quicxecs.quicxecsList[index]);
+                return QuicxecItem(quicxec: quicxecs.quicxecs[index]);
               },
             ),
           );
