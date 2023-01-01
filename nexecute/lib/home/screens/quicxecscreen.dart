@@ -36,7 +36,7 @@ class QuicxecScreen extends StatelessWidget {
                     : {
                         if (controller.text == '' || controller.text.isEmpty)
                           {}
-                        else if (controller.text != quicxec.title)
+                        else if (controller.text != quicxec.text)
                           {
                             FirestoreService().modifyCurrentlyOpenQuicxec(
                                 quicxec, controller.text),
@@ -48,7 +48,7 @@ class QuicxecScreen extends StatelessWidget {
                       };
               },
               child: TextField(
-                controller: controller..text = quicxec.title,
+                controller: controller..text = quicxec.text,
                 keyboardType: TextInputType.multiline,
                 maxLines: null,
                 expands: true,

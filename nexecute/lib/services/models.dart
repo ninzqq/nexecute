@@ -48,12 +48,12 @@ class HomeTabIndex with ChangeNotifier {
 @JsonSerializable()
 class Quicxec {
   final int id;
-  String title;
+  String text;
   bool done;
 
   Quicxec({
     required this.id,
-    required this.title,
+    required this.text,
     required this.done,
   });
 

@@ -31,7 +31,7 @@ class QuicxecItem extends StatelessWidget {
           },
           child: Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Text(quicxec.title),
+            child: Text(quicxec.text),
           ),
         ),
       ),
