@@ -8,6 +8,7 @@ class QuicxecScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final controller = TextEditingController();
     return Hero(
       tag: quicxec.id,
       child: Scaffold(
@@ -27,12 +28,32 @@ class QuicxecScreen extends StatelessWidget {
           color: bgDarkCyan,
           child: Padding(
             padding: const EdgeInsets.all(20.0),
-            child: TextField(
-              controller: TextEditingController()..text = quicxec.title,
-              keyboardType: TextInputType.multiline,
-              maxLines: null,
-              expands: true,
-              keyboardAppearance: Brightness.dark,
+            child: Focus(
+              autofocus: false,
+              onFocusChange: (hasFocus) {
+                hasFocus
+                    ? () => {}
+                    : {
+                        if (controller.text == '' || controller.text.isEmpty)
+                          {}
+                        else if (controller.text != quicxec.title)
+                          {
+                            FirestoreService().modifyCurrentlyOpenQuicxec(
+                                quicxec, controller.text),
+                          }
+                        else
+                          {
+                            print('JAAHAS'),
+                          }
+                      };
+              },
+              child: TextField(
+                controller: controller..text = quicxec.title,
+                keyboardType: TextInputType.multiline,
+                maxLines: null,
+                expands: true,
+                keyboardAppearance: Brightness.dark,
+              ),
             ),
           ),
         ),

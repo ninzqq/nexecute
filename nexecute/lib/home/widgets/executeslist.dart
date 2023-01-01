@@ -23,7 +23,6 @@ class Quicxecs extends StatelessWidget {
           );
         } else if (snapshot.hasData) {
           quicxecs = snapshot.data!;
-          //print(quicxecs.quicxecsList);
 
           return Container(
             color: bgDarkerCyan,

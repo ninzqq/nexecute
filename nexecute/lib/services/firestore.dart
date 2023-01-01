@@ -72,9 +72,40 @@ class FirestoreService {
       dataToWrite.add(quicxecitem);
     }
 
-    ref.set({'quicxecs': dataToWrite}, SetOptions(merge: true));
+    return await ref.set({'quicxecs': dataToWrite}, SetOptions(merge: true));
+  }
 
-    return;
+  /// Modify currently open quicxec
+  Future<void> modifyCurrentlyOpenQuicxec(quicxec, text) async {
+    print('NO SAATANA');
+    var user = AuthService().user!;
+    var ref = _db.collection('users').doc(user.uid);
+    var snapshot = await ref.get();
+    var data = snapshot.get(FieldPath(const ['quicxecs']));
+    var quicxecs = data.map<Quicxec>((q) => Quicxec.fromJson(q));
+
+    var qlist = quicxecs.toList();
+
+    for (var i = 0; i < qlist.length; i++) {
+      if (qlist[i].id == quicxec.id) {
+        qlist[i].title = text;
+        break;
+      }
+    }
+
+    // Recreate the list of quicxecs and format correctly for writing to FireStore
+    var dataToWrite = [];
+
+    for (var i = 0; i < qlist.length; i++) {
+      var quicxecitem = {
+        'id': qlist[i].id,
+        'title': qlist[i].title,
+        'done': false,
+      };
+      dataToWrite.add(quicxecitem);
+    }
+
+    return ref.set({'quicxecs': dataToWrite}, SetOptions(merge: true));
   }
 
   /// Removes currently open quicxec
@@ -107,9 +138,7 @@ class FirestoreService {
       dataToWrite.add(quicxecitem);
     }
 
-    ref.set({'quicxecs': dataToWrite}, SetOptions(merge: true));
-
-    return;
+    return ref.set({'quicxecs': dataToWrite}, SetOptions(merge: true));
   }
 
   /// Updates the current user's count document after pressing button

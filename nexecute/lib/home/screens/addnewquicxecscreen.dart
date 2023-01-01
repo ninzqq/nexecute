@@ -7,7 +7,7 @@ class AddNewQuicxecScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final _controller = TextEditingController();
+    final controller = TextEditingController();
     return Scaffold(
       appBar: AppBar(
         title: const Text('New execute'),
@@ -23,16 +23,16 @@ class AddNewQuicxecScreen extends StatelessWidget {
               hasFocus
                   ? () => {}
                   : {
-                      if (_controller.text == '' || _controller.text.isEmpty)
+                      if (controller.text == '' || controller.text.isEmpty)
                         {}
                       else
                         {
-                          FirestoreService().addNewQuicxec(_controller.text),
+                          FirestoreService().addNewQuicxec(controller.text),
                         }
                     };
             },
             child: TextField(
-              controller: _controller,
+              controller: controller,
               keyboardType: TextInputType.multiline,
               maxLines: null,
               expands: true,

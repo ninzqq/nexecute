@@ -48,10 +48,10 @@ class HomeTabIndex with ChangeNotifier {
 @JsonSerializable()
 class Quicxec {
   final int id;
-  final String title;
-  final bool done;
+  String title;
+  bool done;
 
-  const Quicxec({
+  Quicxec({
     required this.id,
     required this.title,
     required this.done,
