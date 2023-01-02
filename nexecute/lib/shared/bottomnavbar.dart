@@ -33,12 +33,11 @@ class BottomNavBar extends StatelessWidget {
                 height: 63,
                 child: FloatingActionButton(
                   backgroundColor: primaryButtonCyan,
-                  child: const Icon(Icons.add_rounded),
                   elevation: 0.1,
                   onPressed: () {
-                    Navigator.pushNamed(context, '/addnewquicxec')
-                        .then((value) => FirestoreService().getQuicxecs());
+                    Navigator.pushNamed(context, '/addnewquicxec');
                   },
+                  child: const Icon(Icons.add_rounded),
                 ),
               ),
             ),
