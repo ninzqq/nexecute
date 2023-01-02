@@ -19,6 +19,7 @@ class QuicxecScreen extends StatelessWidget {
             IconButton(
               onPressed: () {
                 FirestoreService().removeCurrentlyOpenQuicxec(quicxec);
+                Navigator.pop(context);
               },
               icon: const Icon(Icons.delete_forever_rounded),
             )
