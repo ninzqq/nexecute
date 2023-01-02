@@ -47,14 +47,12 @@ class HomeTabIndex with ChangeNotifier {
 
 @JsonSerializable()
 class Quicxec {
-  final int id;
+  final String id;
   String text;
-  bool done;
 
   Quicxec({
     required this.id,
     required this.text,
-    required this.done,
   });
 
   factory Quicxec.fromJson(Map<String, dynamic> json) =>

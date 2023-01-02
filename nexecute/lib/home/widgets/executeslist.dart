@@ -1,6 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:nexecute/loadingscreen/loadingscreen.dart';
 import 'package:nexecute/services/services.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:nexecute/shared/shared.dart';
 import 'package:provider/provider.dart';
 import 'package:nexecute/home/widgets/quicxecitem.dart';
@@ -10,10 +12,16 @@ class Quicxecs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var quicxecs = context.watch<QuicxecsList>();
+    //var quicxecs = context.watch<QuicxecsList>();
 
-    return FutureBuilder<QuicxecsList>(
-      future: FirestoreService().getQuicxecs(),
+    return StreamBuilder<QuerySnapshot>(
+      stream: AuthService().userStream.switchMap(
+            (user) => FirebaseFirestore.instance
+                .collection('users')
+                .doc(user?.uid)
+                .collection('quicxecs')
+                .snapshots(),
+          ),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const LoadingTextScreen();
@@ -22,17 +30,20 @@ class Quicxecs extends StatelessWidget {
             child: ErrorMessage(message: snapshot.error.toString()),
           );
         } else if (snapshot.hasData) {
-          quicxecs = snapshot.data!;
-
           return Container(
             color: bgDarkerCyan,
             child: GridView.builder(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
               ),
-              itemCount: quicxecs.quicxecs.length,
+              itemCount: snapshot.data!.docs.length,
               itemBuilder: (context, index) {
-                return QuicxecItem(quicxec: quicxecs.quicxecs[index]);
+                var doc = snapshot.data!.docs[index];
+                var data = doc.data() as Map;
+
+                return QuicxecItem(
+                  quicxec: Quicxec(id: data['id'], text: data['text']),
+                );
               },
             ),
           );

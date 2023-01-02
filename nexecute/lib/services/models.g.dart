@@ -17,15 +17,13 @@ Map<String, dynamic> _$CountToJson(Count instance) => <String, dynamic>{
     };
 
 Quicxec _$QuicxecFromJson(Map<String, dynamic> json) => Quicxec(
-      id: json['id'] as int,
+      id: json['id'] as String,
       text: json['text'] as String,
-      done: json['done'] as bool,
     );
 
 Map<String, dynamic> _$QuicxecToJson(Quicxec instance) => <String, dynamic>{
       'id': instance.id,
       'text': instance.text,
-      'done': instance.done,
     };
 
 QuicxecsList _$QuicxecsListFromJson(Map<String, dynamic> json) => QuicxecsList(
