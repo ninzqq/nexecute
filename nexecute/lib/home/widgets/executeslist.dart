@@ -35,6 +35,7 @@ class Quicxecs extends StatelessWidget {
             child: GridView.builder(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
+                mainAxisExtent: 120,
               ),
               itemCount: snapshot.data!.docs.length,
               itemBuilder: (context, index) {
