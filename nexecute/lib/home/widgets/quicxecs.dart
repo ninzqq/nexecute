@@ -7,16 +7,31 @@ import 'package:nexecute/shared/shared.dart';
 import 'package:provider/provider.dart';
 import 'package:nexecute/home/widgets/quicxecitem.dart';
 
-class Quicxecs extends StatelessWidget {
-  Quicxecs({Key? key}) : super(key: key);
+// Stateful widget used here in order to prevent initializing the stream
+// more than once in the beginning, by placing the stream initialization
+// inside initState.
+// This is due to decreasing the amount
+// of reads from Firestore.
 
-  final quicxecsStream = AuthService().userStream.switchMap(
-        (user) => FirebaseFirestore.instance
-            .collection('users')
-            .doc(user?.uid)
-            .collection('quicxecs')
-            .snapshots(),
-      );
+class Quicxecs extends StatefulWidget {
+  const Quicxecs({Key? key}) : super(key: key);
+  @override
+  QuicxecsState createState() => QuicxecsState();
+}
+
+class QuicxecsState extends State<Quicxecs> {
+  dynamic quicxecsStream;
+  @override
+  void initState() {
+    quicxecsStream = AuthService().userStream.switchMap(
+          (user) => FirebaseFirestore.instance
+              .collection('users')
+              .doc(user?.uid)
+              .collection('quicxecs')
+              .snapshots(),
+        );
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
