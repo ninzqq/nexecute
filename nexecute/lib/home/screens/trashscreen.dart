@@ -13,8 +13,40 @@ class TrashScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Deleted quicxecs'),
+        title: const Text('Trashed quicxecs'),
         backgroundColor: appBarDarkCyan,
+        actions: [
+          IconButton(
+            onPressed: () => showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                      title: const Text('Warning'),
+                      content: const Text(
+                          'Are you sure you want to delete all the items in trash permanently?\nNote: This action cannot be undone.'),
+                      actions: <Widget>[
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, 'Cancel'),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => {
+                            FirestoreService().emptyTrash(),
+                            Navigator.pop(context, 'Yes'),
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                backgroundColor: snackBarBgColor,
+                                content: Text('Trash emptied'),
+                              ),
+                            ),
+                          },
+                          child: const Text('Yes'),
+                        ),
+                      ],
+                    )),
+            icon: const Icon(Icons.delete_forever),
+            tooltip: 'Empty trash permanently',
+          )
+        ],
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: AuthService().userStream.switchMap(

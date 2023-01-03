@@ -91,6 +91,20 @@ class FirestoreService {
     return refOriginal.doc(quicxec.id).delete();
   }
 
+  /// Empty trash permanently
+  Future<void> emptyTrash() async {
+    var user = AuthService().user!;
+    var batch = _db.batch();
+    var collection = _db.collection('users').doc(user.uid).collection('trash');
+    var snapshots = await collection.get();
+
+    for (var doc in snapshots.docs) {
+      batch.delete(doc.reference);
+    }
+    await batch.commit();
+    return;
+  }
+
   /// Updates the current user's count document after pressing button
   Future<void> updateUserPressCount() {
     var user = AuthService().user!;

@@ -9,7 +9,7 @@ var appTheme = ThemeData(
   appBarTheme: const AppBarTheme(
     color: Color.fromARGB(255, 32, 41, 41),
   ),
-  textTheme: TextTheme(
+  textTheme: const TextTheme(
     headline1: TextStyle(
       fontSize: 24,
       fontWeight: FontWeight.bold,

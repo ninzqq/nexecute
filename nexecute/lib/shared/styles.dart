@@ -10,6 +10,8 @@ const appBarLighterDarkCyan = Color(0xFF032224);
 const appBarDarkCyan = Color(0xFF021314);
 // Drawer background
 const drawerBgColor = Color(0xEE032224);
+// Snackbar background
+const snackBarBgColor = Color.fromARGB(255, 157, 220, 223);
 
 // Buttons
 const primaryButtonCyan = Color(0xFF2cccd1);
