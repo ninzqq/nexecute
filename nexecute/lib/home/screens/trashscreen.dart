@@ -21,6 +21,7 @@ class TrashScreen extends StatelessWidget {
                 context: context,
                 builder: (context) => AlertDialog(
                       title: const Text('Warning'),
+                      backgroundColor: darkGreen,
                       content: const Text(
                           'Are you sure you want to delete all the items in trash permanently?\nNote: This action cannot be undone.'),
                       actions: <Widget>[
