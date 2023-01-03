@@ -53,6 +53,11 @@ class _NexecuteState extends State<Nexecute> {
                 catchError: (_, err) => Count(),
                 initialData: Count(),
               ),
+              StreamProvider(
+                create: (_) => FirestoreService().streamQuicxecsList(),
+                catchError: (_, err) => QuicxecsList(),
+                initialData: QuicxecsList(),
+              ),
               //ChangeNotifierProvider(
               //  create: (context) => QuicxecsList(),
               //),

@@ -10,7 +10,7 @@ import 'package:nexecute/home/widgets/quicxecitem.dart';
 class Quicxecs extends StatelessWidget {
   Quicxecs({Key? key}) : super(key: key);
 
-  final asdf = AuthService().userStream.switchMap(
+  final quicxecsStream = AuthService().userStream.switchMap(
         (user) => FirebaseFirestore.instance
             .collection('users')
             .doc(user?.uid)
@@ -21,7 +21,7 @@ class Quicxecs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
-      stream: asdf,
+      stream: quicxecsStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const LoadingTextScreen();

@@ -30,8 +30,11 @@ class FirestoreService {
             .doc(user.uid)
             .collection('quicxecs')
             .snapshots();
-        //var asdf = ref.map<Quicxec>((doc) => Quicxec.fromJson(doc));
-        return Stream.fromIterable([QuicxecsList()]);
+
+        return QuicxecsList(
+            quicxecsList: ref.map((list) =>
+                    list.docs.map((doc) => Quicxec.fromJson(doc.data())))
+                as List<Quicxec>) as Stream<QuicxecsList>;
       } else {
         return Stream.fromIterable([QuicxecsList()]);
       }

@@ -15,40 +15,33 @@ class HomeScreen extends StatelessWidget {
     var asdf = Provider.of<Asdf>(context);
     var homePageIndex = Provider.of<HomeTabIndex>(context);
 
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(
-          create: (context) => QuicxecsList(),
-        )
-      ],
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Quicxecs'),
-          backgroundColor: appBarDarkCyan,
-        ),
-        drawer: const MainDrawer(),
-        body: Stack(
-          children: [
-            PageView(
-              controller: pageController,
-              onPageChanged: (page) {
-                homePageIndex.changeIndex(page);
-              },
-              children: [
-                Container(
-                  color: bgDarkerCyan,
-                  child: const Center(
-                    child: Text('First'),
-                  ),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Quicxecs'),
+        backgroundColor: appBarDarkCyan,
+      ),
+      drawer: const MainDrawer(),
+      body: Stack(
+        children: [
+          PageView(
+            controller: pageController,
+            onPageChanged: (page) {
+              homePageIndex.changeIndex(page);
+            },
+            children: [
+              Container(
+                color: bgDarkerCyan,
+                child: const Center(
+                  child: Text('First'),
                 ),
-                Quicxecs(),
-              ],
-            ),
-            BottomNavBar(
-              changePage: pageController.animateToPage,
-            ),
-          ],
-        ),
+              ),
+              Quicxecs(),
+            ],
+          ),
+          BottomNavBar(
+            changePage: pageController.animateToPage,
+          ),
+        ],
       ),
     );
   }
