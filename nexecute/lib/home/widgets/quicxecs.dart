@@ -8,20 +8,20 @@ import 'package:provider/provider.dart';
 import 'package:nexecute/home/widgets/quicxecitem.dart';
 
 class Quicxecs extends StatelessWidget {
-  const Quicxecs({Key? key}) : super(key: key);
+  Quicxecs({Key? key}) : super(key: key);
+
+  final asdf = AuthService().userStream.switchMap(
+        (user) => FirebaseFirestore.instance
+            .collection('users')
+            .doc(user?.uid)
+            .collection('quicxecs')
+            .snapshots(),
+      );
 
   @override
   Widget build(BuildContext context) {
-    //var quicxecs = context.watch<QuicxecsList>();
-
     return StreamBuilder<QuerySnapshot>(
-      stream: AuthService().userStream.switchMap(
-            (user) => FirebaseFirestore.instance
-                .collection('users')
-                .doc(user?.uid)
-                .collection('quicxecs')
-                .snapshots(),
-          ),
+      stream: asdf,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const LoadingTextScreen();

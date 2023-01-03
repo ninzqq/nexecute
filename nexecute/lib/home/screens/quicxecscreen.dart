@@ -18,7 +18,7 @@ class QuicxecScreen extends StatelessWidget {
           actions: [
             IconButton(
               onPressed: () {
-                FirestoreService().removeCurrentlyOpenQuicxec(quicxec);
+                FirestoreService().moveCurrentlyOpenQuicxecToTrash(quicxec);
                 Navigator.pop(context);
               },
               icon: const Icon(Icons.delete_forever_rounded),
@@ -43,9 +43,7 @@ class QuicxecScreen extends StatelessWidget {
                                 quicxec, controller.text),
                           }
                         else
-                          {
-                            print('JAAHAS'),
-                          }
+                          {}
                       };
               },
               child: TextField(

@@ -10,7 +10,7 @@ class AddNewQuicxecScreen extends StatelessWidget {
     final controller = TextEditingController();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('New execute'),
+        title: const Text('New quicxec'),
         backgroundColor: appBarDarkCyan,
       ),
       body: Container(
