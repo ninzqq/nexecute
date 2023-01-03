@@ -9,4 +9,6 @@ var appRoutes = {
   "/profile": (context) => const ProfileScreen(),
   "/count": (context) => const CountScreen(),
   "/addnewquicxec": (context) => const AddNewQuicxecScreen(),
+  "/settings": (context) => const SettingsScreen(),
+  "/trash": (context) => const TrashScreen(),
 };

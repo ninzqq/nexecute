@@ -72,11 +72,20 @@ class FirestoreService {
   }
 
   /// Removes currently open quicxec
-  Future<void> removeCurrentlyOpenQuicxec(quicxec) async {
+  Future<void> moveCurrentlyOpenQuicxecToTrash(quicxec) async {
     var user = AuthService().user!;
-    var ref = _db.collection('users').doc(user.uid).collection('quicxecs');
+    var refOriginal =
+        _db.collection('users').doc(user.uid).collection('quicxecs');
+    var refTrash = _db.collection('users').doc(user.uid).collection('trash');
 
-    return ref.doc(quicxec.id).delete();
+    // Copy to trash
+    var data = {
+      'id': quicxec.id,
+      'text': quicxec.text,
+    };
+    refTrash.doc(quicxec.id).set(data);
+
+    return refOriginal.doc(quicxec.id).delete();
   }
 
   /// Updates the current user's count document after pressing button

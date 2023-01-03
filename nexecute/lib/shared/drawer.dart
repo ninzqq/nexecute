@@ -30,9 +30,21 @@ class MainDrawer extends StatelessWidget {
         "selected": false,
       },
       {
+        "title": const Text("Trash"),
+        "icon": const Icon(Icons.delete_forever),
+        "function": () => {
+              Navigator.pop(context),
+              Navigator.pushNamed(context, "/trash"),
+            },
+        "selected": false,
+      },
+      {
         "title": const Text("Settings"),
         "icon": const Icon(Icons.settings),
-        "function": () => {},
+        "function": () => {
+              Navigator.pop(context),
+              Navigator.pushNamed(context, "/settings"),
+            },
         "selected": false,
       }
     ];
