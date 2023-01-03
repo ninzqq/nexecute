@@ -22,7 +22,7 @@ class FirestoreService {
   }
 
   /// Listens to changes in quicxecslist in Firestore
-  Stream<QuicxecsList> streamQuicxecsList() {
+  Stream<List<Quicxec>> streamQuicxecs() {
     return AuthService().userStream.switchMap((user) {
       if (user != null) {
         var ref = _db
@@ -31,12 +31,27 @@ class FirestoreService {
             .collection('quicxecs')
             .snapshots();
 
-        return QuicxecsList(
-            quicxecsList: ref.map((list) =>
-                    list.docs.map((doc) => Quicxec.fromJson(doc.data())))
-                as List<Quicxec>) as Stream<QuicxecsList>;
+        return ref.map((list) =>
+            list.docs.map((doc) => Quicxec.fromJson(doc.data())).toList());
       } else {
-        return Stream.fromIterable([QuicxecsList()]);
+        return Stream.fromIterable([]);
+      }
+    });
+  }
+
+  Stream<List<Quicxec>> streamTrashedQuicxecs() {
+    return AuthService().userStream.switchMap((user) {
+      if (user != null) {
+        var ref = _db
+            .collection('users')
+            .doc(user.uid)
+            .collection('trash')
+            .snapshots();
+
+        return ref.map((list) =>
+            list.docs.map((doc) => Quicxec.fromJson(doc.data())).toList());
+      } else {
+        return Stream.fromIterable([]);
       }
     });
   }

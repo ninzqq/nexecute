@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
 part 'models.g.dart';
@@ -54,6 +55,14 @@ class Quicxec {
   factory Quicxec.fromJson(Map<String, dynamic> json) =>
       _$QuicxecFromJson(json);
   Map<String, dynamic> toJson() => _$QuicxecToJson(this);
+
+  factory Quicxec.fromMap(Map data) {
+    data = data;
+    return Quicxec(
+      id: data['id'] ?? 'asdf',
+      text: data['text'] ?? 'asdf',
+    );
+  }
 }
 
 @JsonSerializable()

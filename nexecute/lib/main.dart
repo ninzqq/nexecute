@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:nexecute/home/home.dart';
@@ -48,19 +50,16 @@ class _NexecuteState extends State<Nexecute> {
         if (snapshot.connectionState == ConnectionState.done) {
           return MultiProvider(
             providers: [
-              StreamProvider(
+              StreamProvider<Count>(
                 create: (_) => FirestoreService().streamCount(),
-                catchError: (_, err) => Count(),
                 initialData: Count(),
+                catchError: (_, err) => Count(),
               ),
-              StreamProvider(
-                create: (_) => FirestoreService().streamQuicxecsList(),
-                catchError: (_, err) => QuicxecsList(),
-                initialData: QuicxecsList(),
+              StreamProvider<List<Quicxec>>(
+                create: (_) => FirestoreService().streamQuicxecs(),
+                initialData: const [],
+                catchError: (_, err) => [],
               ),
-              //ChangeNotifierProvider(
-              //  create: (context) => QuicxecsList(),
-              //),
               ChangeNotifierProvider(
                 create: (context) => Asdf(),
               ),
