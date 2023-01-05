@@ -46,47 +46,24 @@ class QuicxecItem extends StatelessWidget {
             },
             child: Padding(
               padding: const EdgeInsets.all(8.0),
-              child: Text(quicxec.text),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    quicxec.title,
+                    style: quicxecTitleText,
+                  ),
+                  Expanded(
+                      child: Text(
+                    quicxec.text,
+                    style: quicxecText,
+                  )),
+                ],
+              ),
             ),
           ),
         ),
       ),
-    );
-  }
-}
-
-class PopUpMenuTile extends StatelessWidget {
-  const PopUpMenuTile(
-      {Key? key,
-      required this.icon,
-      required this.title,
-      this.isActive = false})
-      : super(key: key);
-  final IconData icon;
-  final String title;
-  final bool isActive;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.max,
-      mainAxisAlignment: MainAxisAlignment.start,
-      children: <Widget>[
-        Icon(icon,
-            color: isActive
-                ? Theme.of(context).secondaryHeaderColor
-                : Theme.of(context).primaryColor),
-        const SizedBox(
-          width: 8,
-        ),
-        Text(
-          title,
-          style: Theme.of(context).textTheme.headline4?.copyWith(
-              color: isActive
-                  ? Theme.of(context).secondaryHeaderColor
-                  : Theme.of(context).primaryColor),
-        ),
-      ],
     );
   }
 }

@@ -56,37 +56,25 @@ class FirestoreService {
     });
   }
 
-  /// Read Quicxecs from FireStore
-  Future<QuicxecsList> getQuicxecs() async {
-    var user = AuthService().user!;
-    var ref = _db.collection('users').doc(user.uid);
-    var snapshot = await ref.get();
-    var data = snapshot.get(FieldPath(const ['quicxecs']));
-    var quicxecs = data.map<Quicxec>((q) => Quicxec.fromJson(q));
-
-    //print(quicxecs);
-
-    return QuicxecsList(quicxecsList: quicxecs.toList());
-  }
-
-  Future<void> addNewQuicxec(text) async {
+  Future<void> addNewQuicxec(text, title) async {
     var user = AuthService().user!;
     var ref = _db.collection('users').doc(user.uid).collection('quicxecs');
     var id = uuid.v1();
     var data = {
       'id': id,
       'text': text,
+      'title': title,
     };
 
     return ref.doc(id).set(data);
   }
 
   /// Modify currently open quicxec
-  Future<void> modifyCurrentlyOpenQuicxec(quicxec, text) async {
+  Future<void> modifyCurrentlyOpenQuicxec(quicxec, text, title) async {
     var user = AuthService().user!;
     var ref = _db.collection('users').doc(user.uid).collection('quicxecs');
 
-    return ref.doc(quicxec.id).update({'text': text});
+    return ref.doc(quicxec.id).update({'text': text, 'title': title});
   }
 
   /// Removes currently open quicxec
@@ -100,6 +88,7 @@ class FirestoreService {
     var data = {
       'id': quicxec.id,
       'text': quicxec.text,
+      'title': quicxec.title,
     };
     refTrash.doc(quicxec.id).set(data);
 

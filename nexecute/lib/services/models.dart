@@ -46,10 +46,14 @@ class HomeTabIndex with ChangeNotifier {
 class Quicxec {
   final String id;
   String text;
+  String title;
+  bool trashed;
 
   Quicxec({
     required this.id,
     required this.text,
+    this.title = '',
+    this.trashed = false,
   });
 
   factory Quicxec.fromJson(Map<String, dynamic> json) =>
@@ -59,29 +63,11 @@ class Quicxec {
   factory Quicxec.fromMap(Map data) {
     data = data;
     return Quicxec(
-      id: data['id'] ?? 'asdf',
-      text: data['text'] ?? 'asdf',
+      id: data['id'] ?? '',
+      text: data['text'] ?? '',
+      title: data['title'] ?? '',
+      trashed: data['trashed'] ?? false,
     );
-  }
-}
-
-@JsonSerializable()
-class QuicxecsList extends ChangeNotifier {
-  List<Quicxec> quicxecsList;
-
-  QuicxecsList({
-    this.quicxecsList = const [],
-  });
-
-  List<Quicxec> get quicxecs => quicxecsList;
-
-  factory QuicxecsList.fromJson(Map<String, dynamic> json) =>
-      _$QuicxecsListFromJson(json);
-  Map<String, dynamic> toJson() => _$QuicxecsListToJson(this);
-
-  void addQuicxecToList(quicxec) {
-    quicxecsList.add(quicxec);
-    notifyListeners();
   }
 }
 
