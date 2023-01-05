@@ -9,18 +9,6 @@ class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   var uuid = const Uuid();
 
-  /// Listens to current user's button pushed count document in Firestore
-  Stream<Count> streamCount() {
-    return AuthService().userStream.switchMap((user) {
-      if (user != null) {
-        var ref = _db.collection('users').doc(user.uid);
-        return ref.snapshots().map((doc) => Count.fromJson(doc.data()!));
-      } else {
-        return Stream.fromIterable([Count()]);
-      }
-    });
-  }
-
   /// Listens to changes in quicxecslist in Firestore
   Stream<List<Quicxec>> streamQuicxecs() {
     return AuthService().userStream.switchMap((user) {
@@ -64,49 +52,56 @@ class FirestoreService {
       'id': id,
       'text': text,
       'title': title,
+      'trashed': false,
     };
 
     return ref.doc(id).set(data);
   }
 
   /// Modify currently open quicxec
-  Future<void> modifyCurrentlyOpenQuicxec(quicxec, text, title) async {
+  Future<void> modifyCurrentlyOpenQuicxec(quicxec, newText, newTitle) async {
     var user = AuthService().user!;
     var ref = _db.collection('users').doc(user.uid).collection('quicxecs');
 
-    return ref.doc(quicxec.id).update({'text': text, 'title': title});
+    return ref.doc(quicxec.id).update({'text': newText, 'title': newTitle});
   }
 
   /// Removes currently open quicxec
   Future<void> moveCurrentlyOpenQuicxecToTrash(quicxec) async {
     var user = AuthService().user!;
-    var refOriginal =
-        _db.collection('users').doc(user.uid).collection('quicxecs');
-    var refTrash = _db.collection('users').doc(user.uid).collection('trash');
+    var ref = _db.collection('users').doc(user.uid).collection('quicxecs');
 
-    // Copy to trash
-    var data = {
-      'id': quicxec.id,
-      'text': quicxec.text,
-      'title': quicxec.title,
-    };
-    refTrash.doc(quicxec.id).set(data);
-
-    return refOriginal.doc(quicxec.id).delete();
+    return ref.doc(quicxec.id).update({'trashed': true});
   }
 
   /// Empty trash permanently
   Future<void> emptyTrash() async {
     var user = AuthService().user!;
     var batch = _db.batch();
-    var collection = _db.collection('users').doc(user.uid).collection('trash');
-    var snapshots = await collection.get();
+    var collection = _db
+        .collection('users')
+        .doc(user.uid)
+        .collection('quicxecs')
+        .where('trashed', isEqualTo: true);
+    var snapshot = await collection.get();
 
-    for (var doc in snapshots.docs) {
+    for (var doc in snapshot.docs) {
       batch.delete(doc.reference);
     }
     await batch.commit();
     return;
+  }
+
+  /// Listens to current user's button pushed count document in Firestore
+  Stream<Count> streamCount() {
+    return AuthService().userStream.switchMap((user) {
+      if (user != null) {
+        var ref = _db.collection('users').doc(user.uid);
+        return ref.snapshots().map((doc) => Count.fromJson(doc.data()!));
+      } else {
+        return Stream.fromIterable([Count()]);
+      }
+    });
   }
 
   /// Updates the current user's count document after pressing button

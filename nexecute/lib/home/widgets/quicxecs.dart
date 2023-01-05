@@ -9,7 +9,13 @@ class Quicxecs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var qs = context.watch<List<Quicxec>>();
+    var allQuicxecs = context.watch<List<Quicxec>>();
+    var activeQuicxecs = [];
+    for (var q in allQuicxecs) {
+      if (!q.trashed) {
+        activeQuicxecs.add(q);
+      }
+    }
     return Container(
       color: bgDarkerCyan,
       child: GridView.builder(
@@ -17,11 +23,12 @@ class Quicxecs extends StatelessWidget {
           crossAxisCount: 2,
           mainAxisExtent: 120,
         ),
-        itemCount: qs.length,
+        itemCount: activeQuicxecs.length,
         itemBuilder: (context, index) {
-          var doc = qs[index];
+          var quicxec = activeQuicxecs[index];
           return QuicxecItem(
-            quicxec: Quicxec(id: doc.id, text: doc.text, title: doc.title),
+            quicxec: Quicxec(
+                id: quicxec.id, text: quicxec.text, title: quicxec.title),
           );
         },
       ),
