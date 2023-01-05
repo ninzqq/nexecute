@@ -42,14 +42,22 @@ class AddNewQuicxecScreen extends StatelessWidget {
                   maxLines: 1,
                   expands: false,
                   keyboardAppearance: Brightness.dark,
+                  style: quicxecTitleText,
+                  decoration:
+                      const InputDecoration.collapsed(hintText: 'Title'),
                 ),
                 Expanded(
-                  child: TextField(
-                    controller: textController,
-                    keyboardType: TextInputType.multiline,
-                    maxLines: null,
-                    expands: true,
-                    keyboardAppearance: Brightness.dark,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 15),
+                    child: TextField(
+                        controller: textController,
+                        keyboardType: TextInputType.multiline,
+                        maxLines: null,
+                        expands: true,
+                        keyboardAppearance: Brightness.dark,
+                        style: quicxecText,
+                        decoration: const InputDecoration.collapsed(
+                            hintText: 'Quicxec')),
                   ),
                 ),
               ],

@@ -34,7 +34,7 @@ class QuicxecScreen extends StatelessWidget {
       body: Container(
         color: bgDarkCyan,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(15.0, 1.0, 15.0, 5),
+          padding: const EdgeInsets.all(20.0),
           child: Focus(
             autofocus: false,
             onFocusChange: (hasFocus) {
@@ -77,14 +77,20 @@ class QuicxecScreen extends StatelessWidget {
                   expands: false,
                   keyboardAppearance: Brightness.dark,
                   style: quicxecTitleText,
+                  decoration: const InputDecoration.collapsed(hintText: ''),
                 ),
                 Expanded(
-                  child: TextField(
-                    controller: textController..text = quicxec.text,
-                    keyboardType: TextInputType.multiline,
-                    maxLines: null,
-                    expands: true,
-                    keyboardAppearance: Brightness.dark,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 15.0),
+                    child: TextField(
+                      controller: textController..text = quicxec.text,
+                      keyboardType: TextInputType.multiline,
+                      maxLines: null,
+                      expands: true,
+                      keyboardAppearance: Brightness.dark,
+                      style: quicxecText,
+                      decoration: const InputDecoration.collapsed(hintText: ''),
+                    ),
                   ),
                 ),
               ],
