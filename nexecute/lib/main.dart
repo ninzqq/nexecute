@@ -61,6 +61,9 @@ class _NexecuteState extends State<Nexecute> {
                 catchError: (_, err) => [],
               ),
               ChangeNotifierProvider(
+                create: (context) => QuicxecsColumnCount(),
+              ),
+              ChangeNotifierProvider(
                 create: (context) => Asdf(),
               ),
               ChangeNotifierProvider(

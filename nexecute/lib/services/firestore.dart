@@ -27,23 +27,6 @@ class FirestoreService {
     });
   }
 
-  Stream<List<Quicxec>> streamTrashedQuicxecs() {
-    return AuthService().userStream.switchMap((user) {
-      if (user != null) {
-        var ref = _db
-            .collection('users')
-            .doc(user.uid)
-            .collection('trash')
-            .snapshots();
-
-        return ref.map((list) =>
-            list.docs.map((doc) => Quicxec.fromJson(doc.data())).toList());
-      } else {
-        return Stream.fromIterable([]);
-      }
-    });
-  }
-
   Future<void> addNewQuicxec(text, title) async {
     var user = AuthService().user!;
     var ref = _db.collection('users').doc(user.uid).collection('quicxecs');

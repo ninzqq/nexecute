@@ -9,6 +9,9 @@ class Quicxecs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    var columnCount = context.watch<QuicxecsColumnCount>();
+    double baseScaleFactor = 1.0;
+    double scaleFactor = 1.0;
     var allQuicxecs = context.watch<List<Quicxec>>();
     var activeQuicxecs = [];
     for (var q in allQuicxecs) {
@@ -16,21 +19,34 @@ class Quicxecs extends StatelessWidget {
         activeQuicxecs.add(q);
       }
     }
-    return Container(
-      color: bgDarkerCyan,
-      child: GridView.builder(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisExtent: 120,
+    return GestureDetector(
+      onScaleStart: (details) => {
+        baseScaleFactor = columnCount.columns.toDouble(),
+      },
+      onScaleUpdate: (details) => {
+        scaleFactor = baseScaleFactor * details.scale,
+        if (scaleFactor < 1)
+          {scaleFactor = 1.0}
+        else if (scaleFactor > 4)
+          {scaleFactor = 4},
+        columnCount.changeColumns(scaleFactor.round()),
+      },
+      child: Container(
+        color: bgDarkerCyan,
+        child: GridView.builder(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columnCount.columns,
+            mainAxisExtent: 120,
+          ),
+          itemCount: activeQuicxecs.length,
+          itemBuilder: (context, index) {
+            var quicxec = activeQuicxecs[index];
+            return QuicxecItem(
+              quicxec: Quicxec(
+                  id: quicxec.id, text: quicxec.text, title: quicxec.title),
+            );
+          },
         ),
-        itemCount: activeQuicxecs.length,
-        itemBuilder: (context, index) {
-          var quicxec = activeQuicxecs[index];
-          return QuicxecItem(
-            quicxec: Quicxec(
-                id: quicxec.id, text: quicxec.text, title: quicxec.title),
-          );
-        },
       ),
     );
   }

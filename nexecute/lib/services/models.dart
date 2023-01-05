@@ -42,6 +42,27 @@ class HomeTabIndex with ChangeNotifier {
   }
 }
 
+class QuicxecsColumnCount extends ChangeNotifier {
+  int columnCount;
+
+  int get columns {
+    return columnCount;
+  }
+
+  set columns(int columns) {
+    columnCount = columns;
+  }
+
+  QuicxecsColumnCount({
+    this.columnCount = 2,
+  });
+
+  void changeColumns(int i) {
+    this.columnCount = i;
+    notifyListeners();
+  }
+}
+
 @JsonSerializable()
 class Quicxec {
   final String id;
