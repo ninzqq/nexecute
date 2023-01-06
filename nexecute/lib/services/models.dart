@@ -51,16 +51,12 @@ class QuicxecsColumnCount extends ChangeNotifier {
 
   set columns(int columns) {
     columnCount = columns;
+    notifyListeners();
   }
 
   QuicxecsColumnCount({
     this.columnCount = 2,
   });
-
-  void changeColumns(int i) {
-    this.columnCount = i;
-    notifyListeners();
-  }
 }
 
 @JsonSerializable()

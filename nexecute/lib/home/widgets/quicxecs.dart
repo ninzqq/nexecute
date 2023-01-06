@@ -29,7 +29,7 @@ class Quicxecs extends StatelessWidget {
           {scaleFactor = 1.0}
         else if (scaleFactor > 4)
           {scaleFactor = 4},
-        columnCount.changeColumns(scaleFactor.round()),
+        columnCount.columns = scaleFactor.round(),
       },
       child: Container(
         color: bgDarkerCyan,
