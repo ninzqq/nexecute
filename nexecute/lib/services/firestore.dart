@@ -54,11 +54,7 @@ class FirestoreService {
     var user = AuthService().user!;
     var ref = _db.collection('users').doc(user.uid).collection('quicxecs');
 
-    if (toTrash) {
-      return ref.doc(quicxec.id).update({'trashed': false});
-    } else {
-      return ref.doc(quicxec.id).update({'trashed': true});
-    }
+    return ref.doc(quicxec.id).update({'trashed': !toTrash});
   }
 
   /// Empty trash permanently
