@@ -23,7 +23,7 @@ class QuicxecScreen extends StatelessWidget {
                   content: Text('Quicxec moved to trash'),
                 ),
               );
-              FirestoreService().moveCurrentlyOpenQuicxecToTrash(quicxec);
+              FirestoreService().moveCurrentlyOpenQuicxec(quicxec, true);
               Navigator.pop(context);
             },
             icon: const Icon(Icons.delete_outlined),

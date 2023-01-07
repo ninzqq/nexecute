@@ -5,29 +5,32 @@ import 'package:nexecute/shared/shared.dart';
 
 class QuicxecItem extends StatelessWidget {
   final Quicxec quicxec;
-  const QuicxecItem({Key? key, required this.quicxec}) : super(key: key);
+  final bool inTrash;
+  const QuicxecItem({Key? key, required this.quicxec, required this.inTrash})
+      : super(key: key);
 
   _onLongPress(LongPressStartDetails details, context) {
     showMenu(
+      color: darkCyan,
       context: context,
       position: RelativeRect.fromRect(
         Rect.fromLTWH(
-            details.globalPosition.dx, details.globalPosition.dy, 10, 10),
+            details.globalPosition.dx, details.globalPosition.dy, 1, 1),
         const Rect.fromLTWH(0, 0, 1000, 1000),
       ),
       items: [
         PopupMenuItem(
-            child: const Text('Move to trash'),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  backgroundColor: snackBarBgColor,
-                  content: Text('Quicxec moved to trash'),
-                ),
-              );
-              FirestoreService().moveCurrentlyOpenQuicxecToTrash(quicxec);
-            }),
-        const PopupMenuItem(child: Text('VIITUU')),
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                backgroundColor: snackBarBgColor,
+                content: Text('Quicxec moved to trash'),
+              ),
+            );
+            FirestoreService().moveCurrentlyOpenQuicxec(quicxec, inTrash);
+          },
+          child: inTrash ? const Text('Restore') : const Text('Move to trash'),
+        )
       ],
     );
   }
@@ -37,18 +40,6 @@ class QuicxecItem extends StatelessWidget {
     return GestureDetector(
       onLongPressStart: (details) {
         _onLongPress(details, context);
-        //showMenu(
-        //  context: context,
-        //  position: const RelativeRect.fromLTRB(5.0, 111.0, 0.0, 0.0),
-        //  items: <PopupMenuEntry>[
-        //    const PopupMenuItem<String>(
-        //      padding: EdgeInsets.symmetric(vertical: 0, horizontal: 6),
-        //      enabled: true,
-        //      value: '',
-        //      child: Text('TRAAAASH'),
-        //    ),
-        //  ],
-        //);
       },
       child: Hero(
         tag: quicxec.id,

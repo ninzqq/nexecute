@@ -19,6 +19,7 @@ class Quicxecs extends StatelessWidget {
         activeQuicxecs.add(q);
       }
     }
+
     return GestureDetector(
       onScaleStart: (details) => {
         baseScaleFactor = columnCount.columns.toDouble(),
@@ -44,6 +45,7 @@ class Quicxecs extends StatelessWidget {
             return QuicxecItem(
               quicxec: Quicxec(
                   id: quicxec.id, text: quicxec.text, title: quicxec.title),
+              inTrash: false,
             );
           },
         ),

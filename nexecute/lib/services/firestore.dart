@@ -50,11 +50,15 @@ class FirestoreService {
   }
 
   /// Removes currently open quicxec
-  Future<void> moveCurrentlyOpenQuicxecToTrash(quicxec) async {
+  Future<void> moveCurrentlyOpenQuicxec(Quicxec quicxec, bool toTrash) async {
     var user = AuthService().user!;
     var ref = _db.collection('users').doc(user.uid).collection('quicxecs');
 
-    return ref.doc(quicxec.id).update({'trashed': true});
+    if (toTrash) {
+      return ref.doc(quicxec.id).update({'trashed': false});
+    } else {
+      return ref.doc(quicxec.id).update({'trashed': true});
+    }
   }
 
   /// Empty trash permanently
