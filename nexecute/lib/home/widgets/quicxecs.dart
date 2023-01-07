@@ -13,7 +13,7 @@ class Quicxecs extends StatelessWidget {
     double baseScaleFactor = 1.0;
     double scaleFactor = 1.0;
     var allQuicxecs = context.watch<List<Quicxec>>();
-    var activeQuicxecs = [];
+    var activeQuicxecs = []; // Meaning: trashed=false
     for (var q in allQuicxecs) {
       if (!q.trashed) {
         activeQuicxecs.add(q);

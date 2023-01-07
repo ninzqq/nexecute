@@ -9,6 +9,7 @@ class AddNewQuicxecScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final textController = TextEditingController();
     final titleController = TextEditingController();
+    var f = FocusNode();
     return Scaffold(
       appBar: AppBar(
         title: const Text('New quicxec'),
@@ -19,7 +20,6 @@ class AddNewQuicxecScreen extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(20.0),
           child: Focus(
-            autofocus: true,
             onFocusChange: (hasFocus) {
               hasFocus
                   ? () => {}
@@ -54,6 +54,7 @@ class AddNewQuicxecScreen extends StatelessWidget {
                         keyboardType: TextInputType.multiline,
                         maxLines: null,
                         expands: true,
+                        autofocus: true,
                         keyboardAppearance: Brightness.dark,
                         style: quicxecText,
                         decoration: const InputDecoration.collapsed(
