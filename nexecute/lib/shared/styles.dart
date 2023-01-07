@@ -33,12 +33,12 @@ const loadingText = TextStyle(
 
 const quicxecText = TextStyle(
   color: almostWhite,
-  fontSize: 16,
+  fontSize: 20,
   fontWeight: FontWeight.normal,
 );
 
 const quicxecTitleText = TextStyle(
   color: almostWhite,
-  fontSize: 24,
+  fontSize: 28,
   fontWeight: FontWeight.normal,
 );

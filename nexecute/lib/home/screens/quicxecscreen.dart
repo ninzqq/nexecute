@@ -77,11 +77,12 @@ class QuicxecScreen extends StatelessWidget {
                   expands: false,
                   keyboardAppearance: Brightness.dark,
                   style: quicxecTitleText,
-                  decoration: const InputDecoration.collapsed(hintText: ''),
+                  decoration:
+                      const InputDecoration.collapsed(hintText: 'Title'),
                 ),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 15.0),
+                    padding: const EdgeInsets.only(top: 20.0),
                     child: TextField(
                       controller: textController..text = quicxec.text,
                       keyboardType: TextInputType.multiline,
@@ -89,7 +90,8 @@ class QuicxecScreen extends StatelessWidget {
                       expands: true,
                       keyboardAppearance: Brightness.dark,
                       style: quicxecText,
-                      decoration: const InputDecoration.collapsed(hintText: ''),
+                      decoration:
+                          const InputDecoration.collapsed(hintText: 'Quicxec'),
                     ),
                   ),
                 ),
