@@ -37,8 +37,11 @@ class TrashScreen extends StatelessWidget {
             var quicxec = trashedQuicxecs[index];
             return QuicxecItem(
               quicxec: Quicxec(
-                  id: quicxec.id, text: quicxec.text, title: quicxec.title),
-              inTrash: true,
+                id: quicxec.id,
+                text: quicxec.text,
+                title: quicxec.title,
+                trashed: quicxec.trashed,
+              ),
             );
           },
         ),

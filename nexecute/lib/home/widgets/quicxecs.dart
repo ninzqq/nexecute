@@ -44,8 +44,11 @@ class Quicxecs extends StatelessWidget {
             var quicxec = activeQuicxecs[index];
             return QuicxecItem(
               quicxec: Quicxec(
-                  id: quicxec.id, text: quicxec.text, title: quicxec.title),
-              inTrash: false,
+                id: quicxec.id,
+                text: quicxec.text,
+                title: quicxec.title,
+                trashed: quicxec.trashed,
+              ),
             );
           },
         ),

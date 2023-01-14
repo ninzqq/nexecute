@@ -5,9 +5,10 @@ import 'package:nexecute/shared/shared.dart';
 
 class QuicxecItem extends StatelessWidget {
   final Quicxec quicxec;
-  final bool inTrash;
-  const QuicxecItem({Key? key, required this.quicxec, required this.inTrash})
-      : super(key: key);
+  const QuicxecItem({
+    Key? key,
+    required this.quicxec,
+  }) : super(key: key);
 
   _onLongPress(LongPressStartDetails details, context) {
     showMenu(
@@ -27,9 +28,11 @@ class QuicxecItem extends StatelessWidget {
                 content: Text('Quicxec moved to trash'),
               ),
             );
-            FirestoreService().moveCurrentlyOpenQuicxec(quicxec, inTrash);
+            FirestoreService().moveCurrentlyOpenQuicxec(quicxec);
           },
-          child: inTrash ? const Text('Restore') : const Text('Move to trash'),
+          child: quicxec.trashed
+              ? const Text('Restore')
+              : const Text('Move to trash'),
         )
       ],
     );
