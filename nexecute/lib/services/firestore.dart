@@ -27,7 +27,7 @@ class FirestoreService {
     });
   }
 
-  Future<void> addNewQuicxec(text, title) async {
+  Future<void> addNewQuicxec(text, title, tags) async {
     var user = AuthService().user!;
     var ref = _db.collection('users').doc(user.uid).collection('quicxecs');
     var id = uuid.v1();
@@ -36,17 +36,23 @@ class FirestoreService {
       'text': text,
       'title': title,
       'trashed': false,
+      'tags': tags,
     };
 
     return ref.doc(id).set(data);
   }
 
   /// Modify currently open quicxec
-  Future<void> modifyCurrentlyOpenQuicxec(quicxec, newText, newTitle) async {
+  Future<void> modifyCurrentlyOpenQuicxec(
+      quicxec, newText, newTitle, tags) async {
     var user = AuthService().user!;
     var ref = _db.collection('users').doc(user.uid).collection('quicxecs');
 
-    return ref.doc(quicxec.id).update({'text': newText, 'title': newTitle});
+    return ref.doc(quicxec.id).update({
+      'text': newText,
+      'title': newTitle,
+      'tags': tags,
+    });
   }
 
   /// Removes currently open quicxec

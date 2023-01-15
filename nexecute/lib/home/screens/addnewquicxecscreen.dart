@@ -30,7 +30,7 @@ class AddNewQuicxecScreen extends StatelessWidget {
                       else
                         {
                           FirestoreService().addNewQuicxec(
-                              textController.text, titleController.text),
+                              textController.text, titleController.text, []),
                         }
                     };
             },

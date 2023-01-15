@@ -48,6 +48,7 @@ class Quicxecs extends StatelessWidget {
                 text: quicxec.text,
                 title: quicxec.title,
                 trashed: quicxec.trashed,
+                tags: quicxec.tags,
               ),
             );
           },

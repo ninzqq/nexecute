@@ -54,8 +54,12 @@ class QuicxecScreen extends StatelessWidget {
                       else if ((textController.text != quicxec.text) ||
                           (titleController.text != quicxec.text))
                         {
-                          FirestoreService().modifyCurrentlyOpenQuicxec(quicxec,
-                              textController.text, titleController.text),
+                          FirestoreService().modifyCurrentlyOpenQuicxec(
+                            quicxec,
+                            textController.text,
+                            titleController.text,
+                            [],
+                          ),
                         }
                       else
                         {

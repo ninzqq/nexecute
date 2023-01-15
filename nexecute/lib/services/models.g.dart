@@ -21,6 +21,9 @@ Quicxec _$QuicxecFromJson(Map<String, dynamic> json) => Quicxec(
       text: json['text'] as String,
       title: json['title'] as String? ?? '',
       trashed: json['trashed'] as bool? ?? false,
+      tags:
+          (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+              const [],
     );
 
 Map<String, dynamic> _$QuicxecToJson(Quicxec instance) => <String, dynamic>{
@@ -28,6 +31,7 @@ Map<String, dynamic> _$QuicxecToJson(Quicxec instance) => <String, dynamic>{
       'text': instance.text,
       'title': instance.title,
       'trashed': instance.trashed,
+      'tags': instance.tags,
     };
 
 Task _$TaskFromJson(Map<String, dynamic> json) => Task(

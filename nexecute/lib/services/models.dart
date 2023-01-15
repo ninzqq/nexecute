@@ -65,12 +65,14 @@ class Quicxec {
   String text;
   String title;
   bool trashed;
+  List<String> tags;
 
   Quicxec({
     required this.id,
     required this.text,
     this.title = '',
     this.trashed = false,
+    this.tags = const [],
   });
 
   factory Quicxec.fromJson(Map<String, dynamic> json) =>
@@ -84,6 +86,7 @@ class Quicxec {
       text: data['text'] ?? '',
       title: data['title'] ?? '',
       trashed: data['trashed'] ?? false,
+      tags: data['tags'] ?? [],
     );
   }
 }
