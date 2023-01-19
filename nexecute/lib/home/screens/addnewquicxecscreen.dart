@@ -24,9 +24,16 @@ class AddNewQuicxecScreen extends StatelessWidget {
               hasFocus
                   ? () => {}
                   : {
-                      if (textController.text == '' ||
-                          textController.text.isEmpty)
-                        {}
+                      if (textController.text.isEmpty &&
+                          titleController.text.isEmpty)
+                        {
+                          () => ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  backgroundColor: snackBarBgColor,
+                                  content: Text('Empty quicxec discarded'),
+                                ),
+                              ),
+                        }
                       else
                         {
                           FirestoreService().addNewQuicxec(
