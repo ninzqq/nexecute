@@ -15,20 +15,35 @@ class QuicxecScreen extends StatelessWidget {
         title: const Text(''),
         backgroundColor: appBarDarkCyan,
         actions: [
-          IconButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  backgroundColor: snackBarBgColor,
-                  content: Text('Quicxec moved to trash'),
-                ),
-              );
-              FirestoreService().moveCurrentlyOpenQuicxec(quicxec);
-              Navigator.pop(context);
-            },
-            icon: const Icon(Icons.delete_outlined),
-            tooltip: 'Move quicxec to trash',
-          )
+          !quicxec.trashed
+              ? IconButton(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        backgroundColor: snackBarBgColor,
+                        content: Text('Quicxec moved to trash'),
+                      ),
+                    );
+                    FirestoreService().moveCurrentlyOpenQuicxec(quicxec);
+                    Navigator.pop(context);
+                  },
+                  icon: const Icon(Icons.delete_outlined),
+                  tooltip: 'Move quicxec to trash',
+                )
+              : IconButton(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        backgroundColor: snackBarBgColor,
+                        content: Text('Quicxec restored'),
+                      ),
+                    );
+                    FirestoreService().moveCurrentlyOpenQuicxec(quicxec);
+                    Navigator.pop(context);
+                  },
+                  icon: const Icon(Icons.restore_from_trash_rounded),
+                  tooltip: 'Restore quicxec',
+                )
         ],
       ),
       body: Container(
