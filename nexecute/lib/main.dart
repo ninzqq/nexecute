@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:nexecute/services/services.dart';
@@ -34,6 +35,8 @@ class _NexecuteState extends State<Nexecute> {
 
   @override
   Widget build(BuildContext context) {
+    print(kIsWeb);
+    print(defaultTargetPlatform);
     return FutureBuilder(
       // Initialize FlutterFire:
       future: _initialization,
@@ -67,10 +70,21 @@ class _NexecuteState extends State<Nexecute> {
                 create: (context) => HomeTabIndex(),
               ),
             ],
-            child: MaterialApp(
-              routes: appRoutes,
-              theme: appTheme,
-            ),
+            child: defaultTargetPlatform == TargetPlatform.android
+                ? MaterialApp(
+                    routes: appRoutes,
+                    theme: appTheme,
+                  )
+                : kIsWeb
+                    ? const Text(
+                        'WEEEEEEEEB',
+                        textDirection: TextDirection.ltr,
+                      )
+                    : Center(
+                        child: Text(
+                        'JOTAI VITUN MUUUTAAAAAA',
+                        textDirection: TextDirection.ltr,
+                      )),
           );
         }
 
