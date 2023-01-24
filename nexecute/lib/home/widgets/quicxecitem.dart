@@ -60,7 +60,7 @@ class QuicxecItem extends StatelessWidget {
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (BuildContext context) =>
-                      QuicxecScreen(quicxec: quicxec),
+                      SingleQuicxecScreen(quicxec: quicxec),
                 ),
               );
             },
