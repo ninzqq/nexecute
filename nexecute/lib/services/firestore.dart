@@ -81,6 +81,14 @@ class FirestoreService {
     return;
   }
 
+  /// Permanently delete a single quicxec
+  Future<void> permanentlyDeleteSingleQuicxec(Quicxec quicxec) async {
+    var user = AuthService().user!;
+    var ref = _db.collection('users').doc(user.uid).collection('quicxecs');
+
+    return ref.doc(quicxec.id).delete();
+  }
+
   /// Listens to current user's button pushed count document in Firestore
   Stream<Count> streamCount() {
     return AuthService().userStream.switchMap((user) {
