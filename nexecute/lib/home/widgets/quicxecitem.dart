@@ -22,18 +22,31 @@ class QuicxecItem extends StatelessWidget {
       items: [
         PopupMenuItem(
           onTap: () {
+            FirestoreService().moveCurrentlyOpenQuicxec(quicxec);
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 backgroundColor: snackBarBgColor,
                 content: Text('Quicxec moved to trash'),
               ),
             );
-            FirestoreService().moveCurrentlyOpenQuicxec(quicxec);
           },
           child: quicxec.trashed
               ? const Text('Restore')
               : const Text('Move to trash'),
-        )
+        ),
+        if (quicxec.trashed)
+          PopupMenuItem(
+            onTap: () {
+              FirestoreService().permanentlyDeleteSingleQuicxec(quicxec);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  backgroundColor: snackBarBgColor,
+                  content: Text('Quicxec deleted.'),
+                ),
+              );
+            },
+            child: const Text('Delete permanently'),
+          ),
       ],
     );
   }
