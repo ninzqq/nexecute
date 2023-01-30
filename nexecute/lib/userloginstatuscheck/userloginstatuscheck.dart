@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:nexecute/home/screens/homescreen.dart';
 import 'package:nexecute/loginscreen/loginscreen.dart';
 import 'package:nexecute/services/services.dart';
-import 'package:nexecute/shared/shared.dart';
 import 'package:nexecute/loadingscreen/loadingscreen.dart';
 
 class UserLogInStatusCheck extends StatelessWidget {

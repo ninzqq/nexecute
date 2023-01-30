@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/shared/shared.dart';
-import 'package:nexecute/services/services.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({Key? key}) : super(key: key);

@@ -10,7 +10,6 @@ class AddNewQuicxecScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final textController = TextEditingController();
     final titleController = TextEditingController();
-    var f = FocusNode();
     return Scaffold(
       appBar: AppBar(
         title: const Text('New quicxec'),

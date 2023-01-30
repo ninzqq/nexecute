@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/services/services.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:nexecute/shared/shared.dart';
 
 class MainDrawer extends StatelessWidget {

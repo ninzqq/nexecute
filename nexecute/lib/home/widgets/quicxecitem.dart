@@ -87,10 +87,11 @@ class QuicxecItem extends StatelessWidget {
                     style: quicxecTitleText,
                   ),
                   Expanded(
-                      child: Text(
-                    quicxec.text,
-                    style: quicxecText,
-                  )),
+                    child: Text(
+                      quicxec.text,
+                      style: quicxecText,
+                    ),
+                  ),
                 ],
               ),
             ),
