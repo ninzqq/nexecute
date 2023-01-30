@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nexecute/home/widgets/taglistitem.dart';
 import 'package:nexecute/services/services.dart';
 import 'package:nexecute/home/home.dart';
 import 'package:nexecute/shared/shared.dart';
@@ -91,6 +92,20 @@ class QuicxecItem extends StatelessWidget {
                       quicxec.text,
                       style: quicxecText,
                     ),
+                  ),
+                  SizedBox(
+                    height: 20,
+                    child: Row(children: [
+                      Flexible(
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: quicxec.tags.length,
+                          itemBuilder: (BuildContext context, int index) {
+                            return TagListItem(tagText: quicxec.tags[index]);
+                          },
+                        ),
+                      ),
+                    ]),
                   ),
                 ],
               ),
