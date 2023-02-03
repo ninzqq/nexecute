@@ -20,6 +20,15 @@ class MainDrawer extends StatelessWidget {
         "selected": false,
       },
       {
+        "title": const Text('Tags'),
+        'icon': const Icon(Icons.label_outlined),
+        'function': () => {
+              Navigator.pop(context),
+              Navigator.pushNamed(context, '/tags'),
+            },
+        'selected': false,
+      },
+      {
         "title": const Text("Button pressinks"),
         "icon": const Icon(Icons.add),
         "function": () => {
