@@ -27,18 +27,6 @@ class FirestoreService {
     });
   }
 
-  /// Stream tags
-  Stream<Tags> streamTags() {
-    return AuthService().userStream.switchMap((user) {
-      if (user != null) {
-        var ref = _db.collection('users').doc(user.uid).snapshots();
-        return ref.map((doc) => Tags.fromJson(doc.data()!));
-      } else {
-        return Stream.fromIterable([]);
-      }
-    });
-  }
-
   Future<void> addNewQuicxec(text, title, tags) async {
     var user = AuthService().user!;
     var ref = _db.collection('users').doc(user.uid).collection('quicxecs');
@@ -99,6 +87,18 @@ class FirestoreService {
     var ref = _db.collection('users').doc(user.uid).collection('quicxecs');
 
     return ref.doc(quicxec.id).delete();
+  }
+
+  /// Stream tags
+  Stream<Tags> streamTags() {
+    return AuthService().userStream.switchMap((user) {
+      if (user != null) {
+        var ref = _db.collection('users').doc(user.uid).snapshots();
+        return ref.map((doc) => Tags.fromJson(doc.data()!));
+      } else {
+        return Stream.fromIterable([]);
+      }
+    });
   }
 
   /// Add new tag
