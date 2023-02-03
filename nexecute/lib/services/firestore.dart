@@ -99,6 +99,16 @@ class FirestoreService {
     });
   }
 
+  /// Remove selected tag
+  Future<void> removeSelectedTag(tag) async {
+    var user = AuthService().user!;
+    var ref = _db.collection('users').doc(user.uid);
+
+    return ref.update({
+      'tags': FieldValue.arrayRemove([tag])
+    });
+  }
+
   /// Listens to current user's button pushed count document in Firestore
   Stream<Count> streamCount() {
     return AuthService().userStream.switchMap((user) {
