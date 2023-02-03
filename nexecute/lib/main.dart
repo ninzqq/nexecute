@@ -60,6 +60,11 @@ class _NexecuteState extends State<Nexecute> {
                 initialData: const [],
                 catchError: (_, err) => [],
               ),
+              StreamProvider<Tags>(
+                create: (_) => FirestoreService().streamTags(),
+                initialData: Tags(),
+                catchError: (_, err) => Tags(),
+              ),
               ChangeNotifierProvider(
                 create: (context) => QuicxecsColumnCount(),
               ),

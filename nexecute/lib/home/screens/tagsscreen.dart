@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/shared/shared.dart';
 import 'package:nexecute/services/services.dart';
+import 'package:provider/provider.dart';
 
 class TagsScreen extends StatelessWidget {
   const TagsScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    var tags = context.watch<Tags>();
     final newTagController = TextEditingController();
 
     return Scaffold(
@@ -19,7 +21,16 @@ class TagsScreen extends StatelessWidget {
         child: Column(
           children: [
             Expanded(
-              child: Container(),
+              child: Container(
+                child: ListView.builder(
+                  itemCount: tags.tags.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    return ListTile(
+                      title: Text(tags.tags[index]),
+                    );
+                  },
+                ),
+              ),
             ),
             Padding(
               padding:

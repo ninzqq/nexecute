@@ -92,6 +92,18 @@ class Quicxec {
 }
 
 @JsonSerializable()
+class Tags {
+  List<String> tags;
+
+  Tags({
+    this.tags = const [],
+  });
+
+  factory Tags.fromJson(Map<String, dynamic> json) => _$TagsFromJson(json);
+  Map<String, dynamic> toJson() => _$TagsToJson(this);
+}
+
+@JsonSerializable()
 class Task with ChangeNotifier {
   final DateTime created;
   final String title;

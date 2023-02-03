@@ -34,6 +34,16 @@ Map<String, dynamic> _$QuicxecToJson(Quicxec instance) => <String, dynamic>{
       'tags': instance.tags,
     };
 
+Tags _$TagsFromJson(Map<String, dynamic> json) => Tags(
+      tags:
+          (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+              const [],
+    );
+
+Map<String, dynamic> _$TagsToJson(Tags instance) => <String, dynamic>{
+      'tags': instance.tags,
+    };
+
 Task _$TaskFromJson(Map<String, dynamic> json) => Task(
       created: json['created'] == null
           ? null
