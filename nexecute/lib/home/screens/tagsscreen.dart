@@ -7,6 +7,8 @@ class TagsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final newTagController = TextEditingController();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(''),
@@ -14,9 +16,41 @@ class TagsScreen extends StatelessWidget {
       ),
       body: Container(
         color: bgDarkCyan,
-        child: const Center(
-          child: Text('Jaahas.'),
+        child: Column(
+          children: [
+            Expanded(
+              child: Container(),
+            ),
+            Padding(
+              padding:
+                  const EdgeInsets.only(bottom: 25.0, left: 10.0, right: 85.0),
+              child: Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.white70),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextField(
+                      controller: newTagController,
+                      keyboardType: TextInputType.text,
+                      maxLines: 1,
+                      expands: false,
+                      keyboardAppearance: Brightness.dark,
+                      decoration:
+                          const InputDecoration.collapsed(hintText: 'Tag'),
+                    ),
+                  )),
+            )
+          ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: primaryButtonCyan,
+        onPressed: () => {
+          FirestoreService().addNewTag(newTagController.text),
+        },
+        child: const Icon(Icons.new_label_outlined),
       ),
     );
   }

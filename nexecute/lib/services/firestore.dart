@@ -89,6 +89,16 @@ class FirestoreService {
     return ref.doc(quicxec.id).delete();
   }
 
+  /// Add new tag
+  Future<void> addNewTag(tag) async {
+    var user = AuthService().user!;
+    var ref = _db.collection('users').doc(user.uid);
+
+    return ref.update({
+      'tags': FieldValue.arrayUnion([tag])
+    });
+  }
+
   /// Listens to current user's button pushed count document in Firestore
   Stream<Count> streamCount() {
     return AuthService().userStream.switchMap((user) {
