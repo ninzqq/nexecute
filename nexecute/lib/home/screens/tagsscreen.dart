@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nexecute/home/widgets/taglisttile.dart';
 import 'package:nexecute/shared/shared.dart';
 import 'package:nexecute/services/services.dart';
 import 'package:provider/provider.dart';
@@ -25,8 +26,8 @@ class TagsScreen extends StatelessWidget {
                 child: ListView.builder(
                   itemCount: tags.tags.length,
                   itemBuilder: (BuildContext context, int index) {
-                    return ListTile(
-                      title: Text(tags.tags[index]),
+                    return TagListTile(
+                      tag: tags.tags[index],
                     );
                   },
                 ),
