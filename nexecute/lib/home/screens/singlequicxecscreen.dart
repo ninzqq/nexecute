@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/home/widgets/quicxecinputfields.dart';
+import 'package:nexecute/shared/bottommenubar.dart';
 import 'package:nexecute/shared/shared.dart';
 import 'package:nexecute/services/services.dart';
 
@@ -75,7 +76,7 @@ class SingleQuicxecScreen extends StatelessWidget {
                             quicxec,
                             textController.text,
                             titleController.text,
-                            [],
+                            quicxec.tags,
                           ),
                         }
                       else
@@ -95,6 +96,13 @@ class SingleQuicxecScreen extends StatelessWidget {
               textController: textController,
             ),
           ),
+        ),
+      ),
+      bottomNavigationBar: Padding(
+        padding: MediaQuery.of(context)
+            .viewInsets, // This is to make the app bar float on top of keyboard
+        child: BottomMenubar(
+          quicxec: quicxec,
         ),
       ),
     );
