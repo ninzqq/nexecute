@@ -60,8 +60,11 @@ class TagsScreen extends StatelessWidget {
       floatingActionButton: FloatingActionButton(
         backgroundColor: primaryButtonCyan,
         onPressed: () => {
-          FirestoreService().addNewTag(newTagController.text),
-          newTagController.text = '',
+          if (newTagController.text.isNotEmpty)
+            {
+              FirestoreService().addNewTag(newTagController.text),
+              newTagController.text = '',
+            }
         },
         child: const Icon(Icons.new_label_outlined),
       ),
