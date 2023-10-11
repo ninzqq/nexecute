@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/services/models.dart';
+import 'package:nexecute/shared/shared.dart';
 import '../home/widgets/taglistitem.dart';
 
 class BottomMenubar extends StatelessWidget {
@@ -18,7 +19,7 @@ class BottomMenubar extends StatelessWidget {
       width: size.width,
       height: navBarHeight,
       child: Container(
-        color: Colors.black26,
+        color: appBarDarkCyan,
         child: Column(
           children: [
             SizedBox(
