@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
 part 'models.g.dart';
@@ -119,8 +118,8 @@ class Task with ChangeNotifier {
     this.inProgress = false,
     this.done = false,
     DateTime? deadline,
-  })  : this.created = created ?? DateTime.now(),
-        this.deadline = deadline ?? DateTime.now();
+  })  : created = created ?? DateTime.now(),
+        deadline = deadline ?? DateTime.now();
 
   factory Task.fromJson(Map<String, dynamic> json) => _$TaskFromJson(json);
   Map<String, dynamic> toJson() => _$TaskToJson(this);
