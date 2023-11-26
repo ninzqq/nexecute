@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/services/models.dart';
+import 'package:nexecute/services/services.dart';
+import 'package:nexecute/shared/shared.dart';
 import '../home/widgets/taglistitem.dart';
 
 class BottomMenubar extends StatelessWidget {
@@ -8,6 +10,47 @@ class BottomMenubar extends StatelessWidget {
     Key? key,
     required this.quicxec,
   }) : super(key: key);
+
+  _onPress(LongPressStartDetails details, context) {
+    showMenu(
+      color: darkCyan,
+      context: context,
+      position: RelativeRect.fromRect(
+        Rect.fromLTWH(
+            details.globalPosition.dx, details.globalPosition.dy, 1, 1),
+        const Rect.fromLTWH(0, 0, 1000, 1000),
+      ),
+      items: [
+        PopupMenuItem(
+          onTap: () {
+            FirestoreService().moveCurrentlyOpenQuicxec(quicxec);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                backgroundColor: snackBarBgColor,
+                content: Text('Quicxec moved to trash'),
+              ),
+            );
+          },
+          child: quicxec.trashed
+              ? const Text('Restore')
+              : const Text('Move to trash'),
+        ),
+        if (quicxec.trashed)
+          PopupMenuItem(
+            onTap: () {
+              FirestoreService().permanentlyDeleteSingleQuicxec(quicxec);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  backgroundColor: snackBarBgColor,
+                  content: Text('Quicxec deleted.'),
+                ),
+              );
+            },
+            child: const Text('Delete permanently'),
+          ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,10 +87,15 @@ class BottomMenubar extends StatelessWidget {
               width: size.width,
               height: 35,
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
                     onPressed: () => {},
                     icon: const Icon(Icons.new_label_outlined),
+                  ),
+                  IconButton(
+                    onPressed: () => {},
+                    icon: const Icon(Icons.menu),
                   ),
                 ],
               ),
