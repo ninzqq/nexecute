@@ -68,7 +68,7 @@ class MainDrawer extends StatelessWidget {
                 padding: const EdgeInsets.all(20),
                 child: Text(
                   'Nexecute',
-                  style: Theme.of(context).textTheme.headline1,
+                  style: Theme.of(context).textTheme.labelLarge,
                 ),
               ),
             ),

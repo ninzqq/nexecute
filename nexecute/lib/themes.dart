@@ -10,13 +10,13 @@ var appTheme = ThemeData(
     color: Color.fromARGB(255, 32, 41, 41),
   ),
   textTheme: const TextTheme(
-    headline1: TextStyle(
+    labelLarge: TextStyle(
       fontSize: 24,
       fontWeight: FontWeight.bold,
       color: almostWhite,
     ),
-    headline2: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-    bodyText1: TextStyle(fontSize: 18),
-    bodyText2: TextStyle(fontSize: 12),
+    labelMedium: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+    bodyLarge: TextStyle(fontSize: 18),
+    bodyMedium: TextStyle(fontSize: 12),
   ),
 );

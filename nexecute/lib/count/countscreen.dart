@@ -24,13 +24,13 @@ class CountScreen extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 140),
                 child: Text(
                   'You have pushed the button this many times:',
-                  style: Theme.of(context).textTheme.bodyText2,
+                  style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.all(10),
                 child: Text(count.count.toString(),
-                    style: Theme.of(context).textTheme.headline1),
+                    style: Theme.of(context).textTheme.labelLarge),
               ),
               Padding(
                 padding: const EdgeInsets.only(top: 100),
