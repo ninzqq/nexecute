@@ -8,9 +8,9 @@ class BottomNavBarOld extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    int _selectedPage = 0;
+    int selectedPage = 0;
     return BottomNavigationBar(
-      currentIndex: _selectedPage,
+      currentIndex: selectedPage,
       items: const [
         BottomNavigationBarItem(
           icon: Icon(
@@ -35,7 +35,7 @@ class BottomNavBarOld extends StatelessWidget {
         ),
       ],
       onTap: (int idx) {
-        _selectedPage = idx;
+        selectedPage = idx;
       },
     );
   }

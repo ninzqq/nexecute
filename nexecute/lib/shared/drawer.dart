@@ -9,7 +9,7 @@ class MainDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     var user = AuthService().user;
 
-    final List<Map<String, dynamic>> _menuItem = [
+    final List<Map<String, dynamic>> menuItem = [
       {
         "title": const Text("Profile"),
         "icon": const Icon(Icons.person),
@@ -68,23 +68,23 @@ class MainDrawer extends StatelessWidget {
                 padding: const EdgeInsets.all(20),
                 child: Text(
                   'Nexecute',
-                  style: Theme.of(context).textTheme.labelLarge,
+                  style: Theme.of(context).textTheme.displayLarge,
                 ),
               ),
             ),
             Expanded(
               child: ListView.builder(
-                itemCount: _menuItem.length,
+                itemCount: menuItem.length,
                 itemBuilder: (context, index) {
                   return Padding(
                     padding: const EdgeInsets.only(left: 14.0, right: 14),
                     child: ListTile(
-                      leading: _menuItem[index]['icon'],
-                      title: _menuItem[index]['title'],
+                      leading: menuItem[index]['icon'],
+                      title: menuItem[index]['title'],
                       onTap: () => {
-                        _menuItem[index]['function'](),
+                        menuItem[index]['function'](),
                       },
-                      selected: _menuItem[index]['selected'],
+                      selected: menuItem[index]['selected'],
                     ),
                   );
                 },

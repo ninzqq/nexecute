@@ -85,7 +85,7 @@ class _NexecuteState extends State<Nexecute> {
                         'WEEEEEEEEB',
                         textDirection: TextDirection.ltr,
                       )
-                    : Center(
+                    : const Center(
                         child: Text(
                         'JOTAI VITUN MUUUTAAAAAA',
                         textDirection: TextDirection.ltr,

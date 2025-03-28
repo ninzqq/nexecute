@@ -30,7 +30,7 @@ class CountScreen extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.all(10),
                 child: Text(count.count.toString(),
-                    style: Theme.of(context).textTheme.labelLarge),
+                    style: Theme.of(context).textTheme.displayLarge),
               ),
               Padding(
                 padding: const EdgeInsets.only(top: 100),
