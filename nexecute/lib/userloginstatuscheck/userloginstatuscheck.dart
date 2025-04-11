@@ -13,13 +13,9 @@ class UserLogInStatusCheck extends StatelessWidget {
       stream: AuthService().userStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: LoadingTextScreen(),
-          );
+          return const Center(child: LoadingTextScreen());
         } else if (snapshot.hasError) {
-          return const Center(
-            child: Text('Error'),
-          );
+          return const Center(child: Text('Error'));
         } else if (snapshot.hasData) {
           return HomeScreen();
         } else {
