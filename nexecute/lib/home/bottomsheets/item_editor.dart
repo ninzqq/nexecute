@@ -15,8 +15,10 @@ void showItemEditor(
   showModalBottomSheet(
     isScrollControlled: true,
     isDismissible: true,
+    enableDrag: true,
+    useSafeArea: true,
     constraints: BoxConstraints(
-      maxHeight: MediaQuery.of(context).size.height * 0.8,
+      maxHeight: MediaQuery.of(context).size.height,
       minHeight: MediaQuery.of(context).size.height * 0.3,
     ),
     context: context,
@@ -65,11 +67,13 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
       _startTime = widget.event!.startTime;
       _endTime = widget.event!.endTime;
       _isAllDay = widget.event!.isAllDay;
+      _type = ItemType.event;
     } else if (widget.quicxec != null) {
       _titleController.text = widget.quicxec!.title;
       _descriptionController.text = widget.quicxec!.text;
       _startTime = widget.quicxec!.created;
       _dueDate = widget.quicxec!.created;
+      _type = ItemType.quicxec;
     }
     _selectedDate = widget.date;
     _isEvent = widget.event != null;
@@ -136,6 +140,10 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
   }
 
   bool _existingQuicxec(List<Quicxec> quicxecs) {
+    if (widget.quicxec == null) {
+      return false;
+    }
+
     for (var quicxec in quicxecs) {
       if (quicxec.id == widget.quicxec!.id) {
         return true;
@@ -196,11 +204,11 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                       label: Text('Event'),
                       icon: Icon(Icons.event),
                     ),
-                    ButtonSegment(
-                      value: ItemType.task,
-                      label: Text('Task'),
-                      icon: Icon(Icons.task),
-                    ),
+                    // ButtonSegment(
+                    //   value: ItemType.task,
+                    //   label: Text('Task'),
+                    //   icon: Icon(Icons.task),
+                    // ),
                     ButtonSegment(
                       value: ItemType.quicxec,
                       label: Text('Quicxec'),
@@ -233,44 +241,44 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
             const SizedBox(height: 16.0),
             TextFormField(
               controller: _descriptionController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Description',
                 border: OutlineInputBorder(),
               ),
-              maxLines: 7,
+              maxLines: _type != ItemType.quicxec ? 3 : 9,
             ),
             const SizedBox(height: 16.0),
-            Row(
-              children: [
-                if (!_isAllDay) ...[
-                  const SizedBox(width: 8.0),
-                  ItemTimePicker(
-                    time: _startTime,
-                    icon: Icons.access_time,
-                    onTimeChanged: (time) {
-                      setState(() {
-                        _startTime = time;
-                      });
-                    },
-                  ),
-                  const SizedBox(width: 8.0),
-                  if (_type != ItemType.quicxec) ...[
-                    const Icon(Icons.arrow_right_alt),
-                    const SizedBox(width: 16.0),
+            if (_type != ItemType.quicxec) ...[
+              Row(
+                children: [
+                  if (!_isAllDay) ...[
+                    const SizedBox(width: 8.0),
                     ItemTimePicker(
-                      time: _endTime,
+                      time: _startTime,
                       icon: Icons.access_time,
                       onTimeChanged: (time) {
                         setState(() {
-                          _endTime = time;
+                          _startTime = time;
                         });
                       },
                     ),
+                    const SizedBox(width: 8.0),
+                    if (_type != ItemType.quicxec) ...[
+                      const Icon(Icons.arrow_right_alt),
+                      const SizedBox(width: 16.0),
+                      ItemTimePicker(
+                        time: _endTime,
+                        icon: Icons.access_time,
+                        onTimeChanged: (time) {
+                          setState(() {
+                            _endTime = time;
+                          });
+                        },
+                      ),
+                    ],
                   ],
                 ],
-              ],
-            ),
-            if (_type != ItemType.quicxec) ...[
+              ),
               Row(
                 children: [
                   const SizedBox(width: 8.0),
@@ -311,7 +319,6 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                   ),
                 ],
               ),
-            ] else ...[
               const SizedBox(height: 8.0),
               Row(
                 children: [
