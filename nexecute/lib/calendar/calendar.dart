@@ -4,7 +4,6 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:nexecute/models/event.dart';
-import 'package:nexecute/home/bottomsheets/item_editor.dart';
 import 'package:nexecute/calendar/bottomsheets/event_details.dart';
 import 'package:nexecute/calendar/widgets/single_event_marker_widget.dart';
 import 'package:nexecute/calendar/utils.dart';
@@ -237,6 +236,8 @@ class _CalendarState extends State<Calendar> {
                                     title: Text('${value[index]}'),
                                   ),
                                 )
+                                // Add empty container to make the last item have a bottom margin 
+                                // (make the last actual item to show above bottom nav bar)
                                 : Container(
                                     height: 100,
                                     color: Colors.transparent,
