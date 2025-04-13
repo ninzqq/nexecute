@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/shared/shared.dart';
-import 'package:nexecute/services/services.dart';
+import 'package:nexecute/models/quicxec.dart';
 
 class QuicxecInputFields extends StatelessWidget {
   final Quicxec quicxec;
@@ -9,12 +9,12 @@ class QuicxecInputFields extends StatelessWidget {
   final bool? autofocus;
 
   const QuicxecInputFields({
-    Key? key,
+    super.key,
     required this.quicxec,
     required this.titleController,
     required this.textController,
     this.autofocus = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

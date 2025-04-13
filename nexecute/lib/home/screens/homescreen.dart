@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/home/widgets/quicxecs.dart';
-import 'package:nexecute/services/services.dart';
 import 'package:nexecute/shared/shared.dart';
 import 'package:provider/provider.dart';
+import 'package:nexecute/models/home_tab_index.dart';
 
 class HomeScreen extends StatelessWidget {
-  HomeScreen({Key? key}) : super(key: key);
+  HomeScreen({super.key});
 
   final PageController pageController = PageController(initialPage: 1);
 

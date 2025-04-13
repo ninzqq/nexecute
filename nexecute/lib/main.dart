@@ -6,6 +6,12 @@ import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'package:nexecute/routes.dart';
+import 'package:nexecute/models/home_tab_index.dart';
+import 'package:nexecute/models/count.dart';
+import 'package:nexecute/models/quicxec_column_count.dart';
+import 'package:nexecute/models/asdf.dart';
+import 'package:nexecute/models/quicxec.dart';
+import 'package:nexecute/models/tag.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,14 +25,14 @@ void main() async {
 /// would re-initialize FlutterFire and make our application re-enter loading state,
 /// which is undesired.
 class Nexecute extends StatefulWidget {
-  const Nexecute({Key? key}) : super(key: key);
+  const Nexecute({super.key});
 
   // Create the initialization Future outside of `build`:
   @override
-  _NexecuteState createState() => _NexecuteState();
+  NexecuteState createState() => NexecuteState();
 }
 
-class _NexecuteState extends State<Nexecute> {
+class NexecuteState extends State<Nexecute> {
   /// The future is part of the state of our widget. We should not call `initializeApp`
   /// directly inside [build].
   final Future<FirebaseApp> _initialization = Firebase.initializeApp();

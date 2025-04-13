@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:nexecute/services/services.dart';
 import 'package:nexecute/shared/shared.dart';
 
 class MainDrawer extends StatelessWidget {
-  const MainDrawer({Key? key}) : super(key: key);
+  const MainDrawer({super.key});
 
   @override
   Widget build(BuildContext context) {
-    var user = AuthService().user;
 
     final List<Map<String, dynamic>> menuItem = [
       {

@@ -1,11 +1,14 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:nexecute/services/services.dart';
+import 'package:nexecute/home/bottomsheets/item_editor.dart';
+import 'package:nexecute/models/quicxec.dart';
 import 'package:provider/provider.dart';
 import 'package:nexecute/shared/shared.dart';
+import 'package:nexecute/models/home_tab_index.dart';
 
 class BottomNavBar extends StatelessWidget {
   final Function changePage;
-  const BottomNavBar({Key? key, required this.changePage}) : super(key: key);
+  const BottomNavBar({super.key, required this.changePage});
 
   @override
   Widget build(BuildContext context) {
@@ -33,9 +36,23 @@ class BottomNavBar extends StatelessWidget {
                 height: 63,
                 child: FloatingActionButton(
                   backgroundColor: primaryButtonCyan,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(100),
+                  ),
                   elevation: 0.1,
                   onPressed: () {
-                    Navigator.pushNamed(context, '/addnewquicxec');
+                    //Navigator.pushNamed(context, '/addnewquicxec');
+                    showItemEditor(
+                      context,
+                      quicxec: Quicxec(
+                        id: '',
+                        text: '',
+                        created: DateTime.now(),
+                        title: '',
+                        tags: [],
+                        trashed: false,
+                      ),
+                    );
                   },
                   child: const Icon(Icons.add_rounded),
                 ),

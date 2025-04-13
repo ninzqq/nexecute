@@ -2,13 +2,16 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:nexecute/services/auth.dart';
-import 'package:nexecute/services/models.dart';
 import 'package:uuid/uuid.dart';
-
+import 'package:nexecute/models/count.dart';
+import 'package:nexecute/models/quicxec.dart';
+import 'package:nexecute/models/tag.dart';
+import 'package:logger/logger.dart';
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   var uuid = const Uuid();
-
+  var logger = Logger();
+  
   /// Listens to changes in quicxecslist in Firestore
   Stream<List<Quicxec>> streamQuicxecs() {
     return AuthService().userStream.switchMap((user) {
@@ -19,15 +22,25 @@ class FirestoreService {
             .collection('quicxecs')
             .snapshots();
 
-        return ref.map((list) =>
-            list.docs.map((doc) => Quicxec.fromJson(doc.data())).toList());
+        return ref.map((list) {
+          logger.i("Firestore snapshot received");
+          return list.docs.map((doc) {
+            try {
+              return Quicxec.fromFirestore(doc);
+            } catch (e) {
+              logger.e("Error converting doc to Quicxec: $e");
+              rethrow;
+            }
+          }).toList();
+        });
       } else {
+        logger.e("No authenticated user, returning empty stream");
         return Stream.fromIterable([]);
       }
     });
   }
 
-  Future<void> addNewQuicxec(text, title, tags) async {
+  Future<void> addNewQuicxec(text, title, tags, created) async {
     var user = AuthService().user!;
     var ref = _db.collection('users').doc(user.uid).collection('quicxecs');
     var id = uuid.v1();
@@ -37,6 +50,7 @@ class FirestoreService {
       'title': title,
       'trashed': false,
       'tags': tags,
+      'created': created,
     };
 
     return ref.doc(id).set(data);

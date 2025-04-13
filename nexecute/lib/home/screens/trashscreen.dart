@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/shared/shared.dart';
-import 'package:nexecute/services/services.dart';
 import 'package:nexecute/home/home.dart';
 import 'package:provider/provider.dart';
 import 'package:nexecute/buttons/emtpytrashpermanentlybutton.dart';
+import 'package:nexecute/models/quicxec.dart';
 
 class TrashScreen extends StatelessWidget {
-  const TrashScreen({Key? key}) : super(key: key);
+  const TrashScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +42,7 @@ class TrashScreen extends StatelessWidget {
                 title: quicxec.title,
                 trashed: quicxec.trashed,
                 tags: quicxec.tags,
+                created: quicxec.created,
               ),
             );
           },

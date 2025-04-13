@@ -6,9 +6,9 @@ import '../../shared/shared.dart';
 class TagListTile extends StatelessWidget {
   final String tag;
   const TagListTile({
-    Key? key,
+    super.key,
     required this.tag,
-  }) : super(key: key);
+  });
 
   _onLongPress(LongPressStartDetails details, context) {
     showMenu(

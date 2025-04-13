@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:nexecute/services/models.dart';
+import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/shared/shared.dart';
 import '../home/widgets/taglistitem.dart';
 
 class BottomMenubar extends StatelessWidget {
   final Quicxec quicxec;
   const BottomMenubar({
-    Key? key,
+    super.key,
     required this.quicxec,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -3,11 +3,11 @@ import 'package:nexecute/home/widgets/quicxecinputfields.dart';
 import 'package:nexecute/shared/bottommenubar.dart';
 import 'package:nexecute/shared/shared.dart';
 import 'package:nexecute/services/services.dart';
+import 'package:nexecute/models/quicxec.dart';
 
 class SingleQuicxecScreen extends StatelessWidget {
   final Quicxec quicxec;
-  const SingleQuicxecScreen({Key? key, required this.quicxec})
-      : super(key: key);
+  const SingleQuicxecScreen({super.key, required this.quicxec});
 
   @override
   Widget build(BuildContext context) {

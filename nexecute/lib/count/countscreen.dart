@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/services/services.dart';
-import 'package:provider/provider.dart';
 import 'package:nexecute/shared/shared.dart';
+import 'package:provider/provider.dart';
+import 'package:nexecute/models/count.dart';
 
 class CountScreen extends StatelessWidget {
-  const CountScreen({Key? key}) : super(key: key);
+  const CountScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

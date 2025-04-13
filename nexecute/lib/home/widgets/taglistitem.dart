@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 class TagListItem extends StatelessWidget {
   final String tagText;
   const TagListItem({
-    Key? key,
+    super.key,
     required this.tagText,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

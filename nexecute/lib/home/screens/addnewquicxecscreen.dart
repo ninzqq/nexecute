@@ -1,10 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:nexecute/home/widgets/quicxecinputfields.dart';
 import 'package:nexecute/shared/shared.dart';
 import 'package:nexecute/services/services.dart';
+import 'package:nexecute/models/quicxec.dart';
 
 class AddNewQuicxecScreen extends StatelessWidget {
-  const AddNewQuicxecScreen({Key? key}) : super(key: key);
+  const AddNewQuicxecScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -37,12 +39,23 @@ class AddNewQuicxecScreen extends StatelessWidget {
                       else
                         {
                           FirestoreService().addNewQuicxec(
-                              textController.text, titleController.text, []),
+                              textController.text,
+                              titleController.text,
+                              [],
+                              DateTime.now(),
+                            ),
                         }
                     };
             },
             child: QuicxecInputFields(
-              quicxec: Quicxec(id: '', text: ''),
+              quicxec: Quicxec(
+                id: '',
+                text: '',
+                created: DateTime.now(),
+                title: '',
+                tags: [],
+                trashed: false,
+              ),
               titleController: titleController,
               textController: textController,
               autofocus: true,

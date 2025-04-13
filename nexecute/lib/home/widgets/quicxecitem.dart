@@ -3,13 +3,14 @@ import 'package:nexecute/home/widgets/taglistitem.dart';
 import 'package:nexecute/services/services.dart';
 import 'package:nexecute/home/home.dart';
 import 'package:nexecute/shared/shared.dart';
+import 'package:nexecute/models/quicxec.dart';
 
 class QuicxecItem extends StatelessWidget {
   final Quicxec quicxec;
   const QuicxecItem({
-    Key? key,
+    super.key,
     required this.quicxec,
-  }) : super(key: key);
+  });
 
   _onLongPress(LongPressStartDetails details, context) {
     showMenu(
