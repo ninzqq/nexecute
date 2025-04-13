@@ -76,12 +76,6 @@ class QuicxecItem extends StatelessWidget {
                 context,
                 quicxec: quicxec,
               );
-              //Navigator.of(context).push(
-              //  MaterialPageRoute(
-              //      builder: (BuildContext context) =>
-              //        SingleQuicxecScreen(quicxec: quicxec),
-              //    ),
-              //  );
             },
             child: Padding(
               padding: const EdgeInsets.all(8.0),

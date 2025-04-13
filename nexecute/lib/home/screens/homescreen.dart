@@ -19,6 +19,7 @@ class HomeScreen extends StatelessWidget {
         backgroundColor: appBarDarkCyan,
       ),
       drawer: const MainDrawer(),
+      backgroundColor: bgDarkerCyan,
       body: Stack(
         children: [
           PageView(
