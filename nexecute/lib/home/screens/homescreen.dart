@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nexecute/calendar/calendar.dart';
 import 'package:nexecute/home/widgets/quicxecs.dart';
 import 'package:nexecute/shared/shared.dart';
 import 'package:provider/provider.dart';
@@ -30,12 +31,7 @@ class HomeScreen extends StatelessWidget {
                 homePageIndex.changeIndex(page);
               },
               children: [
-                Container(
-                  color: bgDarkerCyan,
-                  child: const Center(
-                    child: Text('First'),
-                  ),
-                ),
+                const Calendar(),
                 const Quicxecs(),
               ],
             ),
