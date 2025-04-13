@@ -1,6 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:nexecute/home/bottomsheets/item_editor.dart';
+import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:provider/provider.dart';
 import 'package:nexecute/shared/shared.dart';
@@ -41,18 +41,28 @@ class BottomNavBar extends StatelessWidget {
                   ),
                   elevation: 0.1,
                   onPressed: () {
-                    //Navigator.pushNamed(context, '/addnewquicxec');
-                    showItemEditor(
-                      context,
-                      quicxec: Quicxec(
-                        id: '',
-                        text: '',
-                        created: DateTime.now(),
-                        title: '',
-                        tags: [],
-                        trashed: false,
-                      ),
-                    );
+                    homePageIndex.idx == 0
+                        ? showItemEditor(
+                          context,
+                          event: Event(
+                            title: '',
+                            description: '',
+                            startTime: DateTime.now(),
+                            endTime: DateTime.now(),
+                            isAllDay: false,
+                          ),
+                        )
+                        : showItemEditor(
+                          context,
+                          quicxec: Quicxec(
+                            id: '',
+                            text: '',
+                            created: DateTime.now(),
+                            title: '',
+                            tags: [],
+                            trashed: false,
+                          ),
+                        );
                   },
                   child: const Icon(Icons.add_rounded),
                 ),
@@ -74,13 +84,12 @@ class BottomNavBar extends StatelessWidget {
                       );
                     },
                     icon: const Icon(Icons.calendar_month_outlined),
-                    color: homePageIndex.idx == 0
-                        ? primaryButtonCyan
-                        : Colors.grey.shade400,
+                    color:
+                        homePageIndex.idx == 0
+                            ? primaryButtonCyan
+                            : Colors.grey.shade400,
                   ),
-                  Container(
-                    width: size.width * 0.12,
-                  ),
+                  Container(width: size.width * 0.12),
                   IconButton(
                     onPressed: () {
                       homePageIndex.changeIndex(1);
@@ -91,9 +100,10 @@ class BottomNavBar extends StatelessWidget {
                       );
                     },
                     icon: const Icon(Icons.list_alt_sharp),
-                    color: homePageIndex.idx == 1
-                        ? primaryButtonCyan
-                        : Colors.grey.shade400,
+                    color:
+                        homePageIndex.idx == 1
+                            ? primaryButtonCyan
+                            : Colors.grey.shade400,
                   ),
                 ],
               ),
@@ -108,16 +118,20 @@ class BottomNavBar extends StatelessWidget {
 class BottomNavBarPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    Paint paint = Paint()
-      ..color = appBarDarkCyan
-      ..style = PaintingStyle.fill;
+    Paint paint =
+        Paint()
+          ..color = appBarDarkCyan
+          ..style = PaintingStyle.fill;
 
     Path path = Path();
     path.moveTo(0, 30); // Start
     path.quadraticBezierTo(size.width * 0.20, 0, size.width * 0.35, 0);
     path.quadraticBezierTo(size.width * 0.40, 0, size.width * 0.40, 20);
-    path.arcToPoint(Offset(size.width * 0.60, 20),
-        radius: const Radius.circular(20.0), clockwise: false);
+    path.arcToPoint(
+      Offset(size.width * 0.60, 20),
+      radius: const Radius.circular(20.0),
+      clockwise: false,
+    );
     path.quadraticBezierTo(size.width * 0.60, 0, size.width * 0.65, 0);
     path.quadraticBezierTo(size.width * 0.80, 0, size.width, 30);
     path.lineTo(size.width, size.height);

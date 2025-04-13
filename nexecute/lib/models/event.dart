@@ -15,6 +15,6 @@ class Event {
 
   @override
   String toString() {
-    return title;
+    return 'Event(title: $title, description: $description, startTime: $startTime, endTime: $endTime, isAllDay: $isAllDay)';
   }
 }

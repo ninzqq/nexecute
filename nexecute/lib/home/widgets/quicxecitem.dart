@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:nexecute/home/bottomsheets/item_editor.dart';
 import 'package:nexecute/home/widgets/taglistitem.dart';
 import 'package:nexecute/services/services.dart';
-import 'package:nexecute/home/home.dart';
 import 'package:nexecute/shared/shared.dart';
 import 'package:nexecute/models/quicxec.dart';
 
@@ -72,12 +72,16 @@ class QuicxecItem extends StatelessWidget {
           ),
           child: InkWell(
             onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (BuildContext context) =>
-                      SingleQuicxecScreen(quicxec: quicxec),
-                ),
+              showItemEditor(
+                context,
+                quicxec: quicxec,
               );
+              //Navigator.of(context).push(
+              //  MaterialPageRoute(
+              //      builder: (BuildContext context) =>
+              //        SingleQuicxecScreen(quicxec: quicxec),
+              //    ),
+              //  );
             },
             child: Padding(
               padding: const EdgeInsets.all(8.0),

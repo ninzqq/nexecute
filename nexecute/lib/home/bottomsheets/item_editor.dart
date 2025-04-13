@@ -1,9 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/home/widgets/item_time_picker.dart';
 import 'package:nexecute/services/firestore.dart';
+import 'package:nexecute/shared/styles.dart';
+import 'package:provider/provider.dart';
 
 void showItemEditor(
   BuildContext context, {
@@ -24,7 +25,11 @@ void showItemEditor(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
       child: SingleChildScrollView(
-        child: ItemEditorSheet(event: event, quicxec: quicxec, date: date),
+        child: ItemEditorSheet(
+          event: event,
+          quicxec: quicxec,
+          date: date,
+        ),
       ),
     ),
   );
@@ -52,9 +57,10 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
   DateTime _startTime = DateTime.now();
   DateTime _endTime = DateTime.now().add(const Duration(hours: 1));
   bool _isAllDay = false;
-  bool _isEvent = true;
+  bool _isEvent = false;
   DateTime? _dueDate;
   DateTime? _selectedDate;
+
   @override
   void initState() {
     super.initState();
@@ -71,6 +77,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
       _dueDate = widget.quicxec!.created;
     }
     _selectedDate = widget.date;
+    _isEvent = widget.event != null;
   }
 
   @override
@@ -80,7 +87,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
     super.dispose();
   }
 
-  void _submit() {
+  void _submitQuicxec(List<Quicxec> allQuicxecs) {
     if (_formKey.currentState!.validate()) {
       if (_isEvent) {
         final event = Event(
@@ -100,26 +107,56 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
           tags: [],
           trashed: false,
         );
-        print("************************************************");
-        print("quicxec: $quicxec");
-        print("************************************************");
-        FirestoreService().addNewQuicxec(
-          _titleController.text,
-          _descriptionController.text,
-          [],
-          _startTime,
-        );
-        Navigator.pop(context, quicxec);
+
+        bool existingQuicxec = false;
+        for (var quicxec in allQuicxecs) {
+          if (quicxec.id == widget.quicxec!.id) {
+            existingQuicxec = true;
+          }
+        }
+
+        if (existingQuicxec) {
+          FirestoreService().modifyCurrentlyOpenQuicxec(
+            quicxec,
+            _descriptionController.text,
+            _titleController.text,
+            quicxec.tags,
+          );
+        } else {
+          FirestoreService().addNewQuicxec(
+            _descriptionController.text,
+            _titleController.text,
+            [],
+            _startTime,
+          );
+        }
+        Navigator.pop(context);
       }
     }
   }
 
+  void _submitEvent() {
+    final event = Event(
+      title: _titleController.text,
+      description: _descriptionController.text,
+      startTime: _startTime,
+      endTime: _endTime,
+      isAllDay: _isAllDay,
+    );
+    print(event);
+    Navigator.pop(context, event);
+  }
+
   @override
   Widget build(BuildContext context) {
+
+    var quicxecs = Provider.of<List<Quicxec>>(context);
+
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        //color: Theme.of(context).colorScheme.surface,
+        color: drawerBgColor,
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(16.0),
           topRight: Radius.circular(16.0),
@@ -133,15 +170,11 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
           children: [
             Row(
               children: [
-                Text(
-                  widget.event != null ? 'Edit' : 'Add new event',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
                 const Spacer(),
                 SegmentedButton<bool>(
                   segments: const [
                     ButtonSegment(value: true, label: Text('Event')),
-                    ButtonSegment(value: false, label: Text('Task')),
+                    ButtonSegment(value: false, label: Text('Quicxec')),
                   ],
                   selected: {_isEvent},
                   onSelectionChanged: (Set<bool> newSelection) {
@@ -276,7 +309,9 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _submit,
+                onPressed: () => _isEvent
+                    ? _submitEvent()
+                    : _submitQuicxec(quicxecs),
                 child: const Text('Save'),
               ),
             ),

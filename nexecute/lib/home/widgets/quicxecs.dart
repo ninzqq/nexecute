@@ -12,9 +12,6 @@ class Quicxecs extends StatelessWidget {
   Widget build(BuildContext context) {
     var columnCount = context.watch<QuicxecsColumnCount>();
     var allQuicxecs = context.watch<List<Quicxec>>();
-    print("************************************************");
-    print("allQuicxecs: $allQuicxecs");
-    print("************************************************");
     var activeQuicxecs = []; // Meaning: trashed=false
     for (var q in allQuicxecs) {
       if (!q.trashed) {

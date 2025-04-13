@@ -11,7 +11,7 @@ class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   var uuid = const Uuid();
   var logger = Logger();
-  
+
   /// Listens to changes in quicxecslist in Firestore
   Stream<List<Quicxec>> streamQuicxecs() {
     return AuthService().userStream.switchMap((user) {
@@ -57,7 +57,7 @@ class FirestoreService {
   }
 
   /// Modify currently open quicxec
-  Future<void> modifyCurrentlyOpenQuicxec(
+  Future<void>modifyCurrentlyOpenQuicxec(
       quicxec, newText, newTitle, tags) async {
     var user = AuthService().user!;
     var ref = _db.collection('users').doc(user.uid).collection('quicxecs');

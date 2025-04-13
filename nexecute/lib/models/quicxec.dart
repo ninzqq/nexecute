@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:json_annotation/json_annotation.dart';
-part 'quicxec.g.dart';
 
 @JsonSerializable()
 class Quicxec {
@@ -19,10 +18,6 @@ class Quicxec {
     this.tags = const [],
     required this.created,
   });
-
-  //factory Quicxec.fromJson(Map<String, dynamic> json) =>
-  //   _$QuicxecFromJson(json);
-  //Map<String, dynamic> toJson() => _$QuicxecToJson(this);
 
   Map<String, dynamic> toFirestore() {
     return {
