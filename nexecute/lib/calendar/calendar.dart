@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import 'package:flutter/material.dart';
+import 'package:nexecute/services/firestore.dart';
+import 'package:nexecute/shared/styles.dart';
+import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/calendar/bottomsheets/event_details.dart';
@@ -31,6 +34,8 @@ class _CalendarState extends State<Calendar> {
   @override
   void initState() {
     super.initState();
+    
+    initializeEventStream(FirestoreService());
 
     _selectedDay = _focusedDay;
     _selectedEvents = ValueNotifier(_getEventsForDay(_selectedDay!));
@@ -38,6 +43,7 @@ class _CalendarState extends State<Calendar> {
 
   @override
   void dispose() {
+    disposeEventStream();
     _selectedEvents.dispose();
     super.dispose();
   }
@@ -121,9 +127,11 @@ class _CalendarState extends State<Calendar> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final events = Provider.of<List<Event>>(context);
 
     return SafeArea(
       child: Scaffold(
+        backgroundColor: bgDarkerCyan,
         body: Column(
           children: [
             TableCalendar<Event>(
@@ -155,14 +163,18 @@ class _CalendarState extends State<Calendar> {
                   color: Colors.white24,
                 ),
                 weekNumberTextStyle: theme.textTheme.bodyMedium!.copyWith(
-                  color: theme.colorScheme.primary,
+                  fontSize: 15,
+                  color: brightCyan,
                 ),
                 weekendTextStyle: theme.textTheme.bodyMedium!,
+                defaultTextStyle: theme.textTheme.bodyMedium!.copyWith(
+                  color: almostWhite,
+                ),
                 cellMargin: const EdgeInsets.all(2.0),
                 cellPadding: const EdgeInsets.only(top: 4.0),
                 cellAlignment: Alignment.topCenter,
                 tableBorder: TableBorder.all(
-                  color: theme.colorScheme.secondary,
+                  color: Colors.cyan.shade100,
                 ),
                 tablePadding: const EdgeInsets.only(left: 2.0, right: 2.0),
                 markerDecoration: BoxDecoration(
@@ -171,11 +183,11 @@ class _CalendarState extends State<Calendar> {
                 ),
                 markersAlignment: Alignment.bottomLeft,
                 selectedDecoration: BoxDecoration(
-                  color: theme.colorScheme.tertiary,
+                  color: almostWhiteWithOpacity,
                   shape: BoxShape.rectangle,
                 ),
                 todayDecoration: BoxDecoration(
-                  color: theme.colorScheme.secondary,
+                  color: darkCyan,
                   shape: BoxShape.rectangle,
                 ),
               ),
@@ -209,7 +221,7 @@ class _CalendarState extends State<Calendar> {
                                     vertical: 4.0,
                                   ),
                                   decoration: BoxDecoration(
-                                    border: Border.all(),
+                                    border: Border.all(color: Colors.cyan.shade100),
                                     borderRadius: BorderRadius.circular(12.0),
                                   ),
                                   child: ListTile(
@@ -233,7 +245,7 @@ class _CalendarState extends State<Calendar> {
                                                     event: value[index],
                                                   ),
                                         ),
-                                    title: Text('${value[index]}'),
+                                    title: Text('${value[index].title}\n${value[index].description}'),
                                   ),
                                 )
                                 // Add empty container to make the last item have a bottom margin 

@@ -1,7 +1,8 @@
 import 'dart:collection';
-
+import 'dart:async';
 import 'package:nexecute/models/event.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:nexecute/services/firestore.dart';
 
 /// Example events.
 ///
@@ -9,43 +10,36 @@ import 'package:table_calendar/table_calendar.dart';
 final kEvents = LinkedHashMap<DateTime, List<Event>>(
   equals: isSameDay,
   hashCode: getHashCode,
-)..addAll(_kEventSource);
+);
 
-final _kEventSource = {
-  for (var item in List.generate(500, (index) => index))
-    DateTime.utc(kFirstDay.year, kFirstDay.month, item * 5): List.generate(
-      item % 4 + 1,
-      (index) => Event(
-          title: 'Event $item | ${index + 1}',
-          startTime: kToday,
-          endTime: kToday),
-    ),
-}..addAll({
-    kToday: [
-      Event(title: "Today's Event 1", startTime: kToday, endTime: kToday),
-      Event(
-          title: "Today's Event 2",
-          description: "Description 2",
-          startTime: kToday,
-          endTime: kToday),
-      Event(
-          title: "Today's Event 3",
-          description: "Description 3",
-          startTime: kToday,
-          endTime: kToday),
-      Event(
-          title: "Today's Event 4",
-          description: "Description 4",
-          startTime: kToday,
-          endTime: kToday),
-      Event(
-          title: "Today's Event 5",
-          description: "Description 5",
-          startTime: kToday,
-          endTime: kToday),
-      Event(title: "Today's Event 6", startTime: kToday, endTime: kToday),
-    ],
+StreamSubscription? _eventsSubscription;
+
+void initializeEventStream(FirestoreService firestoreService) {
+  _eventsSubscription?.cancel(); // Peruuta vanha stream jos sellainen on
+  
+  _eventsSubscription = firestoreService.streamEvents().listen((events) {
+    kEvents.clear(); // Tyhjennä nykyinen kokoelma
+    
+    for (var event in events) {
+      final date = DateTime.utc(
+        event.startTime.year,
+        event.startTime.month,
+        event.startTime.day,
+      );
+      
+      if (kEvents[date] == null) {
+        kEvents[date] = [];
+      }
+      kEvents[date]!.add(event);
+    }
   });
+}
+
+// Muista peruuttaa subscription kun et enää tarvitse sitä
+void disposeEventStream() {
+  _eventsSubscription?.cancel();
+  _eventsSubscription = null;
+}
 
 int getHashCode(DateTime key) {
   return key.day * 1000000 + key.month * 10000 + key.year;

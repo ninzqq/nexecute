@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:nexecute/models/event.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:nexecute/services/auth.dart';
 import 'package:uuid/uuid.dart';
@@ -40,6 +41,34 @@ class FirestoreService {
     });
   }
 
+  /// Listens to changes in eventslist in Firestore
+  Stream<List<Event>> streamEvents() {
+    return AuthService().userStream.switchMap((user) {
+      if (user != null) {
+        var ref = _db
+            .collection('users')
+            .doc(user.uid)
+            .collection('events')
+            .snapshots();
+
+        return ref.map((list) {
+          logger.i("Firestore snapshot received");
+          return list.docs.map((doc) {
+            try {
+              return Event.fromFirestore(doc);
+            } catch (e) {
+              logger.e("Error converting doc to Event: $e");
+              rethrow;
+            }
+          }).toList();
+        });
+      } else {
+        logger.e("No authenticated user, returning empty stream");
+        return Stream.fromIterable([]);
+      }
+    });
+  }
+
   Future<void> addNewQuicxec(text, title, tags, created) async {
     var user = AuthService().user!;
     var ref = _db.collection('users').doc(user.uid).collection('quicxecs');
@@ -67,7 +96,7 @@ class FirestoreService {
       'title': newTitle,
       'tags': tags,
     });
-  }
+  }  
 
   /// Removes currently open quicxec
   Future<void> moveCurrentlyOpenQuicxec(Quicxec quicxec) async {
@@ -75,6 +104,45 @@ class FirestoreService {
     var ref = _db.collection('users').doc(user.uid).collection('quicxecs');
 
     return ref.doc(quicxec.id).update({'trashed': !quicxec.trashed});
+  }
+
+  /// Add new event
+  Future<void> addNewEvent(Event event) async {
+    var user = AuthService().user!;
+    var ref = _db.collection('users').doc(user.uid).collection('events');
+    var id = uuid.v1();
+    var data = {
+      'id': id,
+      'title': event.title,
+      'description': event.description,
+      'startTime': event.startTime,
+      'endTime': event.endTime,
+      'isAllDay': event.isAllDay,
+    };
+
+    return ref.doc(id).set(data);
+  }
+
+  /// Modify currently open event
+  Future<void> modifyCurrentlyOpenEvent(event, newTitle, newDescription, newStartTime, newEndTime, newIsAllDay) async {
+    var user = AuthService().user!;
+    var ref = _db.collection('users').doc(user.uid).collection('events');
+
+    return ref.doc(event.id).update({
+      'title': newTitle,
+      'description': newDescription,
+      'startTime': newStartTime,
+      'endTime': newEndTime,
+      'isAllDay': newIsAllDay,
+    });
+  }
+
+  /// Delete currently open event
+  Future<void> deleteCurrentlyOpenEvent(Event event) async {
+    var user = AuthService().user!;
+    var ref = _db.collection('users').doc(user.uid).collection('events');
+
+    return ref.doc(event.id).delete();
   }
 
   /// Empty trash permanently

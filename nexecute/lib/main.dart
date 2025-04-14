@@ -11,6 +11,7 @@ import 'package:nexecute/models/count.dart';
 import 'package:nexecute/models/quicxec_column_count.dart';
 import 'package:nexecute/models/asdf.dart';
 import 'package:nexecute/models/quicxec.dart';
+import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/tag.dart';
 
 void main() async {
@@ -61,6 +62,11 @@ class NexecuteState extends State<Nexecute> {
               ),
               StreamProvider<List<Quicxec>>(
                 create: (_) => FirestoreService().streamQuicxecs(),
+                initialData: const [],
+                catchError: (_, err) => [],
+              ),
+              StreamProvider<List<Event>>(
+                create: (_) => FirestoreService().streamEvents(),
                 initialData: const [],
                 catchError: (_, err) => [],
               ),

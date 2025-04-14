@@ -53,7 +53,6 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
   DateTime _startTime = DateTime.now();
   DateTime _endTime = DateTime.now().add(const Duration(hours: 1));
   bool _isAllDay = false;
-  bool _isEvent = false;
   DateTime? _dueDate;
   DateTime? _selectedDate;
   ItemType _type = ItemType.quicxec;
@@ -76,7 +75,6 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
       _type = ItemType.quicxec;
     }
     _selectedDate = widget.date;
-    _isEvent = widget.event != null;
   }
 
   @override
@@ -88,55 +86,59 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
 
   void _submitQuicxec(List<Quicxec> quicxecs) {
     if (_formKey.currentState!.validate()) {
-      if (_isEvent) {
-        final event = Event(
-          title: _titleController.text,
-          description: _descriptionController.text,
-          startTime: _startTime,
-          endTime: _endTime,
-          isAllDay: _isAllDay,
-        );
-        Navigator.pop(context, event);
-      } else {
-        final quicxec = Quicxec(
-          id: widget.quicxec!.id,
-          title: _titleController.text,
-          text: _descriptionController.text,
-          created: _startTime,
-          tags: [],
-          trashed: false,
-        );
+      final quicxec = Quicxec(
+        id: widget.quicxec!.id,
+        title: _titleController.text,
+        text: _descriptionController.text,
+        created: _startTime,
+        tags: [],
+        trashed: false,
+      );
 
-        if (_existingQuicxec(quicxecs)) {
-          FirestoreService().modifyCurrentlyOpenQuicxec(
-            quicxec,
-            _descriptionController.text,
-            _titleController.text,
-            quicxec.tags,
-          );
-        } else {
-          FirestoreService().addNewQuicxec(
-            _descriptionController.text,
-            _titleController.text,
-            [],
-            _startTime,
-          );
-        }
-        Navigator.pop(context);
+      if (_existingQuicxec(quicxecs)) {
+        FirestoreService().modifyCurrentlyOpenQuicxec(
+          quicxec,
+          _descriptionController.text,
+          _titleController.text,
+          quicxec.tags,
+        );
+      } else {
+        FirestoreService().addNewQuicxec(
+          _descriptionController.text,
+          _titleController.text,
+          [],
+          _startTime,
+        );
       }
+      Navigator.pop(context);
     }
   }
 
-  void _submitEvent() {
-    final event = Event(
-      title: _titleController.text,
-      description: _descriptionController.text,
-      startTime: _startTime,
-      endTime: _endTime,
-      isAllDay: _isAllDay,
-    );
-    print(event);
-    Navigator.pop(context, event);
+  void _submitEvent(List<Event> events) {
+    if (_formKey.currentState!.validate()) {
+      final event = Event(
+        id: widget.event!.id,
+        title: _titleController.text,
+        description: _descriptionController.text,
+        startTime: _startTime,
+        endTime: _endTime,
+        isAllDay: _isAllDay,
+      );
+
+      if (_existingEvent(events)) {
+        FirestoreService().modifyCurrentlyOpenEvent(
+          event,
+          _titleController.text,
+          _descriptionController.text,
+          _startTime,
+          _endTime,
+          _isAllDay,
+        );
+      } else {
+        FirestoreService().addNewEvent(event);
+      }
+      Navigator.pop(context, event);
+    }
   }
 
   bool _existingQuicxec(List<Quicxec> quicxecs) {
@@ -146,6 +148,19 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
 
     for (var quicxec in quicxecs) {
       if (quicxec.id == widget.quicxec!.id) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool _existingEvent(List<Event> events) {
+    if (widget.event == null) {
+      return false;
+    }
+
+    for (var event in events) {
+      if (event.id == widget.event!.id) {
         return true;
       }
     }
@@ -177,6 +192,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
   @override
   Widget build(BuildContext context) {
     List<Quicxec> quicxecs = Provider.of<List<Quicxec>>(context);
+    List<Event> events = Provider.of<List<Event>>(context);
 
     return Container(
       padding: const EdgeInsets.all(16.0),
@@ -204,11 +220,6 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                       label: Text('Event'),
                       icon: Icon(Icons.event),
                     ),
-                    // ButtonSegment(
-                    //   value: ItemType.task,
-                    //   label: Text('Task'),
-                    //   icon: Icon(Icons.task),
-                    // ),
                     ButtonSegment(
                       value: ItemType.quicxec,
                       label: Text('Quicxec'),
@@ -354,9 +365,9 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
               child: ElevatedButton(
                 onPressed:
                     () =>
-                        _type != ItemType.quicxec
-                            ? _submitEvent()
-                            : _submitQuicxec(quicxecs),
+                        _type == ItemType.quicxec
+                            ? _submitQuicxec(quicxecs)
+                            : _submitEvent(events),
                 child: const Text('Save'),
               ),
             ),

@@ -23,6 +23,8 @@ const almostWhite = Color(0xFFb4dee0);
 const darkCyan = Color(0xFF053436);
 const darkGreen = Color(0xFF09110f);
 const niceGreen = Color(0xFF39ad58);
+const almostWhiteWithOpacity = Color(0x70b4dee0);
+const brightCyan = Color(0xFF2cccd1);
 
 // Text styles
 const loadingText = TextStyle(

@@ -45,6 +45,7 @@ class BottomNavBar extends StatelessWidget {
                         ? showItemEditor(
                           context,
                           event: Event(
+                            id: '',
                             title: '',
                             description: '',
                             startTime: DateTime.now(),

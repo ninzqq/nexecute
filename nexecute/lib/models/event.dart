@@ -1,4 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Event {
+  final String id;
   final String title;
   final String description;
   final DateTime startTime;
@@ -6,6 +9,7 @@ class Event {
   final bool isAllDay;
 
   const Event({
+    required this.id,
     required this.title,
     this.description = '',
     required this.startTime,
@@ -15,6 +19,28 @@ class Event {
 
   @override
   String toString() {
-    return 'Event(title: $title, description: $description, startTime: $startTime, endTime: $endTime, isAllDay: $isAllDay)';
+    return 'Event(id: $id, title: $title, description: $description, startTime: $startTime, endTime: $endTime, isAllDay: $isAllDay)';
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'startTime': startTime,
+      'endTime': endTime,
+      'isAllDay': isAllDay,
+    };
+  }
+
+  factory Event.fromFirestore(DocumentSnapshot doc) {
+    return Event(
+      id: doc.id,
+      title: doc.get('title') ?? '',
+      description: doc.get('description') ?? '',
+      startTime: doc.get('startTime').toDate(),
+      endTime: doc.get('endTime').toDate(),
+      isAllDay: doc.get('isAllDay') ?? false,
+    );
   }
 }

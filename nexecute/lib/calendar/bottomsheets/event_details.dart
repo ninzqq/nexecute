@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/home/bottomsheets/item_editor.dart';
 import 'package:nexecute/models/event.dart';
+import 'package:nexecute/shared/styles.dart';
 
 class EventDetailsBottomSheet extends StatelessWidget {
   final Event event;
@@ -15,7 +16,7 @@ class EventDetailsBottomSheet extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: drawerBgColor,
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(16.0),
           topRight: Radius.circular(16.0),
@@ -78,6 +79,7 @@ class EventDetailsBottomSheet extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 200.0),
         ],
       ),
     );
