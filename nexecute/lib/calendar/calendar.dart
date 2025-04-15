@@ -1,8 +1,9 @@
 // Copyright 2019 Aleksander Woźniak
 // SPDX-License-Identifier: Apache-2.0
 
+import 'dart:collection';
+
 import 'package:flutter/material.dart';
-import 'package:nexecute/services/firestore.dart';
 import 'package:nexecute/shared/styles.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -22,6 +23,10 @@ class Calendar extends StatefulWidget {
 
 class _CalendarState extends State<Calendar> {
   late final ValueNotifier<List<Event>> _selectedEvents;
+  final kEvents = LinkedHashMap<DateTime, List<Event>>(
+    equals: isSameDay,
+    hashCode: getHashCode,
+  );
   CalendarFormat _calendarFormat = CalendarFormat.month;
   RangeSelectionMode _rangeSelectionMode =
       RangeSelectionMode
@@ -34,8 +39,8 @@ class _CalendarState extends State<Calendar> {
   @override
   void initState() {
     super.initState();
-    
-    initializeEventStream(FirestoreService());
+
+    //initializeEventStream(FirestoreService());
 
     _selectedDay = _focusedDay;
     _selectedEvents = ValueNotifier(_getEventsForDay(_selectedDay!));
@@ -43,9 +48,34 @@ class _CalendarState extends State<Calendar> {
 
   @override
   void dispose() {
-    disposeEventStream();
+    //disposeEventStream();
     _selectedEvents.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final events = context.watch<List<Event>>();
+
+    kEvents.clear();
+    for (var event in events) {
+      final date = DateTime.utc(
+        event.startTime.year,
+        event.startTime.month,
+        event.startTime.day,
+      );
+
+      if (kEvents[date] == null) {
+        kEvents[date] = [];
+      }
+      kEvents[date]!.add(event);
+    }
+
+    // Päivitä valitut eventit
+    if (_selectedDay != null) {
+      _selectedEvents.value = _getEventsForDay(_selectedDay!);
+    }
   }
 
   List<Event> _getEventsForDay(DateTime day) {
@@ -127,7 +157,6 @@ class _CalendarState extends State<Calendar> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final events = Provider.of<List<Event>>(context);
 
     return SafeArea(
       child: Scaffold(
@@ -173,9 +202,7 @@ class _CalendarState extends State<Calendar> {
                 cellMargin: const EdgeInsets.all(2.0),
                 cellPadding: const EdgeInsets.only(top: 4.0),
                 cellAlignment: Alignment.topCenter,
-                tableBorder: TableBorder.all(
-                  color: Colors.cyan.shade100,
-                ),
+                tableBorder: TableBorder.all(color: Colors.cyan.shade100),
                 tablePadding: const EdgeInsets.only(left: 2.0, right: 2.0),
                 markerDecoration: BoxDecoration(
                   color: theme.colorScheme.primary,
@@ -221,7 +248,9 @@ class _CalendarState extends State<Calendar> {
                                     vertical: 4.0,
                                   ),
                                   decoration: BoxDecoration(
-                                    border: Border.all(color: Colors.cyan.shade100),
+                                    border: Border.all(
+                                      color: Colors.cyan.shade100,
+                                    ),
                                     borderRadius: BorderRadius.circular(12.0),
                                   ),
                                   child: ListTile(
@@ -245,15 +274,17 @@ class _CalendarState extends State<Calendar> {
                                                     event: value[index],
                                                   ),
                                         ),
-                                    title: Text('${value[index].title}\n${value[index].description}'),
+                                    title: Text(
+                                      '${value[index].title}\n${value[index].description}',
+                                    ),
                                   ),
                                 )
-                                // Add empty container to make the last item have a bottom margin 
+                                // Add empty container to make the last item have a bottom margin
                                 // (make the last actual item to show above bottom nav bar)
                                 : Container(
-                                    height: 100,
-                                    color: Colors.transparent,
-                                  ),
+                                  height: 100,
+                                  color: Colors.transparent,
+                                ),
                   );
                 },
               ),
