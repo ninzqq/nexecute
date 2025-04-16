@@ -298,10 +298,11 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                   TextButton(
                     onPressed: () async {
                       _selectedDate = await showDatePicker(
+                        locale: const Locale('fi', 'FI'),
                         context: context,
-                        initialDate: DateTime.now(),
+                        initialDate: _startTime,
                         firstDate: DateTime.now(),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                        lastDate: DateTime.now().add(const Duration(days: 3650)),
                       );
                       if (_selectedDate != null) {
                         setState(() {
@@ -313,7 +314,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                         });
                       }
                     },
-                    child: Text(_formatDate(_selectedDate ?? DateTime.now())),
+                    child: Text(_formatDate(_selectedDate ?? _startTime)),
                   ),
                   const SizedBox(width: 8.0),
                   Expanded(

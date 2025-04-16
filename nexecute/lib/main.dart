@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/services/services.dart';
 import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'firebase_options.dart';
 import 'package:nexecute/routes.dart';
 import 'package:nexecute/models/home_tab_index.dart';
@@ -80,25 +82,25 @@ class NexecuteState extends State<Nexecute> {
               ),
               ChangeNotifierProvider(create: (context) => Asdf()),
               ChangeNotifierProvider(create: (context) => HomeTabIndex()),
+              ChangeNotifierProvider(create: (context) => SelectedDay()),
             ],
             child:
                 defaultTargetPlatform == TargetPlatform.android
-                    ? MaterialApp(routes: appRoutes, theme: appTheme)
+                    ? MaterialApp(
+                      routes: appRoutes,
+                      theme: appTheme,
+                      localizationsDelegates:
+                          GlobalMaterialLocalizations.delegates,
+                      supportedLocales: [const Locale('fi', 'FI')],
+                    )
                     : kIsWeb
-                    ? const Text('WEEEEEEEEB', textDirection: TextDirection.ltr)
-                    : const Center(
-                      child: Text(
-                        'JOTAI VITUN MUUUTAAAAAA',
-                        textDirection: TextDirection.ltr,
-                      ),
-                    ),
+                    ? Text('WEEEEEEEEB', textDirection: TextDirection.ltr)
+                    : const Center(child: Text('JOTAI VITUN MUUUTAAAAAA', textDirection: TextDirection.ltr)),
           );
         }
 
         // Otherwise, show something whilst waiting for initialization to complete
-        return const Center(
-          child: Text('loading', textDirection: TextDirection.ltr),
-        );
+        return const Center(child: Text('loading', textDirection: TextDirection.ltr));
       },
     );
   }

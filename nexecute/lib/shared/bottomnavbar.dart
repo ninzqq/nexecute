@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nexecute/home/bottomsheets/item_editor.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/quicxec.dart';
+import 'package:nexecute/models/selected_day.dart';
 import 'package:provider/provider.dart';
 import 'package:nexecute/shared/shared.dart';
 import 'package:nexecute/models/home_tab_index.dart';
@@ -12,7 +13,8 @@ class BottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var homePageIndex = Provider.of<HomeTabIndex>(context, listen: true);
+    var homePageIndex = context.watch<HomeTabIndex>();
+    
     final Size size = MediaQuery.of(context).size;
     const double navBarHeight = 70.0;
 
@@ -48,8 +50,8 @@ class BottomNavBar extends StatelessWidget {
                             id: '',
                             title: '',
                             description: '',
-                            startTime: DateTime.now(),
-                            endTime: DateTime.now(),
+                            startTime: context.read<SelectedDay>().selectedDay,
+                            endTime: context.read<SelectedDay>().selectedDay,
                             isAllDay: false,
                           ),
                         )

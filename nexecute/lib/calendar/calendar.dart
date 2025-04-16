@@ -4,6 +4,7 @@
 import 'dart:collection';
 
 import 'package:flutter/material.dart';
+import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/shared/styles.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -40,8 +41,6 @@ class _CalendarState extends State<Calendar> {
   void initState() {
     super.initState();
 
-    //initializeEventStream(FirestoreService());
-
     _selectedDay = _focusedDay;
     _selectedEvents = ValueNotifier(_getEventsForDay(_selectedDay!));
   }
@@ -72,7 +71,7 @@ class _CalendarState extends State<Calendar> {
       kEvents[date]!.add(event);
     }
 
-    // Päivitä valitut eventit
+    // Update selected day's events
     if (_selectedDay != null) {
       _selectedEvents.value = _getEventsForDay(_selectedDay!);
     }
@@ -101,6 +100,8 @@ class _CalendarState extends State<Calendar> {
       });
 
       _selectedEvents.value = _getEventsForDay(selectedDay);
+
+      context.read<SelectedDay>().setSelectedDay(selectedDay);
     }
   }
 
@@ -228,6 +229,7 @@ class _CalendarState extends State<Calendar> {
                   });
                 }
               },
+
               onPageChanged: (focusedDay) {
                 _focusedDay = focusedDay;
               },
