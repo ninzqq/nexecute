@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/models/event.dart';
+import 'package:nexecute/shared/shared.dart';
 
 class SingleEventMarkerWidget extends StatelessWidget {
   final Event event;
@@ -8,18 +9,21 @@ class SingleEventMarkerWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return SizedBox(
-      height: 16,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 2),
-        padding: const EdgeInsets.symmetric(horizontal: 2),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primary.withAlpha(80),
-          borderRadius: BorderRadius.circular(2),
-        ),
-        child: Text(
-          event.title,
-          style: theme.textTheme.bodySmall!.copyWith(fontSize: 10),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 1, left: 1, right: 1),
+      child: SizedBox(
+        height: 16,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          decoration: BoxDecoration(
+            color: darkCyan,
+            borderRadius: BorderRadius.circular(2),
+          ),
+          child: Text(
+            event.title,
+            style: theme.textTheme.bodySmall!.copyWith(fontSize: 10),
+          ),
         ),
       ),
     );

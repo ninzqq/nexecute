@@ -142,13 +142,11 @@ class _CalendarState extends State<Calendar> {
       children: [
         SizedBox(height: MediaQuery.of(context).size.height * 0.033),
         Expanded(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            spacing: 1,
-            children: [
-              for (final event in events.take(maxEvents))
-                SingleEventMarkerWidget(event: event),
-            ],
+          child: ListView.builder(
+            itemCount: events.length,
+            itemBuilder:
+                (context, index) =>
+                    SingleEventMarkerWidget(event: events[index]),
           ),
         ),
       ],

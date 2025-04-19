@@ -8,19 +8,17 @@ class SingleEventMarkerWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return SizedBox(
-      height: 16,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 2),
-        padding: const EdgeInsets.symmetric(horizontal: 2),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primary.withAlpha(80),
-          borderRadius: BorderRadius.circular(2),
-        ),
-        child: Text(
-          event.title,
-          style: theme.textTheme.bodySmall!.copyWith(fontSize: 10),
-        ),
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withAlpha(80),
+        borderRadius: BorderRadius.circular(2),
+      ),
+      child: Text(
+        event.title,
+        style: theme.textTheme.bodySmall!.copyWith(fontSize: 10),
       ),
     );
   }
