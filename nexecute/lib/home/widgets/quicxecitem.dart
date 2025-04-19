@@ -7,10 +7,7 @@ import 'package:nexecute/models/quicxec.dart';
 
 class QuicxecItem extends StatelessWidget {
   final Quicxec quicxec;
-  const QuicxecItem({
-    super.key,
-    required this.quicxec,
-  });
+  const QuicxecItem({super.key, required this.quicxec});
 
   _onLongPress(LongPressStartDetails details, context) {
     showMenu(
@@ -18,7 +15,11 @@ class QuicxecItem extends StatelessWidget {
       context: context,
       position: RelativeRect.fromRect(
         Rect.fromLTWH(
-            details.globalPosition.dx, details.globalPosition.dy, 1, 1),
+          details.globalPosition.dx,
+          details.globalPosition.dy,
+          1,
+          1,
+        ),
         const Rect.fromLTWH(0, 0, 1000, 1000),
       ),
       items: [
@@ -32,9 +33,10 @@ class QuicxecItem extends StatelessWidget {
               ),
             );
           },
-          child: quicxec.trashed
-              ? const Text('Restore')
-              : const Text('Move to trash'),
+          child:
+              quicxec.trashed
+                  ? const Text('Restore')
+                  : const Text('Move to trash'),
         ),
         if (quicxec.trashed)
           PopupMenuItem(
@@ -65,46 +67,35 @@ class QuicxecItem extends StatelessWidget {
           clipBehavior: Clip.antiAlias,
           color: bgDarkCyan,
           shape: RoundedRectangleBorder(
-            side: BorderSide(
-              color: Colors.cyan.shade100,
-            ),
+            side: BorderSide(color: Colors.cyan.shade100),
             borderRadius: const BorderRadius.all(Radius.circular(12)),
           ),
           child: InkWell(
             onTap: () {
-              showItemEditor(
-                context,
-                quicxec: quicxec,
-              );
+              showItemEditor(context, quicxec: quicxec, isEditing: true);
             },
             child: Padding(
               padding: const EdgeInsets.all(8.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    quicxec.title,
-                    style: quicxecTitleText,
-                  ),
-                  Expanded(
-                    child: Text(
-                      quicxec.text,
-                      style: quicxecText,
-                    ),
-                  ),
+                  Text(quicxec.title, style: quicxecTitleText),
+                  Expanded(child: Text(quicxec.text, style: quicxecText)),
                   SizedBox(
                     height: 20,
-                    child: Row(children: [
-                      Flexible(
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: quicxec.tags.length,
-                          itemBuilder: (BuildContext context, int index) {
-                            return TagListItem(tagText: quicxec.tags[index]);
-                          },
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: quicxec.tags.length,
+                            itemBuilder: (BuildContext context, int index) {
+                              return TagListItem(tagText: quicxec.tags[index]);
+                            },
+                          ),
                         ),
-                      ),
-                    ]),
+                      ],
+                    ),
                   ),
                 ],
               ),

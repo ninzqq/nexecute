@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/home/bottomsheets/item_editor.dart';
 import 'package:nexecute/models/event.dart';
+import 'package:nexecute/services/firestore.dart';
 import 'package:nexecute/shared/styles.dart';
 
 class EventDetailsBottomSheet extends StatelessWidget {
   final Event event;
 
-  const EventDetailsBottomSheet({
-    super.key,
-    required this.event,
-  });
+  const EventDetailsBottomSheet({super.key, required this.event});
 
   @override
   Widget build(BuildContext context) {
@@ -37,13 +35,20 @@ class EventDetailsBottomSheet extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.edit),
                 onPressed: () {
-                  showItemEditor(context, event: event);
+                  showItemEditor(context, event: event, isEditing: true);
                 },
               ),
               IconButton(
                 icon: const Icon(Icons.delete),
                 onPressed: () {
-                  // TODO: Implement delete functionality
+                  FirestoreService().deleteCurrentlyOpenEvent(event);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      backgroundColor: snackBarBgColor,
+                      content: Text('Event deleted.'),
+                    ),
+                  );
+                  Navigator.pop(context);
                 },
               ),
             ],

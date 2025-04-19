@@ -25,26 +25,30 @@ class AddNewQuicxecScreen extends StatelessWidget {
               hasFocus
                   ? () => {}
                   : {
-                      if (textController.text.isEmpty &&
-                          titleController.text.isEmpty)
-                        {
-                          () => ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  backgroundColor: snackBarBgColor,
-                                  content: Text('Empty quicxec discarded'),
-                                ),
-                              ),
-                        }
-                      else
-                        {
-                          FirestoreService().addNewQuicxec(
-                              textController.text,
-                              titleController.text,
-                              [],
-                              DateTime.now(),
-                            ),
-                        }
-                    };
+                    if (textController.text.isEmpty &&
+                        titleController.text.isEmpty)
+                      {
+                        () => ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            backgroundColor: snackBarBgColor,
+                            content: Text('Empty quicxec discarded'),
+                          ),
+                        ),
+                      }
+                    else
+                      {
+                        FirestoreService().addNewQuicxec(
+                          Quicxec(
+                            id: '',
+                            text: textController.text,
+                            title: titleController.text,
+                            created: DateTime.now(),
+                            tags: [],
+                            trashed: false,
+                          ),
+                        ),
+                      },
+                  };
             },
             child: QuicxecInputFields(
               quicxec: Quicxec(

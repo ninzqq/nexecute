@@ -8,6 +8,7 @@ import 'package:nexecute/models/count.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/tag.dart';
 import 'package:logger/logger.dart';
+
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   var uuid = const Uuid();
@@ -17,11 +18,12 @@ class FirestoreService {
   Stream<List<Quicxec>> streamQuicxecs() {
     return AuthService().userStream.switchMap((user) {
       if (user != null) {
-        var ref = _db
-            .collection('users')
-            .doc(user.uid)
-            .collection('quicxecs')
-            .snapshots();
+        var ref =
+            _db
+                .collection('users')
+                .doc(user.uid)
+                .collection('quicxecs')
+                .snapshots();
 
         return ref.map((list) {
           logger.i("Firestore snapshot received");
@@ -45,11 +47,12 @@ class FirestoreService {
   Stream<List<Event>> streamEvents() {
     return AuthService().userStream.switchMap((user) {
       if (user != null) {
-        var ref = _db
-            .collection('users')
-            .doc(user.uid)
-            .collection('events')
-            .snapshots();
+        var ref =
+            _db
+                .collection('users')
+                .doc(user.uid)
+                .collection('events')
+                .snapshots();
 
         return ref.map((list) {
           logger.i("Firestore snapshot received");
@@ -69,25 +72,29 @@ class FirestoreService {
     });
   }
 
-  Future<void> addNewQuicxec(text, title, tags, created) async {
+  Future<void> addNewQuicxec(Quicxec quicxec) async {
     var user = AuthService().user!;
     var ref = _db.collection('users').doc(user.uid).collection('quicxecs');
     var id = uuid.v1();
     var data = {
       'id': id,
-      'text': text,
-      'title': title,
+      'text': quicxec.text,
+      'title': quicxec.title,
       'trashed': false,
-      'tags': tags,
-      'created': created,
+      'tags': quicxec.tags,
+      'created': quicxec.created,
     };
 
     return ref.doc(id).set(data);
   }
 
   /// Modify currently open quicxec
-  Future<void>modifyCurrentlyOpenQuicxec(
-      quicxec, newText, newTitle, tags) async {
+  Future<void> modifyCurrentlyOpenQuicxec(
+    quicxec,
+    newText,
+    newTitle,
+    tags,
+  ) async {
     var user = AuthService().user!;
     var ref = _db.collection('users').doc(user.uid).collection('quicxecs');
 
@@ -96,7 +103,7 @@ class FirestoreService {
       'title': newTitle,
       'tags': tags,
     });
-  }  
+  }
 
   /// Removes currently open quicxec
   Future<void> moveCurrentlyOpenQuicxec(Quicxec quicxec) async {
@@ -124,7 +131,14 @@ class FirestoreService {
   }
 
   /// Modify currently open event
-  Future<void> modifyCurrentlyOpenEvent(event, newTitle, newDescription, newStartTime, newEndTime, newIsAllDay) async {
+  Future<void> modifyCurrentlyOpenEvent(
+    event,
+    newTitle,
+    newDescription,
+    newStartTime,
+    newEndTime,
+    newIsAllDay,
+  ) async {
     var user = AuthService().user!;
     var ref = _db.collection('users').doc(user.uid).collection('events');
 
@@ -139,10 +153,36 @@ class FirestoreService {
 
   /// Delete currently open event
   Future<void> deleteCurrentlyOpenEvent(Event event) async {
-    var user = AuthService().user!;
-    var ref = _db.collection('users').doc(user.uid).collection('events');
+    try {
+      // Check that user is logged in
+      final user = AuthService().user;
+      if (user == null) {
+        throw Exception('User is not logged in');
+      }
 
-    return ref.doc(event.id).delete();
+      // Check that event has ID
+      if (event.id.isEmpty) {
+        throw Exception('Event has no ID');
+      }
+
+      // Haetaan eventin viite
+      final ref = _db.collection('users').doc(user.uid).collection('events');
+
+      // Check that event exists before deletion
+      final docSnapshot = await ref.doc(event.id).get();
+      if (!docSnapshot.exists) {
+        throw Exception('Event not found');
+      }
+
+      // Perform deletion
+      await ref.doc(event.id).delete();
+    } on FirebaseException catch (e) {
+      // Firebase errors
+      throw Exception('Error deleting event: ${e.message}');
+    } catch (e) {
+      // Other errors
+      throw Exception('Unexpected error: $e');
+    }
   }
 
   /// Empty trash permanently
@@ -171,6 +211,55 @@ class FirestoreService {
     return ref.doc(quicxec.id).delete();
   }
 
+  /// Convert quicxec to event
+  Future<void> convertQuicxecToEvent(Quicxec quicxec) async {
+    try {
+      var user = AuthService().user;
+      if (user == null) {
+        throw Exception('User is not logged in');
+      }
+
+      Event newEvent = Event(
+        id: quicxec.id,
+        title: quicxec.title,
+        description: quicxec.text,
+        startTime: quicxec.created,
+        endTime: quicxec.created,
+      );
+
+      await addNewEvent(newEvent);
+      await permanentlyDeleteSingleQuicxec(quicxec);
+    } on FirebaseException catch (e) {
+      throw Exception('Error converting quicxec to event: ${e.message}');
+    } catch (e) {
+      throw Exception('Unexpected error: $e');
+    }
+  }
+
+  /// Convert event to quicxec
+  Future<void> convertEventToQuicxec(Event event) async {
+    try {
+      var user = AuthService().user;
+      if (user == null) {
+        throw Exception('User is not logged in');
+      }
+
+      Quicxec newQuicxec = Quicxec(
+        id: event.id,
+        title: event.title,
+        text: event.description,
+        created: event.startTime,
+      );
+
+      await addNewQuicxec(newQuicxec);
+      await deleteCurrentlyOpenEvent(event);
+    } on FirebaseException catch (e) {
+      throw Exception('Error converting event to quicxec: ${e.message}');
+    } catch (e) {
+      throw Exception('Unexpected error: $e');
+    }
+  }
+
   /// Stream tags
   Stream<Tags> streamTags() {
     return AuthService().userStream.switchMap((user) {
@@ -189,7 +278,7 @@ class FirestoreService {
     var ref = _db.collection('users').doc(user.uid);
 
     return ref.update({
-      'tags': FieldValue.arrayUnion([tag])
+      'tags': FieldValue.arrayUnion([tag]),
     });
   }
 
@@ -199,7 +288,7 @@ class FirestoreService {
     var ref = _db.collection('users').doc(user.uid);
 
     return ref.update({
-      'tags': FieldValue.arrayRemove([tag])
+      'tags': FieldValue.arrayRemove([tag]),
     });
   }
 
@@ -220,9 +309,7 @@ class FirestoreService {
     var user = AuthService().user!;
     var ref = _db.collection('users').doc(user.uid);
 
-    var data = {
-      'count': FieldValue.increment(1),
-    };
+    var data = {'count': FieldValue.increment(1)};
 
     return ref.set(data, SetOptions(merge: true));
   }

@@ -137,7 +137,6 @@ class _CalendarState extends State<Calendar> {
     DateTime day,
     List<Event> events,
   ) {
-    int maxEvents = 3;
     return Column(
       children: [
         SizedBox(height: MediaQuery.of(context).size.height * 0.033),

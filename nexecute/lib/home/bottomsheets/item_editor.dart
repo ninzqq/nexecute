@@ -11,6 +11,7 @@ void showItemEditor(
   Event? event,
   Quicxec? quicxec,
   DateTime? date,
+  bool isEditing = false,
 }) {
   showModalBottomSheet(
     isScrollControlled: true,
@@ -28,7 +29,12 @@ void showItemEditor(
             bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
           child: SingleChildScrollView(
-            child: ItemEditorSheet(event: event, quicxec: quicxec, date: date),
+            child: ItemEditorSheet(
+              event: event,
+              quicxec: quicxec,
+              date: date,
+              isEditing: isEditing,
+            ),
           ),
         ),
   );
@@ -38,7 +44,14 @@ class ItemEditorSheet extends StatefulWidget {
   final Event? event;
   final Quicxec? quicxec;
   final DateTime? date;
-  const ItemEditorSheet({super.key, this.event, this.quicxec, this.date});
+  final bool isEditing;
+  const ItemEditorSheet({
+    super.key,
+    this.event,
+    this.quicxec,
+    this.date,
+    this.isEditing = false,
+  });
 
   @override
   State<ItemEditorSheet> createState() => _ItemEditorSheetState();
@@ -103,12 +116,14 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
           quicxec.tags,
         );
       } else {
-        FirestoreService().addNewQuicxec(
-          _descriptionController.text,
-          _titleController.text,
-          [],
-          _startTime,
+        var newQuicxec = Quicxec(
+          id: widget.quicxec!.id,
+          text: _descriptionController.text,
+          title: _titleController.text,
+          created: _startTime,
+          tags: [],
         );
+        FirestoreService().addNewQuicxec(newQuicxec);
       }
       Navigator.pop(context);
     }
@@ -137,7 +152,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
       } else {
         FirestoreService().addNewEvent(event);
       }
-      Navigator.pop(context, event);
+      Navigator.popUntil(context, (route) => route.isFirst);
     }
   }
 
@@ -302,7 +317,9 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                         context: context,
                         initialDate: _startTime,
                         firstDate: DateTime.now(),
-                        lastDate: DateTime.now().add(const Duration(days: 3650)),
+                        lastDate: DateTime.now().add(
+                          const Duration(days: 3650),
+                        ),
                       );
                       if (_selectedDate != null) {
                         setState(() {
@@ -361,17 +378,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
               ),
             ],
             const SizedBox(height: 16.0),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed:
-                    () =>
-                        _type == ItemType.quicxec
-                            ? _submitQuicxec(quicxecs)
-                            : _submitEvent(events),
-                child: const Text('Save'),
-              ),
-            ),
+            _submitButton(quicxecs, events, widget.isEditing),
             const SizedBox(height: 8.0),
           ],
         ),
@@ -381,5 +388,42 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
 
   String _formatDate(DateTime dateTime) {
     return '${dateTime.day.toString().padLeft(2, '0')}.${dateTime.month.toString().padLeft(2, '0')}.${dateTime.year}';
+  }
+
+  Widget _submitButton(
+    List<Quicxec> quicxecs,
+    List<Event> events,
+    bool isEditing,
+  ) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: () {
+          if (isEditing) {
+            if (widget.quicxec != null &&
+                widget.event == null &&
+                _type == ItemType.event) {
+              FirestoreService().convertQuicxecToEvent(widget.quicxec!);
+            } else if (widget.event != null &&
+                widget.quicxec == null &&
+                _type == ItemType.quicxec) {
+              FirestoreService().convertEventToQuicxec(widget.event!);
+            } else {
+              _type == ItemType.quicxec
+                  ? _submitQuicxec(quicxecs)
+                  : _submitEvent(events);
+            }
+          } else {
+            // Creating a new item
+            _type == ItemType.quicxec
+                ? _submitQuicxec(quicxecs)
+                : _submitEvent(events);
+          }
+
+          Navigator.popUntil(context, (route) => route.isFirst);
+        },
+        child: isEditing ? const Text('Update') : const Text('Save'),
+      ),
+    );
   }
 }
