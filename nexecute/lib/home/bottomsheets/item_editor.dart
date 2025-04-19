@@ -182,11 +182,13 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
     return false;
   }
 
-  Widget _deleteButton(List<Quicxec> quicxecs) {
-    bool exists = _existingQuicxec(quicxecs);
+  Widget _deleteButton(List<Quicxec> quicxecs, List<Event> events) {
+    bool existsQuicxec = _existingQuicxec(quicxecs);
+    bool existsEvent = _existingEvent(events);
+
     return IconButton(
       onPressed: () {
-        if (exists) {
+        if (widget.quicxec != null && existsQuicxec) {
           FirestoreService().moveCurrentlyOpenQuicxec(widget.quicxec!);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -194,12 +196,21 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
               content: Text('Quicxec moved to trash'),
             ),
           );
-          Navigator.pop(context);
+          Navigator.popUntil(context, (route) => route.isFirst);
+        } else if (widget.event != null && existsEvent) {
+          FirestoreService().deleteCurrentlyOpenEvent(widget.event!);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: snackBarBgColor,
+              content: Text('Event deleted'),
+            ),
+          );
+          Navigator.popUntil(context, (route) => route.isFirst);
         }
       },
       icon: Icon(
         Icons.delete_forever,
-        color: exists ? Colors.red : Colors.white12,
+        color: existsQuicxec || existsEvent ? Colors.red : Colors.white12,
       ),
     );
   }
@@ -226,7 +237,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
           children: [
             Row(
               children: [
-                _deleteButton(quicxecs),
+                _deleteButton(quicxecs, events),
                 const Spacer(),
                 SegmentedButton<ItemType>(
                   segments: const [

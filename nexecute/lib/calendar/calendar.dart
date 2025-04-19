@@ -184,6 +184,10 @@ class _CalendarState extends State<Calendar> {
                     (context, day, events) =>
                         _buildEventMarker(context, day, events),
               ),
+              headerStyle: HeaderStyle(
+                decoration: BoxDecoration(color: bgDarkerCyan),
+                formatButtonVisible: false,
+              ),
               calendarStyle: CalendarStyle(
                 outsideDaysVisible: true,
                 outsideTextStyle: theme.textTheme.bodyMedium!.copyWith(
