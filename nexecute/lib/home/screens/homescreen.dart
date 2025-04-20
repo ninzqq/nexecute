@@ -17,7 +17,7 @@ class HomeScreen extends StatelessWidget {
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Quicxecs'),
+          title: const Text('Nexecute'),
           backgroundColor: appBarDarkCyan,
         ),
         drawer: const MainDrawer(),
@@ -30,14 +30,9 @@ class HomeScreen extends StatelessWidget {
               onPageChanged: (page) {
                 homePageIndex.changeIndex(page);
               },
-              children: [
-                const Calendar(),
-                const Quicxecs(),
-              ],
+              children: [const Calendar(), const Quicxecs()],
             ),
-            BottomNavBar(
-              changePage: pageController.animateToPage,
-            ),
+            BottomNavBar(changePage: pageController.animateToPage),
           ],
         ),
       ),

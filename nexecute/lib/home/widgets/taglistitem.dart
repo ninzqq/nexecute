@@ -2,10 +2,7 @@ import 'package:flutter/material.dart';
 
 class TagListItem extends StatelessWidget {
   final String tagText;
-  const TagListItem({
-    super.key,
-    required this.tagText,
-  });
+  const TagListItem({super.key, required this.tagText});
 
   @override
   Widget build(BuildContext context) {
@@ -14,9 +11,7 @@ class TagListItem extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           border: Border.all(color: Colors.blueGrey),
-          borderRadius: const BorderRadius.all(
-            Radius.circular(10),
-          ),
+          borderRadius: const BorderRadius.all(Radius.circular(10)),
         ),
         child: Padding(
           padding: const EdgeInsets.only(top: 2, bottom: 2, left: 4, right: 4),
