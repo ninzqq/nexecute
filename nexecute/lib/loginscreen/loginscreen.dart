@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nexecute/services/auth.dart';
 
 class LoginScreen extends StatelessWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -13,9 +13,7 @@ class LoginScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            const FlutterLogo(
-              size: 150,
-            ),
+            const FlutterLogo(size: 150),
             Flexible(
               child: LoginButton(
                 icon: Icons.account_circle_rounded,
@@ -31,7 +29,7 @@ class LoginScreen extends StatelessWidget {
                 loginMethod: AuthService().anonLogin,
                 color: Colors.deepPurple,
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -59,11 +57,7 @@ class LoginButton extends StatelessWidget {
       margin: const EdgeInsets.all(5),
       child: ElevatedButton.icon(
         label: Text(text),
-        icon: Icon(
-          icon,
-          color: Colors.white,
-          size: 20,
-        ),
+        icon: Icon(icon, color: Colors.white, size: 20),
         style: TextButton.styleFrom(
           padding: const EdgeInsets.all(24),
           backgroundColor: color,

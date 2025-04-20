@@ -5,7 +5,7 @@ import 'package:nexecute/services/auth.dart';
 import 'package:nexecute/models/count.dart';
 
 class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -31,26 +31,30 @@ class ProfileScreen extends StatelessWidget {
                     height: 100,
                     margin: const EdgeInsets.only(top: 50),
                     child: const Center(
-                      child: Icon(
-                        Icons.question_mark_rounded,
-                        size: 100,
-                      ),
+                      child: Icon(Icons.question_mark_rounded, size: 100),
                     ),
                   ),
-                  Text(user.email ?? '',
-                      style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    user.email ?? '',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                   const Spacer(),
-                  Text('${count.count}',
-                      style: Theme.of(context).textTheme.displayMedium),
-                  Text('Buttons tapped',
-                      style: Theme.of(context).textTheme.titleSmall),
+                  Text(
+                    '${count.count}',
+                    style: Theme.of(context).textTheme.displayMedium,
+                  ),
+                  Text(
+                    'Buttons tapped',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
                   const Spacer(),
                   ElevatedButton(
                     child: const Text('logout'),
                     onPressed: () async {
                       await AuthService().signOut();
-                      Navigator.of(context)
-                          .pushNamedAndRemoveUntil('/', (route) => false);
+                      Navigator.of(
+                        context,
+                      ).pushNamedAndRemoveUntil('/', (route) => false);
                     },
                   ),
                   const Spacer(),

@@ -5,7 +5,7 @@ import 'package:nexecute/services/services.dart';
 import 'package:nexecute/loadingscreen/loadingscreen.dart';
 
 class UserLogInStatusCheck extends StatelessWidget {
-  const UserLogInStatusCheck({Key? key}) : super(key: key);
+  const UserLogInStatusCheck({super.key});
 
   @override
   Widget build(BuildContext context) {
