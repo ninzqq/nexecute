@@ -59,8 +59,10 @@ class TagsScreen extends StatelessWidget {
               ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: darkCyan),
                 onPressed: () {
-                  FirestoreService().addNewTag(newTagController.text);
-                  newTagController.text = '';
+                  if (newTagController.text.isNotEmpty) {
+                    FirestoreService().addNewTag(newTagController.text);
+                    newTagController.text = '';
+                  }
                 },
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 18.0),

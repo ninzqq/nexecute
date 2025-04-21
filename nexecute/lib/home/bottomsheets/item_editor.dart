@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:nexecute/home/widgets/taglistitem.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/home/widgets/item_time_picker.dart';
+import 'package:nexecute/models/tag.dart';
 import 'package:nexecute/services/firestore.dart';
 import 'package:nexecute/shared/styles.dart';
 import 'package:provider/provider.dart';
@@ -66,7 +68,6 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
   DateTime _startTime = DateTime.now();
   DateTime _endTime = DateTime.now().add(const Duration(hours: 1));
   bool _isAllDay = false;
-  DateTime? _dueDate;
   DateTime? _selectedDate;
   ItemType _type = ItemType.quicxec;
 
@@ -84,7 +85,6 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
       _titleController.text = widget.quicxec!.title;
       _descriptionController.text = widget.quicxec!.text;
       _startTime = widget.quicxec!.created;
-      _dueDate = widget.quicxec!.created;
       _type = ItemType.quicxec;
     }
     _selectedDate = widget.date;
@@ -97,10 +97,21 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
     super.dispose();
   }
 
+  void onItemTypeChanged(ItemType type) {
+    setState(() {
+      _type = type;
+    });
+  }
+
   void _submitQuicxec(List<Quicxec> quicxecs) {
     if (_formKey.currentState!.validate()) {
+      var id = '';
+      if (widget.quicxec != null) {
+        id = widget.quicxec!.id;
+      }
+
       final quicxec = Quicxec(
-        id: widget.quicxec!.id,
+        id: id,
         title: _titleController.text,
         text: _descriptionController.text,
         created: _startTime,
@@ -131,8 +142,13 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
 
   void _submitEvent(List<Event> events) {
     if (_formKey.currentState!.validate()) {
+      var id = '';
+      if (widget.event != null) {
+        id = widget.event!.id;
+      }
+
       final event = Event(
-        id: widget.event!.id,
+        id: id,
         title: _titleController.text,
         description: _descriptionController.text,
         startTime: _startTime,
@@ -217,8 +233,9 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
 
   @override
   Widget build(BuildContext context) {
-    List<Quicxec> quicxecs = Provider.of<List<Quicxec>>(context);
-    List<Event> events = Provider.of<List<Event>>(context);
+    List<Quicxec> quicxecs = context.watch<List<Quicxec>>();
+    List<Event> events = context.watch<List<Event>>();
+    List<String> tags = context.watch<Tags>().tags;
 
     return Container(
       padding: const EdgeInsets.all(16.0),
@@ -254,9 +271,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                   ],
                   selected: {_type},
                   onSelectionChanged: (Set<ItemType> newSelection) {
-                    setState(() {
-                      _type = newSelection.first;
-                    });
+                    onItemTypeChanged(newSelection.first);
                   },
                 ),
               ],
@@ -284,7 +299,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
               ),
               maxLines: _type != ItemType.quicxec ? 3 : 9,
             ),
-            const SizedBox(height: 16.0),
+            const SizedBox(height: 8.0),
             if (_type != ItemType.quicxec) ...[
               Row(
                 children: [
@@ -296,6 +311,9 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                       onTimeChanged: (time) {
                         setState(() {
                           _startTime = time;
+                          if (time.isAfter(_endTime)) {
+                            _endTime = time.add(const Duration(hours: 1));
+                          }
                         });
                       },
                     ),
@@ -338,13 +356,43 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                             _selectedDate!.year,
                             _selectedDate!.month,
                             _selectedDate!.day,
+                            DateTime.now().hour,
+                            DateTime.now().minute,
+                            DateTime.now().second,
                           );
+                          if (_selectedDate!.isAfter(_endTime)) {
+                            _endTime = _startTime.add(const Duration(hours: 1));
+                          }
                         });
                       }
                     },
                     child: Text(_formatDate(_selectedDate ?? _startTime)),
                   ),
                   const SizedBox(width: 8.0),
+                  const Icon(Icons.arrow_right_alt),
+                  const SizedBox(width: 16),
+                  const Icon(Icons.calendar_today),
+                  const SizedBox(width: 8.0),
+                  TextButton(
+                    onPressed: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: _endTime,
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (date != null) {
+                        setState(() {
+                          _endTime = date;
+                        });
+                      }
+                    },
+                    child: Text(_formatDate(_endTime)),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
                   Expanded(
                     child: CheckboxListTile(
                       title: const Text('All day'),
@@ -359,36 +407,24 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8.0),
-              Row(
-                children: [
-                  const SizedBox(width: 8.0),
-                  const Icon(Icons.calendar_today),
-                  const SizedBox(width: 8.0),
-                  TextButton(
-                    onPressed: () async {
-                      final date = await showDatePicker(
-                        context: context,
-                        initialDate: _dueDate ?? DateTime.now(),
-                        firstDate: DateTime.now(),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                      );
-                      if (date != null) {
-                        setState(() {
-                          _dueDate = date;
-                        });
-                      }
-                    },
-                    child: Text(
-                      _dueDate != null
-                          ? _formatDate(_dueDate!)
-                          : 'Set due date',
-                    ),
-                  ),
-                ],
-              ),
             ],
-            const SizedBox(height: 16.0),
+            const SizedBox(height: 8.0),
+            Container(
+              height: 60,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: Colors.blueGrey),
+              ),
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.all(8.0),
+                itemCount: tags.length,
+                itemBuilder: (context, index) {
+                  return TagListItem(tag: Tag(name: tags[index]));
+                },
+              ),
+            ),
+            const SizedBox(height: 8.0),
             _submitButton(quicxecs, events, widget.isEditing),
             const SizedBox(height: 8.0),
           ],

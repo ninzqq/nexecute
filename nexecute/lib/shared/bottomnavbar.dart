@@ -14,7 +14,7 @@ class BottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var homePageIndex = context.watch<HomeTabIndex>();
-    
+
     final Size size = MediaQuery.of(context).size;
     const double navBarHeight = 70.0;
 
@@ -43,6 +43,16 @@ class BottomNavBar extends StatelessWidget {
                   ),
                   elevation: 0.1,
                   onPressed: () {
+                    DateTime selectedDay =
+                        context.read<SelectedDay>().selectedDay;
+                    DateTime startTime = DateTime(
+                      selectedDay.year,
+                      selectedDay.month,
+                      selectedDay.day,
+                      DateTime.now().hour,
+                      DateTime.now().minute,
+                      DateTime.now().second,
+                    );
                     homePageIndex.idx == 0
                         ? showItemEditor(
                           context,
@@ -50,8 +60,8 @@ class BottomNavBar extends StatelessWidget {
                             id: '',
                             title: '',
                             description: '',
-                            startTime: context.read<SelectedDay>().selectedDay,
-                            endTime: context.read<SelectedDay>().selectedDay,
+                            startTime: startTime,
+                            endTime: startTime.add(const Duration(hours: 1)),
                             isAllDay: false,
                           ),
                         )

@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/models/quicxec.dart';
+import 'package:nexecute/models/tag.dart';
 import 'package:nexecute/shared/shared.dart';
 import '../home/widgets/taglistitem.dart';
 
 class BottomMenubar extends StatelessWidget {
   final Quicxec quicxec;
-  const BottomMenubar({
-    super.key,
-    required this.quicxec,
-  });
+  const BottomMenubar({super.key, required this.quicxec});
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +31,9 @@ class BottomMenubar extends StatelessWidget {
                         scrollDirection: Axis.horizontal,
                         itemCount: quicxec.tags.length,
                         itemBuilder: (BuildContext context, int index) {
-                          return TagListItem(tagText: quicxec.tags[index]);
+                          return TagListItem(
+                            tag: Tag(name: quicxec.tags[index]),
+                          );
                         },
                       ),
                     ),

@@ -12,7 +12,7 @@ class SingleEventMarkerWidget extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 1, left: 1, right: 1),
       child: SizedBox(
-        height: 16,
+        height: 14,
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 2),
           padding: const EdgeInsets.symmetric(horizontal: 2),
