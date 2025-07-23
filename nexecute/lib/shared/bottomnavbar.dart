@@ -60,6 +60,7 @@ class BottomNavBar extends StatelessWidget {
                             id: '',
                             title: '',
                             description: '',
+                            tags: [],
                             startTime: startTime,
                             endTime: startTime.add(const Duration(hours: 1)),
                             isAllDay: false,

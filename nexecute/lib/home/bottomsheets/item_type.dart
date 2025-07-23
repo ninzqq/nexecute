@@ -1,0 +1,1 @@
+enum ItemType { event, task, quicxec }
