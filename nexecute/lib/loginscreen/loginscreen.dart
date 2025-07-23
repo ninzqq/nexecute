@@ -44,12 +44,12 @@ class LoginButton extends StatelessWidget {
   final Function loginMethod;
 
   const LoginButton({
-    Key? key,
+    super.key,
     required this.text,
     required this.icon,
     required this.color,
     required this.loginMethod,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
