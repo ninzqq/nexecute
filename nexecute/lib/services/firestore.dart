@@ -125,6 +125,7 @@ class FirestoreService {
       'startTime': event.startTime,
       'endTime': event.endTime,
       'isAllDay': event.isAllDay,
+      'tags': event.tags,
     };
 
     return ref.doc(id).set(data);
@@ -138,6 +139,7 @@ class FirestoreService {
     newStartTime,
     newEndTime,
     newIsAllDay,
+    newTags,
   ) async {
     var user = AuthService().user!;
     var ref = _db.collection('users').doc(user.uid).collection('events');
@@ -148,6 +150,7 @@ class FirestoreService {
       'startTime': newStartTime,
       'endTime': newEndTime,
       'isAllDay': newIsAllDay,
+      'tags': newTags,
     });
   }
 
@@ -225,6 +228,7 @@ class FirestoreService {
         description: quicxec.text,
         startTime: quicxec.created,
         endTime: quicxec.created,
+        tags: quicxec.tags,
       );
 
       await addNewEvent(newEvent);
@@ -249,6 +253,7 @@ class FirestoreService {
         title: event.title,
         text: event.description,
         created: event.startTime,
+        tags: event.tags,
       );
 
       await addNewQuicxec(newQuicxec);

@@ -59,16 +59,16 @@ class _CalendarState extends State<Calendar> {
 
     kEvents.clear();
     for (var event in events) {
-      final date = DateTime.utc(
-        event.startTime.year,
-        event.startTime.month,
-        event.startTime.day,
-      );
+      final days = daysInRange(event.startTime, event.endTime);
+      print("${event.startTime}, ${event.endTime}, $days");
+      for (var day in days) {
+        final date = DateTime.utc(day.year, day.month, day.day);
 
-      if (kEvents[date] == null) {
-        kEvents[date] = [];
+        if (kEvents[date] == null) {
+          kEvents[date] = [];
+        }
+        kEvents[date]!.add(event);
       }
-      kEvents[date]!.add(event);
     }
 
     // Update selected day's events

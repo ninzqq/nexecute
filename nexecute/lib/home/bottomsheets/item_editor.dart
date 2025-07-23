@@ -70,6 +70,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
   bool _isAllDay = false;
   DateTime? _selectedDate;
   ItemType _type = ItemType.quicxec;
+  List<String> _tags = [];
 
   @override
   void initState() {
@@ -81,11 +82,13 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
       _endTime = widget.event!.endTime;
       _isAllDay = widget.event!.isAllDay;
       _type = ItemType.event;
+      _tags = widget.event!.tags;
     } else if (widget.quicxec != null) {
       _titleController.text = widget.quicxec!.title;
       _descriptionController.text = widget.quicxec!.text;
       _startTime = widget.quicxec!.created;
       _type = ItemType.quicxec;
+      _tags = widget.quicxec!.tags;
     }
     _selectedDate = widget.date;
   }
@@ -115,7 +118,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
         title: _titleController.text,
         text: _descriptionController.text,
         created: _startTime,
-        tags: [],
+        tags: _tags,
         trashed: false,
       );
 
@@ -132,7 +135,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
           text: _descriptionController.text,
           title: _titleController.text,
           created: _startTime,
-          tags: [],
+          tags: _tags,
         );
         FirestoreService().addNewQuicxec(newQuicxec);
       }
@@ -154,6 +157,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
         startTime: _startTime,
         endTime: _endTime,
         isAllDay: _isAllDay,
+        tags: _tags,
       );
 
       if (_existingEvent(events)) {
@@ -164,6 +168,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
           _startTime,
           _endTime,
           _isAllDay,
+          _tags,
         );
       } else {
         FirestoreService().addNewEvent(event);
@@ -383,7 +388,13 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                       );
                       if (date != null) {
                         setState(() {
-                          _endTime = date;
+                          _endTime = date.add(
+                            Duration(
+                              hours: _startTime.hour + 1,
+                              minutes: _startTime.minute,
+                              seconds: _startTime.second,
+                            ),
+                          );
                         });
                       }
                     },
@@ -420,7 +431,21 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                 padding: const EdgeInsets.all(8.0),
                 itemCount: tags.length,
                 itemBuilder: (context, index) {
-                  return TagListItem(tag: Tag(name: tags[index]));
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        if (!_tags.contains(tags[index])) {
+                          _tags.add(tags[index]);
+                        } else {
+                          _tags.remove(tags[index]);
+                        }
+                      });
+                    },
+                    child: TagListItem(
+                      tag: Tag(name: tags[index]),
+                      isSelected: _tags.contains(tags[index]),
+                    ),
+                  );
                 },
               ),
             ),

@@ -46,6 +46,18 @@ class TagListTile extends StatelessWidget {
       child: ListTile(
         dense: true,
         title: Text(tag, style: const TextStyle(fontSize: 16)),
+        trailing: IconButton(
+          onPressed: () {
+            FirestoreService().removeSelectedTag(tag);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                backgroundColor: snackBarBgColor,
+                content: Text('Tag deleted'),
+              ),
+            );
+          },
+          icon: Icon(Icons.delete, color: Colors.white70),
+        ),
       ),
     );
   }

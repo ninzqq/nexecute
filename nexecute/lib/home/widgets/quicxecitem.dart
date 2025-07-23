@@ -80,10 +80,10 @@ class QuicxecItem extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(quicxec.title, style: quicxecTitleText),
+                  Text(quicxec.title, style: quicxecTitleText, maxLines: 1),
                   Expanded(child: Text(quicxec.text, style: quicxecText)),
                   SizedBox(
-                    height: 20,
+                    height: 32,
                     child: Row(
                       children: [
                         Flexible(
