@@ -4,6 +4,7 @@ import 'package:nexecute/home/widgets/quicxecs.dart';
 import 'package:nexecute/shared/shared.dart';
 import 'package:provider/provider.dart';
 import 'package:nexecute/models/home_tab_index.dart';
+import 'package:nexecute/ui/calendar/calendar.dart';
 
 class HomeScreen extends StatelessWidget {
   HomeScreen({super.key});
@@ -27,10 +28,8 @@ class HomeScreen extends StatelessWidget {
           children: [
             PageView(
               controller: pageController,
-              onPageChanged: (page) {
-                homePageIndex.changeIndex(page);
-              },
-              children: [const Calendar(), const Quicxecs()],
+              physics: const NeverScrollableScrollPhysics(),
+              children: [const WeekCalendar(), const Quicxecs()],
             ),
             BottomNavBar(changePage: pageController.animateToPage),
           ],
