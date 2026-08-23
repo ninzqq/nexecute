@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:nexecute/calendar/calendar.dart';
 import 'package:nexecute/home/widgets/quicxecs.dart';
 import 'package:nexecute/shared/shared.dart';
-import 'package:provider/provider.dart';
-import 'package:nexecute/models/home_tab_index.dart';
 import 'package:nexecute/ui/calendar/calendar.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -13,8 +10,6 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var homePageIndex = Provider.of<HomeTabIndex>(context);
-
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
@@ -29,7 +24,7 @@ class HomeScreen extends StatelessWidget {
             PageView(
               controller: pageController,
               physics: const NeverScrollableScrollPhysics(),
-              children: [const WeekCalendar(), const Quicxecs()],
+              children: [const CalendarPage(), const Quicxecs()],
             ),
             BottomNavBar(changePage: pageController.animateToPage),
           ],

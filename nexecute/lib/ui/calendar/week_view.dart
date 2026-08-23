@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../domain/calendar/calendar_week.dart';
-import 'week_header.dart';
 import 'day_column.dart';
 
 class WeekView extends StatelessWidget {
@@ -12,8 +11,6 @@ class WeekView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        WeekHeader(week: week),
-        const Divider(height: 1),
         Expanded(
           child: SingleChildScrollView(
             child: IntrinsicHeight(
