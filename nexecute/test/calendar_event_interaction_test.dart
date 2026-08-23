@@ -60,6 +60,10 @@ void main() {
 
     expect(find.byType(EventDetailsBottomSheet), findsOneWidget);
     expect(find.text('Prepare the monthly plan'), findsOneWidget);
+    expect(
+      tester.getSize(find.byType(EventDetailsBottomSheet)).height,
+      greaterThanOrEqualTo(1200 * 0.45),
+    );
 
     await tester.tap(find.byTooltip('Edit event'));
     await tester.pumpAndSettle();
