@@ -40,5 +40,21 @@ void main() {
       expect(month.contains(DateTime(2024, 1, 31)), isFalse);
       expect(month.contains(DateTime(2025, 2, 1)), isFalse);
     });
+
+    test('builds October across the autumn daylight-saving change', () {
+      final month = calculator.fromDate(DateTime(2026, 10));
+
+      expect(month.weeks, hasLength(5));
+      expect(month.days.first.date, DateTime(2026, 9, 28));
+      expect(month.days.last.date, DateTime(2026, 11, 1));
+    });
+
+    test('builds many consecutive months with at most six weeks each', () {
+      for (var offset = 0; offset < 240; offset++) {
+        final month = calculator.fromDate(DateTime(2020, 1 + offset));
+
+        expect(month.weeks.length, inInclusiveRange(4, 6));
+      }
+    });
   });
 }

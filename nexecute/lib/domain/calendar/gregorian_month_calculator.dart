@@ -19,7 +19,18 @@ class GregorianMonthCalculator implements MonthCalculator {
     var week = _weekCalculator.fromDate(start);
     while (!week.start.isAfter(end)) {
       weeks.add(week);
-      week = _weekCalculator.nextWeek(week);
+      final nextWeek = _weekCalculator.nextWeek(week);
+
+      if (!nextWeek.start.isAfter(week.start)) {
+        throw StateError(
+          'Week calculator did not advance beyond ${week.start}.',
+        );
+      }
+      if (weeks.length > 6) {
+        throw StateError('A Gregorian month cannot span more than six weeks.');
+      }
+
+      week = nextWeek;
     }
 
     return CalendarMonth(
