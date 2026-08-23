@@ -1,0 +1,49 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:nexecute/home/screens/homescreen.dart';
+import 'package:nexecute/models/event.dart';
+import 'package:nexecute/models/home_tab_index.dart';
+import 'package:nexecute/models/quicxec.dart';
+import 'package:nexecute/models/quicxec_column_count.dart';
+import 'package:nexecute/models/selected_day.dart';
+import 'package:nexecute/models/todo_item.dart';
+import 'package:nexecute/themes.dart';
+import 'package:provider/provider.dart';
+
+void main() {
+  testWidgets(
+    'switches between three destinations and updates the add action',
+    (tester) async {
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => HomeTabIndex()),
+            ChangeNotifierProvider(create: (_) => SelectedDay()),
+            ChangeNotifierProvider(create: (_) => QuicxecsColumnCount()),
+            Provider<List<Event>>.value(value: const []),
+            Provider<List<TodoItem>>.value(value: const []),
+            Provider<List<Quicxec>>.value(value: const []),
+          ],
+          child: MaterialApp(
+            theme: AppThemes.forPreset(AppThemePreset.midnight),
+            home: const HomeScreen(),
+          ),
+        ),
+      );
+
+      expect(find.text('New note'), findsOneWidget);
+      expect(find.byType(NavigationDestination), findsNWidgets(3));
+
+      await tester.tap(find.byIcon(Icons.checklist_outlined));
+      await tester.pumpAndSettle();
+
+      expect(find.text('New task'), findsOneWidget);
+      expect(find.text('0 tasks open'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.calendar_month_outlined));
+      await tester.pumpAndSettle();
+
+      expect(find.text('New event'), findsOneWidget);
+    },
+  );
+}

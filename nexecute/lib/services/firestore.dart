@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 import 'package:nexecute/models/count.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/tag.dart';
+import 'package:nexecute/models/todo_item.dart';
 import 'package:logger/logger.dart';
 
 class FirestoreService {
@@ -70,6 +71,64 @@ class FirestoreService {
         return Stream.fromIterable([]);
       }
     });
+  }
+
+  Stream<List<TodoItem>> streamTodos() {
+    return AuthService().userStream.switchMap((user) {
+      if (user == null) return Stream.value(const <TodoItem>[]);
+
+      final ref =
+          _db.collection('users').doc(user.uid).collection('todos').snapshots();
+
+      return ref.map((snapshot) {
+        return snapshot.docs.map(TodoItem.fromFirestore).toList();
+      });
+    });
+  }
+
+  Future<void> addTodo(String title) async {
+    final ref = _todoCollection();
+    final id = uuid.v1();
+    final now = DateTime.now();
+    final todo = TodoItem(
+      id: id,
+      title: title.trim(),
+      isCompleted: false,
+      createdAt: now,
+      updatedAt: now,
+    );
+
+    await ref.doc(id).set(todo.toFirestore());
+  }
+
+  Future<void> updateTodoTitle(TodoItem todo, String title) async {
+    await _todoCollection().doc(todo.id).update({
+      'title': title.trim(),
+      'updatedAt': DateTime.now(),
+    });
+  }
+
+  Future<void> setTodoCompleted(TodoItem todo, bool isCompleted) async {
+    final now = DateTime.now();
+    await _todoCollection().doc(todo.id).update({
+      'isCompleted': isCompleted,
+      'completedAt': isCompleted ? now : null,
+      'updatedAt': now,
+    });
+  }
+
+  Future<void> deleteTodo(TodoItem todo) async {
+    await _todoCollection().doc(todo.id).delete();
+  }
+
+  Future<void> restoreTodo(TodoItem todo) async {
+    await _todoCollection().doc(todo.id).set(todo.toFirestore());
+  }
+
+  CollectionReference<Map<String, dynamic>> _todoCollection() {
+    final user = AuthService().user;
+    if (user == null) throw StateError('User is not logged in');
+    return _db.collection('users').doc(user.uid).collection('todos');
   }
 
   Future<void> addNewQuicxec(Quicxec quicxec) async {

@@ -97,14 +97,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
           quicxec.tags,
         );
       } else {
-        var newQuicxec = Quicxec(
-          id: widget.quicxec!.id,
-          text: _descriptionController.text,
-          title: _titleController.text,
-          created: _startTime,
-          tags: _tags,
-        );
-        FirestoreService().addNewQuicxec(newQuicxec);
+        FirestoreService().addNewQuicxec(quicxec);
       }
       Navigator.pop(context);
     }

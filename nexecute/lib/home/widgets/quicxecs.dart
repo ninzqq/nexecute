@@ -61,6 +61,7 @@ class _QuicxecsState extends State<Quicxecs> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2.0),
             child: GridView.builder(
+              padding: const EdgeInsets.only(bottom: 96),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: columnCount.columns,
                 mainAxisExtent: 120,

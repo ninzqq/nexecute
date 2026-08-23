@@ -15,6 +15,7 @@ import 'package:nexecute/models/asdf.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/tag.dart';
+import 'package:nexecute/models/todo_item.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -87,6 +88,11 @@ class NexecuteState extends State<Nexecute> {
               ),
               StreamProvider<List<Event>>(
                 create: (_) => FirestoreService().streamEvents(),
+                initialData: const [],
+                catchError: (_, err) => [],
+              ),
+              StreamProvider<List<TodoItem>>(
+                create: (_) => FirestoreService().streamTodos(),
                 initialData: const [],
                 catchError: (_, err) => [],
               ),
