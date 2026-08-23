@@ -110,7 +110,8 @@ abstract final class AppThemes {
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: palette.chrome,
         surfaceTintColor: Colors.transparent,
-        elevation: 0,
+        elevation: 8,
+        shadowColor: Colors.black.withValues(alpha: 0.72),
         indicatorColor: navigationIndicator,
         indicatorShape: StadiumBorder(
           side: BorderSide(

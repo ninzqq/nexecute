@@ -8,6 +8,7 @@ import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/shared/drawer.dart';
 import 'package:nexecute/tasks/tasks_page.dart';
 import 'package:nexecute/tasks/todo_editor_sheet.dart';
+import 'package:nexecute/themes.dart';
 import 'package:nexecute/ui/calendar/calendar.dart';
 import 'package:provider/provider.dart';
 
@@ -19,6 +20,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tab = context.watch<HomeTabIndex>();
+    final palette = context.appPalette;
 
     return SafeArea(
       child: Scaffold(
@@ -29,26 +31,34 @@ class HomeScreen extends StatelessWidget {
           index: tab.idx,
           children: const [CalendarPage(), TasksPage(), Quicxecs()],
         ),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: tab.idx,
-          onDestinationSelected: tab.changeIndex,
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.calendar_month_outlined),
-              selectedIcon: Icon(Icons.calendar_month_rounded),
-              label: 'Calendar',
+        bottomNavigationBar: Container(
+          key: const Key('bottom-navigation-shell'),
+          foregroundDecoration: BoxDecoration(
+            border: Border(
+              top: BorderSide(color: palette.outline.withValues(alpha: 0.75)),
             ),
-            NavigationDestination(
-              icon: Icon(Icons.checklist_outlined),
-              selectedIcon: Icon(Icons.checklist_rounded),
-              label: 'Tasks',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.sticky_note_2_outlined),
-              selectedIcon: Icon(Icons.sticky_note_2_rounded),
-              label: 'Notes',
-            ),
-          ],
+          ),
+          child: NavigationBar(
+            selectedIndex: tab.idx,
+            onDestinationSelected: tab.changeIndex,
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.calendar_month_outlined),
+                selectedIcon: Icon(Icons.calendar_month_rounded),
+                label: 'Calendar',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.checklist_outlined),
+                selectedIcon: Icon(Icons.checklist_rounded),
+                label: 'Tasks',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.sticky_note_2_outlined),
+                selectedIcon: Icon(Icons.sticky_note_2_rounded),
+                label: 'Notes',
+              ),
+            ],
+          ),
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () => _createItem(context, tab.idx),

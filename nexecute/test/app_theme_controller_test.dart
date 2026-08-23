@@ -54,5 +54,7 @@ void main() {
       navigationTheme.iconTheme?.resolve({WidgetState.selected})?.color,
       const Color(0xFF00E7F0),
     );
+    expect(navigationTheme.elevation, 8);
+    expect(navigationTheme.shadowColor, isNot(Colors.transparent));
   });
 }
