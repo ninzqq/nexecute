@@ -10,6 +10,7 @@ class DayColumn extends StatelessWidget {
   final List<Event> events;
   final bool isSelected;
   final VoidCallback onSelected;
+  final ValueChanged<Event> onEventSelected;
 
   const DayColumn({
     super.key,
@@ -17,6 +18,7 @@ class DayColumn extends StatelessWidget {
     required this.events,
     required this.isSelected,
     required this.onSelected,
+    required this.onEventSelected,
   });
 
   @override
@@ -62,7 +64,11 @@ class DayColumn extends StatelessWidget {
               child: Column(
                 children: [
                   for (var index = 0; index < events.length; index++) ...[
-                    _WeekEventCard(event: events[index], day: day.date),
+                    _WeekEventCard(
+                      event: events[index],
+                      day: day.date,
+                      onTap: () => onEventSelected(events[index]),
+                    ),
                     if (index < events.length - 1) const SizedBox(height: 4),
                   ],
                 ],
@@ -76,10 +82,15 @@ class DayColumn extends StatelessWidget {
 }
 
 class _WeekEventCard extends StatelessWidget {
-  const _WeekEventCard({required this.event, required this.day});
+  const _WeekEventCard({
+    required this.event,
+    required this.day,
+    required this.onTap,
+  });
 
   final Event event;
   final DateTime day;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -91,35 +102,42 @@ class _WeekEventCard extends StatelessWidget {
             ? DateFormat('HH:mm').format(event.startTime)
             : 'Continues';
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-      decoration: BoxDecoration(
-        color: palette.primary.withValues(alpha: 0.2),
-        border: Border(left: BorderSide(color: palette.primary, width: 2)),
+    return Material(
+      color: palette.primary.withValues(alpha: 0.2),
+      borderRadius: BorderRadius.circular(4),
+      child: InkWell(
         borderRadius: BorderRadius.circular(4),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            event.title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: palette.onSurface,
-              fontWeight: FontWeight.w600,
-            ),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+          decoration: BoxDecoration(
+            border: Border(left: BorderSide(color: palette.primary, width: 2)),
+            borderRadius: BorderRadius.circular(4),
           ),
-          const SizedBox(height: 2),
-          Text(
-            timeLabel,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(
-              context,
-            ).textTheme.labelSmall?.copyWith(color: palette.secondary),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                event.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: palette.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                timeLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(
+                  context,
+                ).textTheme.labelSmall?.copyWith(color: palette.secondary),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

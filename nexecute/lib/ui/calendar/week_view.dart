@@ -9,6 +9,7 @@ class WeekView extends StatelessWidget {
   final List<Event> events;
   final DateTime selectedDay;
   final ValueChanged<DateTime> onDaySelected;
+  final ValueChanged<Event> onEventSelected;
 
   const WeekView({
     super.key,
@@ -16,6 +17,7 @@ class WeekView extends StatelessWidget {
     required this.events,
     required this.selectedDay,
     required this.onDaySelected,
+    required this.onEventSelected,
   });
 
   @override
@@ -39,6 +41,7 @@ class WeekView extends StatelessWidget {
                                 selectedDay,
                               ),
                               onSelected: () => onDaySelected(day.date),
+                              onEventSelected: onEventSelected,
                             ),
                           ),
                         )

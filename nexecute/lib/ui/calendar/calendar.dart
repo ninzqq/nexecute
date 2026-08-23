@@ -4,7 +4,10 @@ import 'package:nexecute/domain/calendar/gregorian_month_calculator.dart';
 import 'package:nexecute/domain/calendar/iso_week_calculator.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/selected_day.dart';
+import 'package:nexecute/calendar/bottomsheets/event_details.dart';
 import 'package:nexecute/ui/calendar/month_view.dart';
+import 'package:nexecute/ui/calendar/event_date_utils.dart';
+import 'package:nexecute/ui/calendar/selected_day_agenda.dart';
 import 'package:nexecute/ui/calendar/week_view.dart';
 import 'package:provider/provider.dart';
 
@@ -37,42 +40,58 @@ class _CalendarPageState extends State<CalendarPage> {
     final week = _weekCalculator.fromDate(_focusedDay);
     final month = _monthCalculator.fromDate(_focusedDay);
     final events = context.watch<List<Event>>();
+    final selectedEvents = eventsForDay(events, _selectedDay);
 
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.only(bottom: 70),
-        child: Column(
-          children: [
-            _CalendarToolbar(
-              title:
-                  _viewMode == CalendarViewMode.month
-                      ? DateFormat('MMMM yyyy').format(month.start)
-                      : 'Week ${week.weekNumber} · ${DateFormat('MMM yyyy').format(week.start)}',
-              viewMode: _viewMode,
-              onViewModeChanged: (mode) => setState(() => _viewMode = mode),
-              onPrevious: _showPrevious,
-              onNext: _showNext,
-              onToday: _showToday,
+      body: Column(
+        children: [
+          _CalendarToolbar(
+            title:
+                _viewMode == CalendarViewMode.month
+                    ? DateFormat('MMMM yyyy').format(month.start)
+                    : 'Week ${week.weekNumber} · ${DateFormat('MMM yyyy').format(week.start)}',
+            viewMode: _viewMode,
+            onViewModeChanged: (mode) => setState(() => _viewMode = mode),
+            onPrevious: _showPrevious,
+            onNext: _showNext,
+            onToday: _showToday,
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: Column(
+              children: [
+                Expanded(
+                  child:
+                      _viewMode == CalendarViewMode.month
+                          ? MonthView(
+                            month: month,
+                            selectedDay: _selectedDay,
+                            events: events,
+                            onDaySelected: _selectDay,
+                            onEventSelected: _openEvent,
+                          )
+                          : WeekView(
+                            week: week,
+                            events: events,
+                            selectedDay: _selectedDay,
+                            onDaySelected: _selectDay,
+                            onEventSelected: _openEvent,
+                          ),
+                ),
+                const Divider(height: 1),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  height: selectedDayAgendaHeight(selectedEvents.length),
+                  child: SelectedDayAgenda(
+                    day: _selectedDay,
+                    events: selectedEvents,
+                    onEventSelected: _openEvent,
+                  ),
+                ),
+              ],
             ),
-            const Divider(height: 1),
-            Expanded(
-              child:
-                  _viewMode == CalendarViewMode.month
-                      ? MonthView(
-                        month: month,
-                        selectedDay: _selectedDay,
-                        events: events,
-                        onDaySelected: _selectDay,
-                      )
-                      : WeekView(
-                        week: week,
-                        events: events,
-                        selectedDay: _selectedDay,
-                        onDaySelected: _selectDay,
-                      ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -107,6 +126,10 @@ class _CalendarPageState extends State<CalendarPage> {
       _focusedDay = normalized;
     });
     context.read<SelectedDay>().setSelectedDay(normalized);
+  }
+
+  void _openEvent(Event event) {
+    showEventDetails(context, event);
   }
 }
 

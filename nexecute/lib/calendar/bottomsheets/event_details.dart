@@ -1,7 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:nexecute/home/bottomsheets/item_editor.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/services/firestore.dart';
+import 'package:nexecute/themes.dart';
+
+Future<void> showEventDetails(BuildContext context, Event event) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    showDragHandle: true,
+    builder: (_) => EventDetailsBottomSheet(event: event),
+  );
+}
 
 class EventDetailsBottomSheet extends StatelessWidget {
   final Event event;
@@ -10,15 +22,11 @@ class EventDetailsBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(16.0),
-          topRight: Radius.circular(16.0),
-        ),
-      ),
+    final theme = Theme.of(context);
+    final palette = context.appPalette;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -26,71 +34,97 @@ class EventDetailsBottomSheet extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(
-                  event.title,
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
+                child: Text(event.title, style: theme.textTheme.titleLarge),
               ),
               IconButton(
-                icon: const Icon(Icons.edit),
+                tooltip: 'Edit event',
+                icon: const Icon(Icons.edit_rounded),
                 onPressed: () {
                   showItemEditor(context, event: event, isEditing: true);
                 },
               ),
               IconButton(
-                icon: const Icon(Icons.delete),
-                onPressed: () {
-                  FirestoreService().deleteCurrentlyOpenEvent(event);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Event deleted.')),
-                  );
-                  Navigator.pop(context);
-                },
+                tooltip: 'Delete event',
+                color: theme.colorScheme.error,
+                icon: const Icon(Icons.delete_outline_rounded),
+                onPressed: () => _deleteEvent(context),
               ),
             ],
           ),
-          const SizedBox(height: 16.0),
-          if (event.description.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _DetailRow(icon: Icons.schedule_rounded, text: _timeLabel()),
+          const SizedBox(height: 12),
+          _DetailRow(icon: Icons.calendar_today_rounded, text: _dateLabel()),
+          if (event.description.trim().isNotEmpty) ...[
+            const SizedBox(height: 20),
             Text(
-              event.description,
-              style: Theme.of(context).textTheme.bodyLarge,
+              'Description',
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: palette.secondary,
+              ),
             ),
-            const SizedBox(height: 16.0),
+            const SizedBox(height: 6),
+            Text(event.description, style: theme.textTheme.bodyMedium),
           ],
-          Row(
-            children: [
-              const Icon(Icons.access_time),
-              const SizedBox(width: 8.0),
-              Text(
-                event.isAllDay
-                    ? 'All day'
-                    : '${_formatTime(event.startTime)} - ${_formatTime(event.endTime)}',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ],
-          ),
-          const SizedBox(height: 8.0),
-          Row(
-            children: [
-              const Icon(Icons.calendar_today),
-              const SizedBox(width: 8.0),
-              Text(
-                _formatDate(event.startTime),
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ],
-          ),
-          const SizedBox(height: 200.0),
+          if (event.tags.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final tag in event.tags)
+                  Chip(visualDensity: VisualDensity.compact, label: Text(tag)),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
 
-  String _formatTime(DateTime dateTime) {
-    return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+  Future<void> _deleteEvent(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    try {
+      await FirestoreService().deleteCurrentlyOpenEvent(event);
+      if (!context.mounted) return;
+      navigator.pop();
+      messenger.showSnackBar(const SnackBar(content: Text('Event deleted')));
+    } catch (_) {
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Could not delete event')),
+      );
+    }
   }
 
-  String _formatDate(DateTime dateTime) {
-    return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')}';
+  String _timeLabel() {
+    if (event.isAllDay) return 'All day';
+    return '${DateFormat('HH:mm').format(event.startTime)}–${DateFormat('HH:mm').format(event.endTime)}';
+  }
+
+  String _dateLabel() {
+    final start = DateFormat('EEEE, d MMMM yyyy').format(event.startTime);
+    final end = DateFormat('EEEE, d MMMM yyyy').format(event.endTime);
+    return start == end ? start : '$start – $end';
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  const _DetailRow({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: context.appPalette.secondary),
+        const SizedBox(width: 10),
+        Expanded(child: Text(text)),
+      ],
+    );
   }
 }

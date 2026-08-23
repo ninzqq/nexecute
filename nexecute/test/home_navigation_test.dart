@@ -31,19 +31,22 @@ void main() {
         ),
       );
 
-      expect(find.text('New note'), findsOneWidget);
+      expect(find.byTooltip('New note'), findsOneWidget);
+      expect(find.text('New note'), findsNothing);
       expect(find.byType(NavigationDestination), findsNWidgets(3));
 
       await tester.tap(find.byIcon(Icons.checklist_outlined));
       await tester.pumpAndSettle();
 
-      expect(find.text('New task'), findsOneWidget);
+      expect(find.byTooltip('New task'), findsOneWidget);
+      expect(find.text('New task'), findsNothing);
       expect(find.text('0 tasks open'), findsOneWidget);
 
       await tester.tap(find.byIcon(Icons.calendar_month_outlined));
       await tester.pumpAndSettle();
 
-      expect(find.text('New event'), findsOneWidget);
+      expect(find.byTooltip('New event'), findsOneWidget);
+      expect(find.text('New event'), findsNothing);
     },
   );
 }

@@ -50,10 +50,10 @@ class HomeScreen extends StatelessWidget {
             ),
           ],
         ),
-        floatingActionButton: FloatingActionButton.extended(
+        floatingActionButton: FloatingActionButton(
           onPressed: () => _createItem(context, tab.idx),
-          icon: Icon(_fabIcon(tab.idx)),
-          label: Text(_fabLabel(tab.idx)),
+          tooltip: _fabLabel(tab.idx),
+          child: Icon(_fabIcon(tab.idx)),
         ),
       ),
     );

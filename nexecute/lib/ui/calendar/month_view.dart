@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:nexecute/domain/calendar/calendar_day.dart';
@@ -6,6 +8,32 @@ import 'package:nexecute/models/event.dart';
 import 'package:nexecute/themes.dart';
 import 'package:nexecute/ui/calendar/event_date_utils.dart';
 
+const _eventMarkerHeight = 17.0;
+const _eventMarkerSpacing = 2.0;
+const _overflowLabelHeight = 14.0;
+const _minimumMonthCellHeight = 32.0;
+
+int visibleMonthEventCount({
+  required int eventCount,
+  required double availableHeight,
+}) {
+  if (eventCount <= 0 || availableHeight <= 0) return 0;
+
+  int markerCapacity(double height) => math.max(
+    0,
+    ((height + _eventMarkerSpacing) /
+            (_eventMarkerHeight + _eventMarkerSpacing))
+        .floor(),
+  );
+
+  final capacity = markerCapacity(availableHeight);
+  if (eventCount <= capacity) return eventCount;
+
+  final heightWithOverflowReserved =
+      availableHeight - _overflowLabelHeight - _eventMarkerSpacing;
+  return math.min(eventCount, markerCapacity(heightWithOverflowReserved));
+}
+
 class MonthView extends StatelessWidget {
   const MonthView({
     super.key,
@@ -13,12 +41,14 @@ class MonthView extends StatelessWidget {
     required this.selectedDay,
     required this.events,
     required this.onDaySelected,
+    required this.onEventSelected,
   });
 
   final CalendarMonth month;
   final DateTime selectedDay;
   final List<Event> events;
   final ValueChanged<DateTime> onDaySelected;
+  final ValueChanged<Event> onEventSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -33,10 +63,18 @@ class MonthView extends StatelessWidget {
             builder: (context, constraints) {
               final rowCount = month.weeks.length;
               final cellWidth = constraints.maxWidth / 7;
-              final cellHeight = constraints.maxHeight / rowCount;
+              final fittedCellHeight = constraints.maxHeight / rowCount;
+              final cellHeight = math.max(
+                fittedCellHeight,
+                _minimumMonthCellHeight,
+              );
+              final needsScrolling = cellHeight > fittedCellHeight;
 
               return GridView.builder(
-                physics: const NeverScrollableScrollPhysics(),
+                physics:
+                    needsScrolling
+                        ? const ClampingScrollPhysics()
+                        : const NeverScrollableScrollPhysics(),
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 7,
                   childAspectRatio: cellWidth / cellHeight,
@@ -51,6 +89,10 @@ class MonthView extends StatelessWidget {
                     isSelected: isSameCalendarDay(day.date, selectedDay),
                     isToday: isSameCalendarDay(day.date, DateTime.now()),
                     onTap: () => onDaySelected(day.date),
+                    onEventSelected: (event) {
+                      onDaySelected(day.date);
+                      onEventSelected(event);
+                    },
                   );
                 },
               );
@@ -99,6 +141,7 @@ class _MonthDayCell extends StatelessWidget {
     required this.isSelected,
     required this.isToday,
     required this.onTap,
+    required this.onEventSelected,
   });
 
   final CalendarDay day;
@@ -107,6 +150,7 @@ class _MonthDayCell extends StatelessWidget {
   final bool isSelected;
   final bool isToday;
   final VoidCallback onTap;
+  final ValueChanged<Event> onEventSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -164,21 +208,51 @@ class _MonthDayCell extends StatelessWidget {
               const SizedBox(height: 2),
               if (events.isNotEmpty)
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _EventMarker(event: events.first),
-                      if (events.length > 1)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2, left: 2),
-                          child: Text(
-                            '+${events.length - 1}',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: palette.secondary,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final visibleCount = visibleMonthEventCount(
+                        eventCount: events.length,
+                        availableHeight: constraints.maxHeight,
+                      );
+                      final hiddenCount = events.length - visibleCount;
+                      final showOverflow =
+                          hiddenCount > 0 &&
+                          constraints.maxHeight >= _overflowLabelHeight;
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (
+                            var index = 0;
+                            index < visibleCount;
+                            index++
+                          ) ...[
+                            if (index > 0)
+                              const SizedBox(height: _eventMarkerSpacing),
+                            _EventMarker(
+                              event: events[index],
+                              onTap: () => onEventSelected(events[index]),
                             ),
-                          ),
-                        ),
-                    ],
+                          ],
+                          if (showOverflow) ...[
+                            if (visibleCount > 0)
+                              const SizedBox(height: _eventMarkerSpacing),
+                            SizedBox(
+                              height: _overflowLabelHeight,
+                              child: Padding(
+                                padding: const EdgeInsets.only(left: 2),
+                                child: Text(
+                                  '+$hiddenCount',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: palette.secondary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      );
+                    },
                   ),
                 ),
             ],
@@ -190,26 +264,35 @@ class _MonthDayCell extends StatelessWidget {
 }
 
 class _EventMarker extends StatelessWidget {
-  const _EventMarker({required this.event});
+  const _EventMarker({required this.event, required this.onTap});
 
   final Event event;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.appPalette;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
-      decoration: BoxDecoration(
+    return SizedBox(
+      height: _eventMarkerHeight,
+      child: Material(
         color: palette.primary.withValues(alpha: 0.22),
         borderRadius: BorderRadius.circular(3),
-      ),
-      child: Text(
-        event.title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: Theme.of(
-          context,
-        ).textTheme.labelSmall?.copyWith(color: palette.onSurface, fontSize: 9),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(3),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+            child: Text(
+              event.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: palette.onSurface,
+                fontSize: 9,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
