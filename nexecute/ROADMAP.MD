@@ -2,7 +2,7 @@
 
 ## Tasks / to-do list
 
-**Status:** Planned — implementation not started
+**Status:** Implemented — Firebase security-rule verification pending
 
 Add a deliberately simple, user-specific task list alongside Calendar and
 Notes (Quicxecs).
@@ -63,18 +63,22 @@ Required operations:
 
 ### Implementation checklist
 
-- [ ] Refactor the app shell to the three-destination `NavigationBar`.
-- [ ] Add the context-aware floating action button.
-- [ ] Add the `TodoItem` model and Firestore serialization.
-- [ ] Add task stream and CRUD operations.
-- [ ] Register the task stream provider.
-- [ ] Build the active task list and empty state.
-- [ ] Build the collapsed completed-task section.
-- [ ] Add the task creation and editing sheet.
-- [ ] Add completion, restoration, deletion, and Undo interactions.
+- [x] Refactor the app shell to the three-destination `NavigationBar`.
+- [x] Add the context-aware floating action button.
+- [x] Add the `TodoItem` model and Firestore serialization.
+- [x] Add task stream and CRUD operations.
+- [x] Register the task stream provider.
+- [x] Build the active task list and empty state.
+- [x] Build the collapsed completed-task section.
+- [x] Add the task creation and editing sheet.
+- [x] Add completion, restoration, deletion, and Undo interactions.
 - [ ] Verify Firestore security rules for the `todos` collection.
-- [ ] Add model, interaction, persistence, and navigation tests.
-- [ ] Verify the page under Cyberpunk, Midnight, Forest, and Neutral themes.
+- [x] Add model, interaction, persistence, and navigation tests.
+- [x] Verify the page under Cyberpunk, Midnight, Forest, and Neutral themes.
+
+The repository does not currently contain a Firestore rules file. Verify in
+the Firebase console that an authenticated user can access only their own
+`users/{userId}/todos/{todoId}` documents.
 
 ### Acceptance criteria
 
