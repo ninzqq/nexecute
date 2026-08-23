@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/models/app_theme_controller.dart';
 import 'package:nexecute/themes.dart';
@@ -41,5 +42,17 @@ void main() {
     };
 
     expect(primaryColors.length, AppThemePreset.values.length);
+  });
+
+  test('Cyberpunk navigation uses dark chrome and cyan selection', () {
+    final theme = AppThemes.forPreset(AppThemePreset.cyberpunk);
+    final navigationTheme = theme.navigationBarTheme;
+
+    expect(navigationTheme.backgroundColor, const Color(0xFF120A25));
+    expect(navigationTheme.indicatorColor, const Color(0xFF241437));
+    expect(
+      navigationTheme.iconTheme?.resolve({WidgetState.selected})?.color,
+      const Color(0xFF00E7F0),
+    );
   });
 }

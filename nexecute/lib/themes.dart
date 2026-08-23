@@ -45,6 +45,12 @@ abstract final class AppThemes {
       bodyColor: palette.onSurface,
       displayColor: palette.onSurface,
     );
+    final isCyberpunk = preset == AppThemePreset.cyberpunk;
+    final navigationAccent = isCyberpunk ? palette.secondary : palette.primary;
+    final navigationIndicator =
+        isCyberpunk
+            ? const Color(0xFF241437)
+            : palette.primary.withValues(alpha: 0.18);
 
     return ThemeData(
       useMaterial3: true,
@@ -100,6 +106,39 @@ abstract final class AppThemes {
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: palette.primary,
         foregroundColor: palette.onPrimary,
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: palette.chrome,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        indicatorColor: navigationIndicator,
+        indicatorShape: StadiumBorder(
+          side: BorderSide(
+            color:
+                isCyberpunk
+                    ? palette.primary.withValues(alpha: 0.65)
+                    : palette.outline,
+          ),
+        ),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          final selected = states.contains(WidgetState.selected);
+          return IconThemeData(
+            color:
+                selected
+                    ? navigationAccent
+                    : palette.onSurface.withValues(alpha: 0.65),
+          );
+        }),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          final selected = states.contains(WidgetState.selected);
+          return baseTextTheme.labelMedium?.copyWith(
+            color:
+                selected
+                    ? navigationAccent
+                    : palette.onSurface.withValues(alpha: 0.65),
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+          );
+        }),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
