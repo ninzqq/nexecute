@@ -29,3 +29,4 @@ firebase_options.dart
 firebase.json
 
 nexecute/android/app/google-services.json
+.DS_Store
