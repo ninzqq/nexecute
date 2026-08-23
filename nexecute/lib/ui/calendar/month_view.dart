@@ -3,7 +3,8 @@ import 'package:intl/intl.dart';
 import 'package:nexecute/domain/calendar/calendar_day.dart';
 import 'package:nexecute/domain/calendar/calendar_month.dart';
 import 'package:nexecute/models/event.dart';
-import 'package:nexecute/shared/styles.dart';
+import 'package:nexecute/themes.dart';
+import 'package:nexecute/ui/calendar/event_date_utils.dart';
 
 class MonthView extends StatelessWidget {
   const MonthView({
@@ -45,10 +46,10 @@ class MonthView extends StatelessWidget {
                   final day = days[index];
                   return _MonthDayCell(
                     day: day,
-                    events: _eventsForDay(day.date),
+                    events: eventsForDay(events, day.date),
                     isInMonth: month.contains(day.date),
-                    isSelected: _isSameDay(day.date, selectedDay),
-                    isToday: _isSameDay(day.date, DateTime.now()),
+                    isSelected: isSameCalendarDay(day.date, selectedDay),
+                    isToday: isSameCalendarDay(day.date, DateTime.now()),
                     onTap: () => onDaySelected(day.date),
                   );
                 },
@@ -59,33 +60,6 @@ class MonthView extends StatelessWidget {
       ],
     );
   }
-
-  List<Event> _eventsForDay(DateTime day) {
-    final normalizedDay = DateTime(day.year, day.month, day.day);
-    final result =
-        events.where((event) {
-            final start = DateTime(
-              event.startTime.year,
-              event.startTime.month,
-              event.startTime.day,
-            );
-            final end = DateTime(
-              event.endTime.year,
-              event.endTime.month,
-              event.endTime.day,
-            );
-            return !normalizedDay.isBefore(start) &&
-                !normalizedDay.isAfter(end);
-          }).toList()
-          ..sort((a, b) => a.startTime.compareTo(b.startTime));
-
-    return result;
-  }
-
-  bool _isSameDay(DateTime first, DateTime second) =>
-      first.year == second.year &&
-      first.month == second.month &&
-      first.day == second.day;
 }
 
 class _WeekdayHeader extends StatelessWidget {
@@ -93,6 +67,7 @@ class _WeekdayHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.appPalette;
     final monday = DateTime(2024, 1, 1);
     return SizedBox(
       height: 32,
@@ -105,7 +80,7 @@ class _WeekdayHeader extends StatelessWidget {
               child: Text(
                 DateFormat.E().format(date),
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: weekend ? brightCyan : almostWhite,
+                  color: weekend ? palette.secondary : palette.onSurface,
                 ),
               ),
             ),
@@ -136,10 +111,11 @@ class _MonthDayCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final borderColor = theme.dividerColor.withValues(alpha: 0.45);
+    final palette = context.appPalette;
+    final borderColor = palette.outline.withValues(alpha: 0.6);
     final background = switch ((isSelected, day.isWeekend)) {
-      (true, _) => almostWhiteWithOpacity,
-      (false, true) => theme.colorScheme.surfaceContainerHigh,
+      (true, _) => palette.primary.withValues(alpha: 0.2),
+      (false, true) => palette.surfaceRaised,
       _ => Colors.transparent,
     };
 
@@ -166,15 +142,18 @@ class _MonthDayCell extends StatelessWidget {
                 alignment: Alignment.center,
                 decoration:
                     isToday
-                        ? const BoxDecoration(
-                          color: darkCyan,
+                        ? BoxDecoration(
+                          color: palette.secondary.withValues(alpha: 0.18),
                           shape: BoxShape.circle,
                         )
                         : null,
                 child: Text(
                   '${day.dayNumber}',
                   style: theme.textTheme.labelMedium?.copyWith(
-                    color: isSelected || isToday ? brightCyan : almostWhite,
+                    color:
+                        isSelected || isToday
+                            ? palette.secondary
+                            : palette.onSurface,
                     fontWeight:
                         isSelected || isToday
                             ? FontWeight.bold
@@ -195,7 +174,7 @@ class _MonthDayCell extends StatelessWidget {
                           child: Text(
                             '+${events.length - 1}',
                             style: theme.textTheme.labelSmall?.copyWith(
-                              color: brightCyan,
+                              color: palette.secondary,
                             ),
                           ),
                         ),
@@ -217,10 +196,11 @@ class _EventMarker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.appPalette;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
       decoration: BoxDecoration(
-        color: darkCyan,
+        color: palette.primary.withValues(alpha: 0.22),
         borderRadius: BorderRadius.circular(3),
       ),
       child: Text(
@@ -229,7 +209,7 @@ class _EventMarker extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         style: Theme.of(
           context,
-        ).textTheme.labelSmall?.copyWith(color: almostWhite, fontSize: 9),
+        ).textTheme.labelSmall?.copyWith(color: palette.onSurface, fontSize: 9),
       ),
     );
   }

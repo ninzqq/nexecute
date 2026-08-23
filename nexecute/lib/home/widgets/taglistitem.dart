@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/models/tag.dart';
-import 'package:nexecute/shared/styles.dart';
+import 'package:nexecute/themes.dart';
 
 class TagListItem extends StatelessWidget {
   final Tag tag;
@@ -9,12 +9,16 @@ class TagListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.appPalette;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 3.0),
       child: InkWell(
         child: Container(
           decoration: BoxDecoration(
-            color: isSelected ? niceGreen : darkCyan,
+            color:
+                isSelected
+                    ? palette.success.withValues(alpha: 0.35)
+                    : palette.surfaceRaised,
             borderRadius: const BorderRadius.all(Radius.circular(10)),
           ),
           child: Padding(

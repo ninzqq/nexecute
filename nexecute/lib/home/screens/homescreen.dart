@@ -12,12 +12,8 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Nexecute'),
-          backgroundColor: appBarDarkCyan,
-        ),
+        appBar: AppBar(title: const Text('Nexecute')),
         drawer: const MainDrawer(),
-        backgroundColor: bgDarkerCyan,
         resizeToAvoidBottomInset: true,
         body: Stack(
           children: [

@@ -5,13 +5,13 @@ import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:nexecute/models/selected_day.dart';
-import 'package:nexecute/shared/styles.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/calendar/bottomsheets/event_details.dart';
 import 'package:nexecute/calendar/widgets/single_event_marker_widget.dart';
 import 'package:nexecute/calendar/utils.dart';
+import 'package:nexecute/themes.dart';
 
 class Calendar extends StatefulWidget {
   const Calendar({super.key});
@@ -158,7 +158,6 @@ class _CalendarState extends State<Calendar> {
 
     return SafeArea(
       child: Scaffold(
-        backgroundColor: bgDarkerCyan,
         body: Column(
           children: [
             TableCalendar<Event>(
@@ -185,7 +184,9 @@ class _CalendarState extends State<Calendar> {
                         _buildEventMarker(context, day, events),
               ),
               headerStyle: HeaderStyle(
-                decoration: BoxDecoration(color: bgDarkerCyan),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                ),
                 formatButtonVisible: false,
               ),
               calendarStyle: CalendarStyle(
@@ -195,16 +196,16 @@ class _CalendarState extends State<Calendar> {
                 ),
                 weekNumberTextStyle: theme.textTheme.bodyMedium!.copyWith(
                   fontSize: 15,
-                  color: brightCyan,
+                  color: context.appPalette.secondary,
                 ),
                 weekendTextStyle: theme.textTheme.bodyMedium!,
                 defaultTextStyle: theme.textTheme.bodyMedium!.copyWith(
-                  color: almostWhite,
+                  color: context.appPalette.onSurface,
                 ),
                 cellMargin: const EdgeInsets.all(2.0),
                 cellPadding: const EdgeInsets.only(top: 4.0),
                 cellAlignment: Alignment.topCenter,
-                tableBorder: TableBorder.all(color: Colors.cyan.shade100),
+                tableBorder: TableBorder.all(color: context.appPalette.outline),
                 tablePadding: const EdgeInsets.only(left: 2.0, right: 2.0),
                 markerDecoration: BoxDecoration(
                   color: theme.colorScheme.primary,
@@ -212,11 +213,11 @@ class _CalendarState extends State<Calendar> {
                 ),
                 markersAlignment: Alignment.bottomLeft,
                 selectedDecoration: BoxDecoration(
-                  color: almostWhiteWithOpacity,
+                  color: context.appPalette.primary.withValues(alpha: 0.2),
                   shape: BoxShape.rectangle,
                 ),
                 todayDecoration: BoxDecoration(
-                  color: darkCyan,
+                  color: context.appPalette.secondary.withValues(alpha: 0.18),
                   shape: BoxShape.rectangle,
                 ),
               ),

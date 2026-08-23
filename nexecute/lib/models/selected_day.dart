@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
 class SelectedDay with ChangeNotifier {
-  SelectedDay({
-    DateTime? selectedDay,
-  }) : _selectedDay = selectedDay ?? DateTime.now();
+  SelectedDay({DateTime? selectedDay})
+    : _selectedDay = selectedDay ?? DateTime.now();
 
   DateTime _selectedDay;
 

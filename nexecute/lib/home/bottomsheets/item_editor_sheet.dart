@@ -8,7 +8,6 @@ import 'package:nexecute/models/event.dart';
 import 'package:nexecute/home/widgets/item_time_picker.dart';
 import 'package:nexecute/models/tag.dart';
 import 'package:nexecute/services/firestore.dart';
-import 'package:nexecute/shared/styles.dart';
 import 'package:provider/provider.dart';
 import 'package:nexecute/home/bottomsheets/item_type.dart';
 
@@ -154,7 +153,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: drawerBgColor,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(16.0),
           topRight: Radius.circular(16.0),

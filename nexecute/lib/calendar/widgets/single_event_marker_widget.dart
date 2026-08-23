@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/models/event.dart';
-import 'package:nexecute/shared/shared.dart';
+import 'package:nexecute/themes.dart';
 
 class SingleEventMarkerWidget extends StatelessWidget {
   final Event event;
@@ -17,7 +17,7 @@ class SingleEventMarkerWidget extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: 2),
           padding: const EdgeInsets.symmetric(horizontal: 2),
           decoration: BoxDecoration(
-            color: darkCyan,
+            color: context.appPalette.primary.withValues(alpha: 0.22),
             borderRadius: BorderRadius.circular(2),
           ),
           child: Text(

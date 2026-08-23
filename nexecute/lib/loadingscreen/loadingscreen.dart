@@ -7,11 +7,8 @@ class LoadingTextScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text(''), backgroundColor: appBarDarkCyan),
-      body: Container(
-        color: bgDarkCyan,
-        child: const Center(child: Text('LATAAING...', style: loadingText)),
-      ),
+      appBar: AppBar(title: const Text('')),
+      body: const Center(child: Text('LATAAING...', style: loadingText)),
     );
   }
 }

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:nexecute/home/bottomsheets/item_editor.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/services/firestore.dart';
-import 'package:nexecute/shared/styles.dart';
 
 class EventDetailsBottomSheet extends StatelessWidget {
   final Event event;
@@ -14,7 +13,7 @@ class EventDetailsBottomSheet extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: drawerBgColor,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(16.0),
           topRight: Radius.circular(16.0),
@@ -43,10 +42,7 @@ class EventDetailsBottomSheet extends StatelessWidget {
                 onPressed: () {
                   FirestoreService().deleteCurrentlyOpenEvent(event);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      backgroundColor: snackBarBgColor,
-                      content: Text('Event deleted.'),
-                    ),
+                    const SnackBar(content: Text('Event deleted.')),
                   );
                   Navigator.pop(context);
                 },

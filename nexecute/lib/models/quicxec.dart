@@ -32,8 +32,10 @@ class Quicxec {
 
   factory Quicxec.fromFirestore(DocumentSnapshot doc) {
     var rawTags = doc.get('tags') ?? [];
-    List<String> tags = List<String>.from(rawTags.map((item) => item.toString()));
-    
+    List<String> tags = List<String>.from(
+      rawTags.map((item) => item.toString()),
+    );
+
     return Quicxec(
       id: doc.id,
       text: doc.get('text') ?? '',

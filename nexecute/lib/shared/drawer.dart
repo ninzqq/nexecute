@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:nexecute/shared/shared.dart';
 
 class MainDrawer extends StatelessWidget {
   const MainDrawer({super.key});
 
   @override
   Widget build(BuildContext context) {
-
     final List<Map<String, dynamic>> menuItem = [
       {
         "title": const Text("Profile"),
         "icon": const Icon(Icons.person),
-        "function": () => {
+        "function":
+            () => {
               Navigator.pop(context),
               Navigator.pushNamed(context, "/profile"),
             },
@@ -20,7 +19,8 @@ class MainDrawer extends StatelessWidget {
       {
         "title": const Text('Tags'),
         'icon': const Icon(Icons.label_outlined),
-        'function': () => {
+        'function':
+            () => {
               Navigator.pop(context),
               Navigator.pushNamed(context, '/tags'),
             },
@@ -29,7 +29,8 @@ class MainDrawer extends StatelessWidget {
       {
         "title": const Text("Button pressinks"),
         "icon": const Icon(Icons.add),
-        "function": () => {
+        "function":
+            () => {
               Navigator.pop(context),
               Navigator.pushNamed(context, "/count"),
             },
@@ -38,7 +39,8 @@ class MainDrawer extends StatelessWidget {
       {
         "title": const Text("Trash"),
         "icon": const Icon(Icons.delete_forever),
-        "function": () => {
+        "function":
+            () => {
               Navigator.pop(context),
               Navigator.pushNamed(context, "/trash"),
             },
@@ -47,16 +49,16 @@ class MainDrawer extends StatelessWidget {
       {
         "title": const Text("Settings"),
         "icon": const Icon(Icons.settings),
-        "function": () => {
+        "function":
+            () => {
               Navigator.pop(context),
               Navigator.pushNamed(context, "/settings"),
             },
         "selected": false,
-      }
+      },
     ];
 
     return Drawer(
-      backgroundColor: drawerBgColor,
       child: SafeArea(
         child: Column(
           children: [
@@ -79,9 +81,7 @@ class MainDrawer extends StatelessWidget {
                     child: ListTile(
                       leading: menuItem[index]['icon'],
                       title: menuItem[index]['title'],
-                      onTap: () => {
-                        menuItem[index]['function'](),
-                      },
+                      onTap: () => {menuItem[index]['function']()},
                       selected: menuItem[index]['selected'],
                     ),
                   );

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/home/widgets/taglisttile.dart';
-import 'package:nexecute/shared/shared.dart';
 import 'package:nexecute/services/services.dart';
 import 'package:provider/provider.dart';
 import 'package:nexecute/models/tag.dart';
@@ -14,11 +13,7 @@ class TagsScreen extends StatelessWidget {
     final newTagController = TextEditingController();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tags'),
-        backgroundColor: appBarDarkCyan,
-      ),
-      backgroundColor: bgDarkCyan,
+      appBar: AppBar(title: const Text('Tags')),
       body: Column(
         children: [
           const SizedBox(height: 16),
@@ -37,7 +32,9 @@ class TagsScreen extends StatelessWidget {
                 child: Container(
                   width: MediaQuery.of(context).size.width,
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.white70),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Padding(
@@ -57,7 +54,6 @@ class TagsScreen extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: darkCyan),
                 onPressed: () {
                   if (newTagController.text.isNotEmpty) {
                     FirestoreService().addNewTag(newTagController.text);

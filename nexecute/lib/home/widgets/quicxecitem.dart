@@ -3,8 +3,8 @@ import 'package:nexecute/home/bottomsheets/item_editor.dart';
 import 'package:nexecute/home/widgets/taglistitem.dart';
 import 'package:nexecute/models/tag.dart';
 import 'package:nexecute/services/services.dart';
-import 'package:nexecute/shared/shared.dart';
 import 'package:nexecute/models/quicxec.dart';
+import 'package:nexecute/themes.dart';
 
 class QuicxecItem extends StatelessWidget {
   final Quicxec quicxec;
@@ -12,7 +12,7 @@ class QuicxecItem extends StatelessWidget {
 
   _onLongPress(LongPressStartDetails details, context) {
     showMenu(
-      color: darkCyan,
+      color: context.appPalette.surfaceRaised,
       context: context,
       position: RelativeRect.fromRect(
         Rect.fromLTWH(
@@ -28,10 +28,7 @@ class QuicxecItem extends StatelessWidget {
           onTap: () {
             FirestoreService().moveCurrentlyOpenQuicxec(quicxec);
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                backgroundColor: snackBarBgColor,
-                content: Text('Quicxec moved to trash'),
-              ),
+              const SnackBar(content: Text('Quicxec moved to trash')),
             );
           },
           child:
@@ -43,12 +40,9 @@ class QuicxecItem extends StatelessWidget {
           PopupMenuItem(
             onTap: () {
               FirestoreService().permanentlyDeleteSingleQuicxec(quicxec);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  backgroundColor: snackBarBgColor,
-                  content: Text('Quicxec deleted.'),
-                ),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Quicxec deleted.')));
             },
             child: const Text('Delete permanently'),
           ),
@@ -66,9 +60,8 @@ class QuicxecItem extends StatelessWidget {
         tag: quicxec.id,
         child: Card(
           clipBehavior: Clip.antiAlias,
-          color: bgDarkCyan,
           shape: RoundedRectangleBorder(
-            side: BorderSide(color: Colors.cyan.shade100),
+            side: BorderSide(color: context.appPalette.outline),
             borderRadius: const BorderRadius.all(Radius.circular(12)),
           ),
           child: InkWell(
@@ -80,8 +73,17 @@ class QuicxecItem extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(quicxec.title, style: quicxecTitleText, maxLines: 1),
-                  Expanded(child: Text(quicxec.text, style: quicxecText)),
+                  Text(
+                    quicxec.title,
+                    style: Theme.of(context).textTheme.titleLarge,
+                    maxLines: 1,
+                  ),
+                  Expanded(
+                    child: Text(
+                      quicxec.text,
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                  ),
                   SizedBox(
                     height: 32,
                     child: Row(

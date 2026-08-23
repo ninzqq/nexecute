@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:nexecute/shared/shared.dart';
 import 'package:nexecute/home/home.dart';
 import 'package:provider/provider.dart';
 import 'package:nexecute/buttons/emtpytrashpermanentlybutton.dart';
@@ -20,33 +19,27 @@ class TrashScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Trashed quicxecs'),
-        backgroundColor: appBarDarkCyan,
-        actions: const [
-          EmptyTrashPermanentlyButton(),
-        ],
+        actions: const [EmptyTrashPermanentlyButton()],
       ),
-      body: Container(
-        color: bgDarkerCyan,
-        child: GridView.builder(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisExtent: 120,
-          ),
-          itemCount: trashedQuicxecs.length,
-          itemBuilder: (context, index) {
-            var quicxec = trashedQuicxecs[index];
-            return QuicxecItem(
-              quicxec: Quicxec(
-                id: quicxec.id,
-                text: quicxec.text,
-                title: quicxec.title,
-                trashed: quicxec.trashed,
-                tags: quicxec.tags,
-                created: quicxec.created,
-              ),
-            );
-          },
+      body: GridView.builder(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisExtent: 120,
         ),
+        itemCount: trashedQuicxecs.length,
+        itemBuilder: (context, index) {
+          var quicxec = trashedQuicxecs[index];
+          return QuicxecItem(
+            quicxec: Quicxec(
+              id: quicxec.id,
+              text: quicxec.text,
+              title: quicxec.title,
+              trashed: quicxec.trashed,
+              tags: quicxec.tags,
+              created: quicxec.created,
+            ),
+          );
+        },
       ),
     );
   }

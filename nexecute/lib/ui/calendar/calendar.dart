@@ -4,7 +4,6 @@ import 'package:nexecute/domain/calendar/gregorian_month_calculator.dart';
 import 'package:nexecute/domain/calendar/iso_week_calculator.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/selected_day.dart';
-import 'package:nexecute/shared/styles.dart';
 import 'package:nexecute/ui/calendar/month_view.dart';
 import 'package:nexecute/ui/calendar/week_view.dart';
 import 'package:provider/provider.dart';
@@ -40,7 +39,6 @@ class _CalendarPageState extends State<CalendarPage> {
     final events = context.watch<List<Event>>();
 
     return Scaffold(
-      backgroundColor: bgDarkerCyan,
       body: Padding(
         padding: const EdgeInsets.only(bottom: 70),
         child: Column(
@@ -66,7 +64,12 @@ class _CalendarPageState extends State<CalendarPage> {
                         events: events,
                         onDaySelected: _selectDay,
                       )
-                      : WeekView(week: week),
+                      : WeekView(
+                        week: week,
+                        events: events,
+                        selectedDay: _selectedDay,
+                        onDaySelected: _selectDay,
+                      ),
             ),
           ],
         ),

@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/services/firestore.dart';
 
-import '../../shared/shared.dart';
+import 'package:nexecute/themes.dart';
 
 class TagListTile extends StatelessWidget {
   final String tag;
   const TagListTile({super.key, required this.tag});
 
-  _onLongPress(LongPressStartDetails details, context) {
+  void _onLongPress(LongPressStartDetails details, BuildContext context) {
     showMenu(
-      color: darkCyan,
+      color: context.appPalette.surfaceRaised,
       context: context,
       position: RelativeRect.fromRect(
         Rect.fromLTWH(
@@ -24,12 +24,9 @@ class TagListTile extends StatelessWidget {
         PopupMenuItem(
           onTap: () {
             FirestoreService().removeSelectedTag(tag);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                backgroundColor: snackBarBgColor,
-                content: Text('Tag deleted'),
-              ),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Tag deleted')));
           },
           child: const Text('Delete tag'),
         ),
@@ -49,14 +46,11 @@ class TagListTile extends StatelessWidget {
         trailing: IconButton(
           onPressed: () {
             FirestoreService().removeSelectedTag(tag);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                backgroundColor: snackBarBgColor,
-                content: Text('Tag deleted'),
-              ),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Tag deleted')));
           },
-          icon: Icon(Icons.delete, color: Colors.white70),
+          icon: const Icon(Icons.delete),
         ),
       ),
     );

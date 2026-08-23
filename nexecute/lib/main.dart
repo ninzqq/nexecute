@@ -2,8 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:nexecute/models/selected_day.dart';
+import 'package:nexecute/models/app_theme_controller.dart';
 import 'package:nexecute/services/services.dart';
-import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'firebase_options.dart';
@@ -19,7 +19,8 @@ import 'package:nexecute/models/tag.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(const Nexecute());
+  final themeController = await AppThemeController.load();
+  runApp(Nexecute(themeController: themeController));
 }
 
 /// We are using a StatefulWidget such that we only create the [Future] once,
@@ -28,7 +29,9 @@ void main() async {
 /// would re-initialize FlutterFire and make our application re-enter loading state,
 /// which is undesired.
 class Nexecute extends StatefulWidget {
-  const Nexecute({super.key});
+  const Nexecute({super.key, this.themeController});
+
+  final AppThemeController? themeController;
 
   // Create the initialization Future outside of `build`:
   @override
@@ -39,6 +42,21 @@ class NexecuteState extends State<Nexecute> {
   /// The future is part of the state of our widget. We should not call `initializeApp`
   /// directly inside [build].
   final Future<FirebaseApp> _initialization = Firebase.initializeApp();
+  late final AppThemeController _themeController;
+  late final bool _ownsThemeController;
+
+  @override
+  void initState() {
+    super.initState();
+    _ownsThemeController = widget.themeController == null;
+    _themeController = widget.themeController ?? AppThemeController();
+  }
+
+  @override
+  void dispose() {
+    if (_ownsThemeController) _themeController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -83,24 +101,38 @@ class NexecuteState extends State<Nexecute> {
               ChangeNotifierProvider(create: (context) => Asdf()),
               ChangeNotifierProvider(create: (context) => HomeTabIndex()),
               ChangeNotifierProvider(create: (context) => SelectedDay()),
+              ChangeNotifierProvider.value(value: _themeController),
             ],
-            child:
-                defaultTargetPlatform == TargetPlatform.android
-                    ? MaterialApp(
-                      routes: appRoutes,
-                      theme: appTheme,
-                      localizationsDelegates:
-                          GlobalMaterialLocalizations.delegates,
-                      supportedLocales: [const Locale('fi', 'FI')],
-                    )
-                    : kIsWeb
-                    ? Text('WEEEEEEEEB', textDirection: TextDirection.ltr)
-                    : const Center(child: Text('JOTAI VITUN MUUUTAAAAAA', textDirection: TextDirection.ltr)),
+            child: Consumer<AppThemeController>(
+              builder:
+                  (context, themeController, _) =>
+                      defaultTargetPlatform == TargetPlatform.android
+                          ? MaterialApp(
+                            routes: appRoutes,
+                            theme: themeController.themeData,
+                            localizationsDelegates:
+                                GlobalMaterialLocalizations.delegates,
+                            supportedLocales: [const Locale('fi', 'FI')],
+                          )
+                          : kIsWeb
+                          ? const Text(
+                            'WEEEEEEEEB',
+                            textDirection: TextDirection.ltr,
+                          )
+                          : const Center(
+                            child: Text(
+                              'JOTAI VITUN MUUUTAAAAAA',
+                              textDirection: TextDirection.ltr,
+                            ),
+                          ),
+            ),
           );
         }
 
         // Otherwise, show something whilst waiting for initialization to complete
-        return const Center(child: Text('loading', textDirection: TextDirection.ltr));
+        return const Center(
+          child: Text('loading', textDirection: TextDirection.ltr),
+        );
       },
     );
   }

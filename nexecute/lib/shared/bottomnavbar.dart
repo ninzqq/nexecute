@@ -4,8 +4,8 @@ import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/selected_day.dart';
 import 'package:provider/provider.dart';
-import 'package:nexecute/shared/shared.dart';
 import 'package:nexecute/models/home_tab_index.dart';
+import 'package:nexecute/themes.dart';
 
 class BottomNavBar extends StatelessWidget {
   final Function changePage;
@@ -29,7 +29,7 @@ class BottomNavBar extends StatelessWidget {
           children: [
             CustomPaint(
               size: Size(size.width, navBarHeight),
-              painter: BottomNavBarPainter(),
+              painter: BottomNavBarPainter(color: context.appPalette.chrome),
             ),
             Center(
               heightFactor: 0.6,
@@ -37,7 +37,6 @@ class BottomNavBar extends StatelessWidget {
                 width: 63,
                 height: 63,
                 child: FloatingActionButton(
-                  backgroundColor: primaryButtonCyan,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(100),
                   ),
@@ -100,7 +99,7 @@ class BottomNavBar extends StatelessWidget {
                     icon: const Icon(Icons.calendar_month_outlined),
                     color:
                         homePageIndex.idx == 0
-                            ? primaryButtonCyan
+                            ? Theme.of(context).colorScheme.primary
                             : Colors.grey.shade400,
                   ),
                   Container(width: size.width * 0.12),
@@ -116,7 +115,7 @@ class BottomNavBar extends StatelessWidget {
                     icon: const Icon(Icons.list_alt_sharp),
                     color:
                         homePageIndex.idx == 1
-                            ? primaryButtonCyan
+                            ? Theme.of(context).colorScheme.primary
                             : Colors.grey.shade400,
                   ),
                 ],
@@ -130,11 +129,15 @@ class BottomNavBar extends StatelessWidget {
 }
 
 class BottomNavBarPainter extends CustomPainter {
+  const BottomNavBarPainter({required this.color});
+
+  final Color color;
+
   @override
   void paint(Canvas canvas, Size size) {
     Paint paint =
         Paint()
-          ..color = appBarDarkCyan
+          ..color = color
           ..style = PaintingStyle.fill;
 
     Path path = Path();
@@ -157,6 +160,6 @@ class BottomNavBarPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(CustomPainter oldDelegate) {
-    return false;
+    return oldDelegate is! BottomNavBarPainter || oldDelegate.color != color;
   }
 }

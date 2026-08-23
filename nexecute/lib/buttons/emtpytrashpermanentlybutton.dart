@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/services/firestore.dart';
-import 'package:nexecute/shared/shared.dart';
 
 class EmptyTrashPermanentlyButton extends StatelessWidget {
   const EmptyTrashPermanentlyButton({super.key});
@@ -14,7 +13,6 @@ class EmptyTrashPermanentlyButton extends StatelessWidget {
             builder:
                 (context) => AlertDialog(
                   title: const Text('Warning'),
-                  backgroundColor: darkGreen,
                   content: const Text(
                     'Are you sure you want to delete all the items in trash permanently?\nNote: This action cannot be undone.',
                   ),
@@ -29,10 +27,7 @@ class EmptyTrashPermanentlyButton extends StatelessWidget {
                             FirestoreService().emptyTrash(),
                             Navigator.pop(context, 'Yes'),
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                backgroundColor: snackBarBgColor,
-                                content: Text('Trash emptied'),
-                              ),
+                              const SnackBar(content: Text('Trash emptied')),
                             ),
                           },
                       child: const Text('Yes'),
