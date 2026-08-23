@@ -263,15 +263,11 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                       );
                       if (_selectedDate != null) {
                         setState(() {
-                          _startTime = DateTime(
-                            _selectedDate!.year,
-                            _selectedDate!.month,
-                            _selectedDate!.day,
-                            DateTime.now().hour,
-                            DateTime.now().minute,
-                            DateTime.now().second,
+                          _startTime = combineDateAndTime(
+                            _selectedDate!,
+                            _startTime,
                           );
-                          if (_selectedDate!.isAfter(_endTime)) {
+                          if (_startTime.isAfter(_endTime)) {
                             _endTime = _startTime.add(const Duration(hours: 1));
                           }
                         });
@@ -294,13 +290,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                       );
                       if (date != null) {
                         setState(() {
-                          _endTime = date.add(
-                            Duration(
-                              hours: _startTime.hour + 1,
-                              minutes: _startTime.minute,
-                              seconds: _startTime.second,
-                            ),
-                          );
+                          _endTime = combineDateAndTime(date, _endTime);
                         });
                       }
                     },
