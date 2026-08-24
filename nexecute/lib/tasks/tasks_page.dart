@@ -3,6 +3,7 @@ import 'package:nexecute/models/todo_item.dart';
 import 'package:nexecute/services/firestore.dart';
 import 'package:nexecute/tasks/todo_editor_sheet.dart';
 import 'package:nexecute/tasks/todo_list_utils.dart';
+import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
 
 class TasksPage extends StatelessWidget {
@@ -89,20 +90,26 @@ class _DismissibleTodo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Dismissible(
-      key: ValueKey('todo-${todo.id}'),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        color: Theme.of(context).colorScheme.errorContainer,
-        padding: const EdgeInsets.only(right: 20),
-        alignment: Alignment.centerRight,
-        child: Icon(
-          Icons.delete_outline,
-          color: Theme.of(context).colorScheme.onErrorContainer,
+    return Padding(
+      padding: EdgeInsets.fromLTRB(completed ? 8 : 0, 0, completed ? 8 : 0, 8),
+      child: Dismissible(
+        key: ValueKey('todo-${todo.id}'),
+        direction: DismissDirection.endToStart,
+        background: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.errorContainer,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          padding: const EdgeInsets.only(right: 20),
+          alignment: Alignment.centerRight,
+          child: Icon(
+            Icons.delete_outline,
+            color: Theme.of(context).colorScheme.onErrorContainer,
+          ),
         ),
+        confirmDismiss: (_) => _delete(context),
+        child: _TodoRow(todo: todo, completed: completed),
       ),
-      confirmDismiss: (_) => _delete(context),
-      child: _TodoRow(todo: todo, completed: completed),
     );
   }
 
@@ -151,26 +158,86 @@ class _TodoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.appPalette;
+
     return Opacity(
       opacity: completed ? 0.62 : 1,
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-        leading: Checkbox(
-          value: completed,
-          onChanged: (value) => _setCompleted(context, value ?? false),
+      child: DecoratedBox(
+        key: ValueKey('todo-surface-${todo.id}'),
+        decoration: BoxDecoration(
+          color: palette.surfaceRaised,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color:
+                completed
+                    ? palette.outline.withValues(alpha: 0.65)
+                    : palette.outline,
+          ),
+          boxShadow:
+              completed
+                  ? const []
+                  : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
         ),
-        title: Text(
-          todo.title,
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            decoration: completed ? TextDecoration.lineThrough : null,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => showTodoEditor(context, todo: todo),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 6, 8),
+              child: Row(
+                children: [
+                  Checkbox(
+                    value: completed,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                    side: BorderSide(
+                      color: completed ? palette.success : palette.primary,
+                      width: 1.6,
+                    ),
+                    onChanged:
+                        (value) => _setCompleted(context, value ?? false),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      todo.title,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontWeight:
+                            completed ? FontWeight.w400 : FontWeight.w600,
+                        decoration:
+                            completed ? TextDecoration.lineThrough : null,
+                        decorationColor: palette.onSurface,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    tooltip: 'Edit task',
+                    visualDensity: VisualDensity.compact,
+                    style: IconButton.styleFrom(
+                      backgroundColor: palette.primary.withValues(alpha: 0.1),
+                      foregroundColor:
+                          completed
+                              ? palette.onSurface.withValues(alpha: 0.7)
+                              : palette.primary,
+                    ),
+                    onPressed: () => showTodoEditor(context, todo: todo),
+                    icon: const Icon(Icons.edit_outlined, size: 19),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
-        trailing: IconButton(
-          tooltip: 'Edit task',
-          onPressed: () => showTodoEditor(context, todo: todo),
-          icon: const Icon(Icons.edit_outlined),
-        ),
-        onTap: () => showTodoEditor(context, todo: todo),
       ),
     );
   }

@@ -53,6 +53,25 @@ void main() {
     expect(find.text('Nothing to do'), findsOneWidget);
   });
 
+  testWidgets('renders active tasks as separate card-like items', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      appWith([
+        todo(id: 'First task', completed: false),
+        todo(id: 'Second task', completed: false),
+      ]),
+    );
+
+    final first = find.byKey(const ValueKey('todo-surface-First task'));
+    final second = find.byKey(const ValueKey('todo-surface-Second task'));
+
+    expect(first, findsOneWidget);
+    expect(second, findsOneWidget);
+    expect(tester.getTopLeft(second).dy - tester.getBottomLeft(first).dy, 8);
+    expect(find.byTooltip('Edit task'), findsNWidgets(2));
+  });
+
   for (final preset in AppThemePreset.values) {
     testWidgets('renders under the ${preset.name} theme', (tester) async {
       await tester.pumpWidget(
