@@ -46,10 +46,12 @@ abstract final class AppThemes {
       displayColor: palette.onSurface,
     );
     final isCyberpunk = preset == AppThemePreset.cyberpunk;
-    final navigationAccent = isCyberpunk ? palette.secondary : palette.primary;
+    final navigationIconAccent = palette.primary;
+    final navigationLabelAccent =
+        isCyberpunk ? palette.secondary : palette.primary;
     final navigationIndicator =
         isCyberpunk
-            ? const Color(0xFF241437)
+            ? const Color(0xFF102A35)
             : palette.primary.withValues(alpha: 0.18);
 
     return ThemeData(
@@ -106,6 +108,12 @@ abstract final class AppThemes {
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: palette.primary,
         foregroundColor: palette.onPrimary,
+        shape: CircleBorder(
+          side:
+              isCyberpunk
+                  ? BorderSide(color: palette.secondary, width: 1.5)
+                  : BorderSide.none,
+        ),
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: palette.chrome,
@@ -117,7 +125,7 @@ abstract final class AppThemes {
           side: BorderSide(
             color:
                 isCyberpunk
-                    ? palette.primary.withValues(alpha: 0.65)
+                    ? palette.secondary.withValues(alpha: 0.75)
                     : palette.outline,
           ),
         ),
@@ -126,7 +134,7 @@ abstract final class AppThemes {
           return IconThemeData(
             color:
                 selected
-                    ? navigationAccent
+                    ? navigationIconAccent
                     : palette.onSurface.withValues(alpha: 0.65),
           );
         }),
@@ -135,7 +143,7 @@ abstract final class AppThemes {
           return baseTextTheme.labelMedium?.copyWith(
             color:
                 selected
-                    ? navigationAccent
+                    ? navigationLabelAccent
                     : palette.onSurface.withValues(alpha: 0.65),
             fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
           );
@@ -167,7 +175,18 @@ abstract final class AppThemes {
                     ? palette.primary
                     : palette.surfaceRaised,
           ),
-          side: WidgetStatePropertyAll(BorderSide(color: palette.outline)),
+          side: WidgetStateProperty.resolveWith(
+            (states) => BorderSide(
+              color:
+                  isCyberpunk && states.contains(WidgetState.selected)
+                      ? palette.secondary.withValues(alpha: 0.85)
+                      : palette.outline,
+              width:
+                  isCyberpunk && states.contains(WidgetState.selected)
+                      ? 1.5
+                      : 1,
+            ),
+          ),
         ),
       ),
       extensions: [palette],
@@ -180,12 +199,12 @@ abstract final class AppThemes {
       surface: Color(0xFF100B20),
       surfaceRaised: Color(0xFF1A1230),
       chrome: Color(0xFF120A25),
-      primary: Color(0xFFFF3BD4),
-      onPrimary: Color(0xFF24001D),
-      secondary: Color(0xFF00E7F0),
+      primary: Color(0xFF00E7F0),
+      onPrimary: Color(0xFF001F22),
+      secondary: Color(0xFFFF3BD4),
       tertiary: Color(0xFFFFD740),
       onSurface: Color(0xFFF5EEFF),
-      outline: Color(0xFF503C72),
+      outline: Color(0xFF32556B),
       success: Color(0xFF55F991),
     ),
     AppThemePreset.midnight => const AppPalette(

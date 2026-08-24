@@ -44,15 +44,33 @@ void main() {
     expect(primaryColors.length, AppThemePreset.values.length);
   });
 
-  test('Cyberpunk navigation uses dark chrome and cyan selection', () {
+  test('Cyberpunk uses cyan as its primary interactive accent', () {
     final theme = AppThemes.forPreset(AppThemePreset.cyberpunk);
     final navigationTheme = theme.navigationBarTheme;
 
+    expect(theme.colorScheme.primary, const Color(0xFF00E7F0));
+    expect(theme.colorScheme.secondary, const Color(0xFFFF3BD4));
+    expect(
+      theme.floatingActionButtonTheme.backgroundColor,
+      const Color(0xFF00E7F0),
+    );
     expect(navigationTheme.backgroundColor, const Color(0xFF120A25));
-    expect(navigationTheme.indicatorColor, const Color(0xFF241437));
+    expect(navigationTheme.indicatorColor, const Color(0xFF102A35));
     expect(
       navigationTheme.iconTheme?.resolve({WidgetState.selected})?.color,
       const Color(0xFF00E7F0),
+    );
+    expect(
+      navigationTheme.labelTextStyle?.resolve({WidgetState.selected})?.color,
+      const Color(0xFFFF3BD4),
+    );
+    expect(
+      (navigationTheme.indicatorShape as StadiumBorder).side.color,
+      const Color(0xFFFF3BD4).withValues(alpha: 0.75),
+    );
+    expect(
+      (theme.floatingActionButtonTheme.shape as CircleBorder).side.color,
+      const Color(0xFFFF3BD4),
     );
     expect(navigationTheme.elevation, 8);
     expect(navigationTheme.shadowColor, isNot(Colors.transparent));
