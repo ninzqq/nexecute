@@ -33,8 +33,29 @@ void main() {
     final currentMonth = DateTime(today.year, today.month);
     final nextMonth = DateTime(today.year, today.month + 1);
     final swipeArea = find.byKey(const Key('calendar-swipe-area'));
+    final currentMonthPage = find.byKey(
+      ValueKey('month-page-${currentMonth.year}-${currentMonth.month}'),
+    );
+    final initialPageX = tester.getTopLeft(currentMonthPage).dx;
 
-    await tester.drag(swipeArea, const Offset(-300, 0));
+    final partialSwipe = await tester.startGesture(tester.getCenter(swipeArea));
+    await partialSwipe.moveBy(const Offset(-20, 0));
+    await tester.pump();
+    await partialSwipe.moveBy(const Offset(-140, 0));
+    await tester.pump();
+
+    expect(tester.getTopLeft(currentMonthPage).dx, lessThan(initialPageX));
+
+    await tester.pump(const Duration(milliseconds: 300));
+    await partialSwipe.up();
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(DateFormat('MMMM yyyy').format(currentMonth)),
+      findsOneWidget,
+    );
+
+    await tester.drag(swipeArea, const Offset(-500, 0));
     await tester.pumpAndSettle();
 
     expect(
@@ -42,7 +63,7 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.drag(swipeArea, const Offset(300, 0));
+    await tester.drag(swipeArea, const Offset(500, 0));
     await tester.pumpAndSettle();
 
     expect(
@@ -57,9 +78,10 @@ void main() {
     await tester.pumpAndSettle();
 
     final nextWeekDate = DateTime(today.year, today.month, today.day + 7);
+    final currentWeek = IsoWeekCalculator().fromDate(today);
     final nextWeek = IsoWeekCalculator().fromDate(nextWeekDate);
 
-    await tester.drag(swipeArea, const Offset(-300, 0));
+    await tester.drag(swipeArea, const Offset(-500, 0));
     await tester.pumpAndSettle();
 
     expect(
@@ -67,6 +89,51 @@ void main() {
         'Week ${nextWeek.weekNumber} · '
         '${DateFormat('MMM yyyy').format(nextWeek.start)}',
       ),
+      findsOneWidget,
+    );
+
+    final nextWeekPage = find.byKey(
+      ValueKey('week-page-${nextWeek.year}-${nextWeek.weekNumber}'),
+    );
+    final settledPageX = tester.getTopLeft(nextWeekPage).dx;
+
+    await tester.tap(find.byTooltip('Previous'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(tester.getTopLeft(nextWeekPage).dx, greaterThan(settledPageX));
+
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Week ${currentWeek.weekNumber} · '
+        '${DateFormat('MMM yyyy').format(currentWeek.start)}',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Month'));
+    await tester.pumpAndSettle();
+    await tester.drag(swipeArea, const Offset(-500, 0));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Week'));
+    await tester.pumpAndSettle();
+
+    final firstWeekOfNextMonth = IsoWeekCalculator().fromDate(nextMonth);
+    expect(
+      find.text(
+        'Week ${firstWeekOfNextMonth.weekNumber} · '
+        '${DateFormat('MMM yyyy').format(firstWeekOfNextMonth.start)}',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Month'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(DateFormat('MMMM yyyy').format(nextMonth)),
       findsOneWidget,
     );
   });

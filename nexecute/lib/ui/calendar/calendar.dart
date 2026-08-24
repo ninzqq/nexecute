@@ -21,27 +21,42 @@ class CalendarPage extends StatefulWidget {
 }
 
 class _CalendarPageState extends State<CalendarPage> {
-  static const _swipeThreshold = 48.0;
+  static const _initialPage = 12000;
+  static const _pageAnimationDuration = Duration(milliseconds: 280);
 
   final _weekCalculator = IsoWeekCalculator();
   final _monthCalculator = GregorianMonthCalculator();
+  late final PageController _monthPageController;
+  late final PageController _weekPageController;
   CalendarViewMode _viewMode = CalendarViewMode.month;
+  late DateTime _pageAnchor;
   late DateTime _focusedDay;
   late DateTime _selectedDay;
-  double _horizontalDragDistance = 0;
+  int _monthPage = _initialPage;
+  int _weekPage = _initialPage;
 
   @override
   void initState() {
     super.initState();
     final today = DateTime.now();
-    _focusedDay = DateTime(today.year, today.month, today.day);
+    _pageAnchor = DateTime(today.year, today.month, today.day);
+    _focusedDay = _pageAnchor;
     _selectedDay = _focusedDay;
+    _monthPageController = PageController(initialPage: _initialPage);
+    _weekPageController = PageController(initialPage: _initialPage);
+  }
+
+  @override
+  void dispose() {
+    _monthPageController.dispose();
+    _weekPageController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final week = _weekCalculator.fromDate(_focusedDay);
-    final month = _monthCalculator.fromDate(_focusedDay);
+    final week = _weekCalculator.fromDate(_weekDateForPage(_weekPage));
+    final month = _monthCalculator.fromDate(_monthDateForPage(_monthPage));
     final events = context.watch<List<Event>>();
     final selectedEvents = eventsForDay(events, _selectedDay);
 
@@ -55,7 +70,7 @@ class _CalendarPageState extends State<CalendarPage> {
                     ? DateFormat('MMMM yyyy').format(month.start)
                     : 'Week ${week.weekNumber} · ${DateFormat('MMM yyyy').format(week.start)}',
             viewMode: _viewMode,
-            onViewModeChanged: (mode) => setState(() => _viewMode = mode),
+            onViewModeChanged: _changeViewMode,
             onPrevious: _showPrevious,
             onNext: _showNext,
             onToday: _showToday,
@@ -66,32 +81,57 @@ class _CalendarPageState extends State<CalendarPage> {
             child: Column(
               children: [
                 Expanded(
-                  child: GestureDetector(
+                  child: KeyedSubtree(
                     key: const Key('calendar-swipe-area'),
-                    behavior: HitTestBehavior.opaque,
-                    onHorizontalDragStart: (_) => _horizontalDragDistance = 0,
-                    onHorizontalDragUpdate:
-                        (details) =>
-                            _horizontalDragDistance +=
-                                details.primaryDelta ?? 0,
-                    onHorizontalDragEnd: (_) => _finishHorizontalSwipe(),
-                    onHorizontalDragCancel: () => _horizontalDragDistance = 0,
-                    child:
-                        _viewMode == CalendarViewMode.month
-                            ? MonthView(
-                              month: month,
-                              selectedDay: _selectedDay,
-                              events: events,
-                              onDaySelected: _selectDay,
-                              onEventSelected: _openEvent,
-                            )
-                            : WeekView(
-                              week: week,
-                              events: events,
-                              selectedDay: _selectedDay,
-                              onDaySelected: _selectDay,
-                              onEventSelected: _openEvent,
-                            ),
+                    child: IndexedStack(
+                      index: _viewMode == CalendarViewMode.month ? 0 : 1,
+                      children: [
+                        PageView.builder(
+                          controller: _monthPageController,
+                          allowImplicitScrolling: true,
+                          onPageChanged: _onMonthPageChanged,
+                          itemBuilder: (context, page) {
+                            final pageMonth = _monthCalculator.fromDate(
+                              _monthDateForPage(page),
+                            );
+                            return KeyedSubtree(
+                              key: ValueKey(
+                                'month-page-${pageMonth.year}-${pageMonth.month}',
+                              ),
+                              child: MonthView(
+                                month: pageMonth,
+                                selectedDay: _selectedDay,
+                                events: events,
+                                onDaySelected: _selectDay,
+                                onEventSelected: _openEvent,
+                              ),
+                            );
+                          },
+                        ),
+                        PageView.builder(
+                          controller: _weekPageController,
+                          allowImplicitScrolling: true,
+                          onPageChanged: _onWeekPageChanged,
+                          itemBuilder: (context, page) {
+                            final pageWeek = _weekCalculator.fromDate(
+                              _weekDateForPage(page),
+                            );
+                            return KeyedSubtree(
+                              key: ValueKey(
+                                'week-page-${pageWeek.year}-${pageWeek.weekNumber}',
+                              ),
+                              child: WeekView(
+                                week: pageWeek,
+                                events: events,
+                                selectedDay: _selectedDay,
+                                onDaySelected: _selectDay,
+                                onEventSelected: _openEvent,
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const Divider(height: 1),
@@ -113,40 +153,42 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   void _showPrevious() {
-    setState(() {
-      _focusedDay =
-          _viewMode == CalendarViewMode.month
-              ? DateTime(_focusedDay.year, _focusedDay.month - 1, 1)
-              : DateTime(
-                _focusedDay.year,
-                _focusedDay.month,
-                _focusedDay.day - 7,
-              );
-    });
+    _activePageController.previousPage(
+      duration: _pageAnimationDuration,
+      curve: Curves.easeOutCubic,
+    );
   }
 
   void _showNext() {
-    setState(() {
-      _focusedDay =
-          _viewMode == CalendarViewMode.month
-              ? DateTime(_focusedDay.year, _focusedDay.month + 1, 1)
-              : DateTime(
-                _focusedDay.year,
-                _focusedDay.month,
-                _focusedDay.day + 7,
-              );
-    });
+    _activePageController.nextPage(
+      duration: _pageAnimationDuration,
+      curve: Curves.easeOutCubic,
+    );
   }
 
-  void _finishHorizontalSwipe() {
-    final distance = _horizontalDragDistance;
-    _horizontalDragDistance = 0;
+  PageController get _activePageController =>
+      _viewMode == CalendarViewMode.month
+          ? _monthPageController
+          : _weekPageController;
 
-    if (distance <= -_swipeThreshold) {
-      _showNext();
-    } else if (distance >= _swipeThreshold) {
-      _showPrevious();
+  void _changeViewMode(CalendarViewMode mode) {
+    if (mode == _viewMode) return;
+
+    if (mode == CalendarViewMode.month) {
+      final page = _monthPageForDate(_focusedDay);
+      _monthPage = page;
+      if (_monthPageController.hasClients) {
+        _monthPageController.jumpToPage(page);
+      }
+    } else {
+      final page = _weekPageForDate(_focusedDay);
+      _weekPage = page;
+      if (_weekPageController.hasClients) {
+        _weekPageController.jumpToPage(page);
+      }
     }
+
+    setState(() => _viewMode = mode);
   }
 
   void _showToday() {
@@ -160,7 +202,77 @@ class _CalendarPageState extends State<CalendarPage> {
       _selectedDay = normalized;
       _focusedDay = normalized;
     });
+    _animateActivePageToDate(normalized);
     context.read<SelectedDay>().setSelectedDay(normalized);
+  }
+
+  void _onMonthPageChanged(int page) {
+    setState(() {
+      _monthPage = page;
+      if (_viewMode == CalendarViewMode.month) {
+        _focusedDay = _monthDateForPage(page);
+      }
+    });
+  }
+
+  void _onWeekPageChanged(int page) {
+    setState(() {
+      _weekPage = page;
+      if (_viewMode == CalendarViewMode.week) {
+        _focusedDay = _weekDateForPage(page);
+      }
+    });
+  }
+
+  void _animateActivePageToDate(DateTime date) {
+    final targetPage =
+        _viewMode == CalendarViewMode.month
+            ? _monthPageForDate(date)
+            : _weekPageForDate(date);
+    final currentPage =
+        _viewMode == CalendarViewMode.month ? _monthPage : _weekPage;
+
+    if (targetPage == currentPage || !_activePageController.hasClients) return;
+
+    _activePageController.animateToPage(
+      targetPage,
+      duration: _pageAnimationDuration,
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  DateTime _monthDateForPage(int page) =>
+      DateTime(_pageAnchor.year, _pageAnchor.month + page - _initialPage, 1);
+
+  DateTime _weekDateForPage(int page) {
+    final anchorWeekStart = _weekCalculator.fromDate(_pageAnchor).start;
+    return DateTime(
+      anchorWeekStart.year,
+      anchorWeekStart.month,
+      anchorWeekStart.day + (page - _initialPage) * 7 + 3,
+    );
+  }
+
+  int _monthPageForDate(DateTime date) =>
+      _initialPage +
+      (date.year - _pageAnchor.year) * 12 +
+      date.month -
+      _pageAnchor.month;
+
+  int _weekPageForDate(DateTime date) {
+    final anchorWeek = _weekCalculator.fromDate(_pageAnchor);
+    final targetWeek = _weekCalculator.fromDate(date);
+    final anchorUtc = DateTime.utc(
+      anchorWeek.start.year,
+      anchorWeek.start.month,
+      anchorWeek.start.day,
+    );
+    final targetUtc = DateTime.utc(
+      targetWeek.start.year,
+      targetWeek.start.month,
+      targetWeek.start.day,
+    );
+    return _initialPage + targetUtc.difference(anchorUtc).inDays ~/ 7;
   }
 
   void _openEvent(Event event) {
