@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/domain/calendar/calendar_day.dart';
+import 'package:nexecute/domain/calendar/iso_week_calculator.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/themes.dart';
 import 'package:nexecute/ui/calendar/day_column.dart';
+import 'package:nexecute/ui/calendar/week_view.dart';
 
 void main() {
   testWidgets('selects a date by tapping the body of its week column', (
@@ -76,5 +78,38 @@ void main() {
 
     expect(selectedEvent, same(event));
     expect(daySelections, 0);
+  });
+
+  testWidgets('selecting a week event also selects its date', (tester) async {
+    final eventDate = DateTime(2026, 8, 25);
+    final event = Event(
+      id: 'event-1',
+      title: 'Planning',
+      startTime: DateTime(2026, 8, 25, 9),
+      endTime: DateTime(2026, 8, 25, 10),
+    );
+    DateTime? selectedDay;
+    Event? selectedEvent;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppThemes.forPreset(AppThemePreset.midnight),
+        home: Scaffold(
+          body: WeekView(
+            week: IsoWeekCalculator().fromDate(eventDate),
+            events: [event],
+            selectedDay: DateTime(2026, 8, 24),
+            onDaySelected: (value) => selectedDay = value,
+            onEventSelected: (value) => selectedEvent = value,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Planning'));
+    await tester.pump();
+
+    expect(selectedDay, eventDate);
+    expect(selectedEvent, same(event));
   });
 }
