@@ -1,5 +1,14 @@
 # Nexecute Roadmap
 
+## Roadmap maintenance
+
+- Update this document whenever roadmap work is started, changed, completed,
+  deferred, or replaced by another approach.
+- Keep feature statuses and implementation checklists aligned with the actual
+  application state.
+- Record meaningful scope and architecture decisions here so work can resume
+  later without relying on conversation history.
+
 ## Tasks / to-do list
 
 **Status:** Completed
@@ -97,13 +106,95 @@ tool built around Calendar, Tasks, and Notes. New functionality should connect
 these areas without making the core workflows dependent on AI or a permanent
 network connection.
 
+### Cross-platform laptop access
+
+**Status:** Proposed
+
+Provide access to the same Firestore-backed Calendar, Tasks, Notes, and Tags
+from laptop-sized devices without creating a second synchronization system.
+All clients should continue using the same authenticated, user-specific
+Firestore data.
+
+#### Recommended rollout
+
+1. Refactor application startup and services so they are not Android-only.
+2. Add an adaptive application shell shared by all platforms.
+3. Configure Firebase and Google authentication for Flutter Web.
+4. Deploy a private first web release and verify all core workflows.
+5. Add installable PWA behavior and desktop keyboard shortcuts.
+6. Enable macOS as a native target later, reusing the adaptive interface.
+7. Defer native Linux until its Firebase data and authentication approach can
+   be supported without fragile third-party dependencies.
+
+#### Web application
+
+- Use Flutter Web as the first laptop client so macOS, Linux, and Windows can
+  use the same release.
+- Treat the web build as a static client; it does not require a continuously
+  running custom application server when deployed to managed static hosting.
+- Prefer Firebase Hosting for the main client so Calendar, Tasks, and Notes
+  remain available even when the home AI PC is offline.
+- Configure the web Firebase application, authorized authentication domains,
+  Google sign-in flow, branding, icons, and PWA manifest.
+- Keep Firebase Authentication and Firestore security rules as the authority
+  for access to user data.
+- Optionally host the static web build privately through the home PC and
+  Tailscale if a tailnet-only application is preferred later. This makes the
+  home PC an availability dependency and is not the initial recommendation.
+
+#### macOS application
+
+- Consider macOS as the second laptop target when native integration becomes
+  valuable.
+- Reuse the responsive Flutter widgets and repositories rather than creating a
+  separate desktop application.
+- Configure the macOS Firebase application, Google sign-in, entitlements,
+  signing, packaging, and release process.
+- Use the native target for capabilities such as direct local-network access,
+  richer notifications, menu-bar actions, file integration, and global
+  shortcuts.
+- Decide later whether personal builds are installed manually or require an
+  application update mechanism.
+
+#### Linux application
+
+- Continue supporting Linux laptops through the web client initially.
+- Do not depend on a native Linux release until the official Firebase plugin
+  support needed by Nexecute is sufficient or the data layer has a deliberate
+  REST/backend implementation.
+
+#### Adaptive desktop interface
+
+- Preserve bottom navigation on compact phone layouts.
+- Use a `NavigationRail` or persistent sidebar on medium and wide layouts.
+- Allow the calendar and selected-day agenda/details to appear side by side.
+- Increase the Notes masonry-grid column count based on available width.
+- Consider list-and-detail layouts for Tasks and Notes.
+- Add keyboard shortcuts for creation, search, navigation, save, and close.
+- Add appropriate hover states, right-click menus, focus traversal, and desktop
+  spacing.
+- Support freely resizable windows instead of assuming phone dimensions.
+
+#### Cross-platform acceptance criteria
+
+- The same Google account sees the same data on Android and the laptop client.
+- Core Calendar, Tasks, and Notes workflows work at phone and desktop widths.
+- Navigation adapts without maintaining separate feature implementations.
+- The web client remains useful when the home AI server is unreachable.
+- Authentication and Firestore rules protect data on every target.
+
 ### Local AI assistant / intelligent quick capture
 
 **Status:** Proposed
 
-Connect the app to a user-configurable Ollama server and provide an assistant
-that can work across Calendar, Tasks, and Notes. The goal is an
-action-oriented assistant rather than a standalone generic chatbot.
+Connect the app to the self-hosted AI services on the dedicated home PC and
+provide an assistant that can work across Calendar, Tasks, and Notes. The PC
+runs Ollama and the ready-made Odysseus AI workspace created by PewDiePie;
+Nexecute does not own or control Odysseus's FastAPI implementation. Odysseus is
+not part of the initial integration: the existing installation primarily
+confirms that secure remote access to the AI PC already works through
+Tailscale. The goal is an action-oriented assistant rather than a standalone
+generic chatbot.
 
 Example requests:
 
@@ -113,9 +204,14 @@ Example requests:
 - "Summarize my unfinished checklist."
 - "What do I have planned tomorrow?"
 
-#### Phase 1: basic Ollama chat
+#### Phase 1: basic AI chat
 
-- Add Ollama server URL and model selection to Settings.
+- Integrate directly with Ollama through the existing private Tailscale route.
+- Keep Odysseus independent unless a future feature specifically benefits from
+  its agents, memory, documents, or research workflow.
+- Do not depend on Odysseus's internal routes or patch its FastAPI application
+  as part of Nexecute.
+- Add the Ollama service URL and available model selection to Settings.
 - Add a connection test and clear online, connecting, and unavailable states.
 - Provide a full-screen conversation view with streaming responses.
 - Allow an in-progress response to be stopped and a failed response retried.
@@ -133,6 +229,31 @@ Example requests:
   or finding unfinished checklist items.
 - Avoid automatically sending the user's complete Firestore data to the model.
 
+#### Firebase data and AI tool boundary
+
+- Do not give Ollama Firebase credentials, Firebase user tokens, a service
+  account, or unrestricted Firestore access.
+- Let the authenticated Nexecute client continue reading and writing Firestore
+  through its repositories and the existing user-specific security rules.
+- Convert only the relevant records into small, explicit JSON context objects
+  before sending them to Ollama. Exclude fields that are unnecessary for the
+  current request.
+- Support narrow read tools such as `listTasks`, `eventsForDateRange`,
+  `searchNotes`, and `getNote`, executed by the Nexecute client rather than by
+  the model or AI server.
+- Return tool results to the model so it can reason about the selected data
+  without knowing how Firebase is configured.
+- Limit reads by date range, search query, result count, and user-selected
+  context instead of attempting to place the complete database in the model's
+  context window.
+- Treat all model output as untrusted. Validate identifiers, dates, field
+  lengths, allowed action types, and required values inside Nexecute.
+- Represent writes as proposed actions and require confirmation before the app
+  calls its normal repositories to create or modify Firestore documents.
+- Keep a possible server-side AI adapter as a later scalability option, not an
+  MVP requirement. Do not place a Firebase Admin service account on the AI PC
+  for the initial implementation.
+
 #### Phase 3: structured, confirmed actions
 
 - Let the model propose a new task, note, or calendar event.
@@ -146,22 +267,40 @@ Example requests:
 
 #### Connectivity and security
 
-- Support a private LAN or VPN address for a home-hosted Ollama instance.
+- Use the existing dedicated home AI PC, which runs Ollama and the ready-made
+  Odysseus workspace and is reachable through the home network and Tailscale.
+- Treat Ollama and Odysseus as externally maintained services with their own
+  configuration, authentication, API contracts, and update lifecycle.
+- Keep the Flutter web client independently hosted while exposing Ollama
+  privately through Tailscale.
+- Prefer a valid Tailscale HTTPS/MagicDNS address so an HTTPS-hosted browser
+  client never needs to call a plain HTTP service.
+- Configure only the minimum Ollama network origins required by Nexecute and
+  verify browser CORS behavior during the web prototype.
+- If a stable and secure direct web integration is not available, choose
+  between a separate Nexecute-owned adapter or a tailnet-hosted same-origin web
+  client as an explicit architecture decision.
+- Restrict tailnet access to only the required service ports and devices/users.
 - Do not expose an unauthenticated Ollama port directly to the public internet.
-- Prefer a private VPN such as Tailscale or an authenticated HTTPS reverse
-  proxy for access outside the home network.
-- Store endpoint credentials in Android secure storage, not Firestore or plain
-  shared preferences.
+- Store native-client endpoint credentials in platform secure storage, not
+  Firestore or plain shared preferences. Do not embed a reusable API secret in
+  the web client. Rely on tailnet access for direct Ollama requests; if a
+  Nexecute-owned adapter is introduced later, authenticate it with the
+  signed-in user's verified Firebase identity.
 - Provide sensible connection timeouts, cancellation, and model warm-up
   feedback.
+- Treat all AI services as optional: Calendar, Tasks, Notes, authentication,
+  and Firestore synchronization must not depend on the home PC being online.
 
 #### AI assistant acceptance criteria
 
-- Ollama configuration can be tested without starting a conversation.
+- The selected AI-service configuration can be tested without starting a
+  conversation.
 - Responses stream into the interface and can be cancelled.
 - Offline or unreachable-server states are understandable and recoverable.
 - Application context is opt-in and visible to the user.
 - No model-generated action changes user data without confirmation.
+- Ollama never receives Firebase credentials or unrestricted database access.
 - The app's Calendar, Tasks, and Notes remain usable without Ollama.
 
 ### Today dashboard and universal quick capture
@@ -224,7 +363,8 @@ These improvements should be considered before or alongside larger features.
 ### High priority
 
 - Split `FirestoreService` into injected repositories for events, notes, tasks,
-  and tags. Add an independent assistant repository for Ollama.
+  and tags. Add an independent assistant repository whose interface does not
+  depend on Odysseus or Ollama-specific response types.
 - Query calendar events by the visible date range instead of maintaining one
   live stream containing the user's complete event history.
 - Represent loading, empty, authentication, and error states separately rather
