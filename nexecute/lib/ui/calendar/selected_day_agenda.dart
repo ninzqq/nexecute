@@ -8,7 +8,7 @@ import 'package:nexecute/ui/calendar/event_date_utils.dart';
 
 double selectedDayAgendaHeight(int eventCount) {
   if (eventCount == 0) return 120;
-  return math.min(176, math.max(120, 42 + eventCount * 54)).toDouble();
+  return math.min(232, math.max(120, 42 + eventCount * 54)).toDouble();
 }
 
 class SelectedDayAgenda extends StatelessWidget {

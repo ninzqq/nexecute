@@ -24,7 +24,7 @@ class HomeScreen extends StatelessWidget {
 
     return SafeArea(
       child: Scaffold(
-        appBar: AppBar(title: Text(_titles[tab.idx])),
+        appBar: tab.idx == 0 ? null : AppBar(title: Text(_titles[tab.idx])),
         drawer: const MainDrawer(),
         resizeToAvoidBottomInset: true,
         body: IndexedStack(
@@ -73,14 +73,11 @@ class HomeScreen extends StatelessWidget {
     switch (index) {
       case 0:
         final selectedDay = context.read<SelectedDay>().selectedDay;
-        final now = DateTime.now();
         final startTime = DateTime(
           selectedDay.year,
           selectedDay.month,
           selectedDay.day,
-          now.hour,
-          now.minute,
-          now.second,
+          9,
         );
         showItemEditor(
           context,

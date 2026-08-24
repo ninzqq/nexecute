@@ -15,7 +15,7 @@ void main() {
   test('agenda height grows with events and remains capped', () {
     expect(selectedDayAgendaHeight(0), 120);
     expect(selectedDayAgendaHeight(1), 120);
-    expect(selectedDayAgendaHeight(10), 176);
+    expect(selectedDayAgendaHeight(10), 232);
   });
 
   testWidgets('opens a selected-day event for viewing and editing', (

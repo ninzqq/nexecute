@@ -41,7 +41,10 @@ class WeekView extends StatelessWidget {
                                 selectedDay,
                               ),
                               onSelected: () => onDaySelected(day.date),
-                              onEventSelected: onEventSelected,
+                              onEventSelected: (event) {
+                                onDaySelected(day.date);
+                                onEventSelected(event);
+                              },
                             ),
                           ),
                         )

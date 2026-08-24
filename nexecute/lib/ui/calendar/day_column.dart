@@ -27,55 +27,62 @@ class DayColumn extends StatelessWidget {
     final dateLabel = DateFormat('EEE d').format(day.date);
     final palette = context.appPalette;
 
-    return Container(
-      decoration: BoxDecoration(
-        border: Border(
-          right: BorderSide(color: Theme.of(context).dividerColor),
-        ),
-      ),
-      child: Column(
-        children: [
-          Material(
-            color:
-                isSelected
-                    ? palette.primary.withValues(alpha: 0.18)
-                    : Theme.of(context).colorScheme.surface,
-            child: InkWell(
-              onTap: onSelected,
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                alignment: Alignment.center,
-                child: Text(
-                  dateLabel,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: isWeekend ? palette.secondary : palette.onSurface,
-                    fontWeight:
-                        isSelected ? FontWeight.bold : FontWeight.normal,
+    return Material(
+      color:
+          isSelected
+              ? palette.primary.withValues(alpha: 0.08)
+              : Colors.transparent,
+      child: InkWell(
+        onTap: onSelected,
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border(
+              right: BorderSide(color: Theme.of(context).dividerColor),
+            ),
+          ),
+          child: Column(
+            children: [
+              ColoredBox(
+                color:
+                    isSelected
+                        ? palette.primary.withValues(alpha: 0.18)
+                        : Theme.of(context).colorScheme.surface,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  alignment: Alignment.center,
+                  child: Text(
+                    dateLabel,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: isWeekend ? palette.secondary : palette.onSurface,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
-          ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 600),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(3, 6, 3, 12),
-              child: Column(
-                children: [
-                  for (var index = 0; index < events.length; index++) ...[
-                    _WeekEventCard(
-                      event: events[index],
-                      day: day.date,
-                      onTap: () => onEventSelected(events[index]),
-                    ),
-                    if (index < events.length - 1) const SizedBox(height: 4),
-                  ],
-                ],
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 600),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(3, 6, 3, 12),
+                  child: Column(
+                    children: [
+                      for (var index = 0; index < events.length; index++) ...[
+                        _WeekEventCard(
+                          event: events[index],
+                          day: day.date,
+                          onTap: () => onEventSelected(events[index]),
+                        ),
+                        if (index < events.length - 1)
+                          const SizedBox(height: 4),
+                      ],
+                    ],
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

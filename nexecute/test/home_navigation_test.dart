@@ -6,6 +6,7 @@ import 'package:nexecute/models/home_tab_index.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/quicxec_column_count.dart';
 import 'package:nexecute/models/selected_day.dart';
+import 'package:nexecute/models/tag.dart' as models;
 import 'package:nexecute/models/todo_item.dart';
 import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
@@ -23,6 +24,7 @@ void main() {
             Provider<List<Event>>.value(value: const []),
             Provider<List<TodoItem>>.value(value: const []),
             Provider<List<Quicxec>>.value(value: const []),
+            Provider<models.Tags>.value(value: models.Tags()),
           ],
           child: MaterialApp(
             theme: AppThemes.forPreset(AppThemePreset.midnight),
@@ -47,6 +49,23 @@ void main() {
 
       expect(find.byTooltip('New event'), findsOneWidget);
       expect(find.text('New event'), findsNothing);
+      expect(find.byTooltip('Open navigation menu'), findsOneWidget);
+      expect(find.byKey(const Key('calendar-toolbar')), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Open navigation menu'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nexecute'), findsOneWidget);
+      expect(find.text('Profile'), findsOneWidget);
+
+      await tester.tapAt(const Offset(790, 400));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('New event'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('09:00'), findsOneWidget);
+      expect(find.text('10:00'), findsOneWidget);
     },
   );
 }

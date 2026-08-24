@@ -42,8 +42,9 @@ class _CalendarPageState extends State<CalendarPage> {
     final events = context.watch<List<Event>>();
     final selectedEvents = eventsForDay(events, _selectedDay);
 
-    return Scaffold(
-      body: Column(
+    return Material(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: Column(
         children: [
           _CalendarToolbar(
             title:
@@ -55,6 +56,7 @@ class _CalendarPageState extends State<CalendarPage> {
             onPrevious: _showPrevious,
             onNext: _showNext,
             onToday: _showToday,
+            onOpenNavigation: () => Scaffold.maybeOf(context)?.openDrawer(),
           ),
           const Divider(height: 1),
           Expanded(
@@ -141,6 +143,7 @@ class _CalendarToolbar extends StatelessWidget {
     required this.onPrevious,
     required this.onNext,
     required this.onToday,
+    required this.onOpenNavigation,
   });
 
   final String title;
@@ -149,55 +152,85 @@ class _CalendarToolbar extends StatelessWidget {
   final VoidCallback onPrevious;
   final VoidCallback onNext;
   final VoidCallback onToday;
+  final VoidCallback onOpenNavigation;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+    final theme = Theme.of(context);
+
+    return ColoredBox(
+      key: const Key('calendar-toolbar'),
+      color: theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface,
       child: Column(
         children: [
-          Row(
-            children: [
-              IconButton(
-                tooltip: 'Previous',
-                onPressed: onPrevious,
-                icon: const Icon(Icons.chevron_left),
-              ),
-              Expanded(
-                child: Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleMedium,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 4, 8, 0),
+            child: Row(
+              children: [
+                IconButton(
+                  tooltip: 'Open navigation menu',
+                  onPressed: onOpenNavigation,
+                  icon: const Icon(Icons.menu),
                 ),
-              ),
-              IconButton(
-                tooltip: 'Next',
-                onPressed: onNext,
-                icon: const Icon(Icons.chevron_right),
-              ),
-            ],
+                const SizedBox(width: 4),
+                Text(
+                  'Calendar',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  tooltip: 'Previous',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: onPrevious,
+                  icon: const Icon(Icons.chevron_left),
+                ),
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleMedium,
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Next',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: onNext,
+                  icon: const Icon(Icons.chevron_right),
+                ),
+              ],
+            ),
           ),
-          Row(
-            children: [
-              TextButton(onPressed: onToday, child: const Text('Today')),
-              const Spacer(),
-              SegmentedButton<CalendarViewMode>(
-                showSelectedIcon: false,
-                segments: const [
-                  ButtonSegment(
-                    value: CalendarViewMode.week,
-                    label: Text('Week'),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            child: Row(
+              children: [
+                TextButton(onPressed: onToday, child: const Text('Today')),
+                const Spacer(),
+                SegmentedButton<CalendarViewMode>(
+                  showSelectedIcon: false,
+                  style: const ButtonStyle(
+                    visualDensity: VisualDensity.compact,
                   ),
-                  ButtonSegment(
-                    value: CalendarViewMode.month,
-                    label: Text('Month'),
-                  ),
-                ],
-                selected: {viewMode},
-                onSelectionChanged:
-                    (selection) => onViewModeChanged(selection.first),
-              ),
-            ],
+                  segments: const [
+                    ButtonSegment(
+                      value: CalendarViewMode.week,
+                      label: Text('Week'),
+                    ),
+                    ButtonSegment(
+                      value: CalendarViewMode.month,
+                      label: Text('Month'),
+                    ),
+                  ],
+                  selected: {viewMode},
+                  onSelectionChanged:
+                      (selection) => onViewModeChanged(selection.first),
+                ),
+              ],
+            ),
           ),
         ],
       ),
