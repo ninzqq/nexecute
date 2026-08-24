@@ -81,6 +81,9 @@ class QuicxecItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasTitle = quicxec.title.trim().isNotEmpty;
+    final hasText = quicxec.text.trim().isNotEmpty;
+
     return GestureDetector(
       onLongPress: () => _showActions(context),
       child: Hero(
@@ -96,39 +99,44 @@ class QuicxecItem extends StatelessWidget {
               showItemEditor(context, quicxec: quicxec, isEditing: true);
             },
             child: Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(12),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    quicxec.title,
-                    style: Theme.of(context).textTheme.titleLarge,
-                    maxLines: 1,
-                  ),
-                  Expanded(
-                    child: Text(
+                  if (hasTitle)
+                    Text(
+                      quicxec.title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  if (hasTitle && hasText) const SizedBox(height: 8),
+                  if (hasText)
+                    Text(
                       quicxec.text,
                       style: Theme.of(context).textTheme.bodyLarge,
+                      maxLines: 8,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  SizedBox(
-                    height: 32,
-                    child: Row(
-                      children: [
-                        Flexible(
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: quicxec.tags.length,
-                            itemBuilder: (BuildContext context, int index) {
-                              return TagListItem(
-                                tag: Tag(name: quicxec.tags[index]),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
+                  if (quicxec.tags.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children:
+                          quicxec.tags
+                              .map(
+                                (tag) => TagListItem(
+                                  tag: Tag(name: tag),
+                                  compact: true,
+                                ),
+                              )
+                              .toList(),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),

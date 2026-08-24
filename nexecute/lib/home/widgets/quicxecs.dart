@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:nexecute/home/widgets/searchbox.dart';
 import 'package:provider/provider.dart';
 import 'package:nexecute/home/widgets/quicxecitem.dart';
@@ -50,23 +51,18 @@ class _QuicxecsState extends State<Quicxecs> {
             onChanged: (value) {
               setState(() {
                 searchQuery = value;
-                for (var q in activeQuicxecs) {
-                  print(q.tags);
-                }
               });
             },
           ),
         ),
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2.0),
-            child: GridView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: MasonryGridView.count(
               padding: const EdgeInsets.only(bottom: 96),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: columnCount.columns,
-                mainAxisExtent: 120,
-                mainAxisSpacing: 1,
-              ),
+              crossAxisCount: columnCount.columns,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
               itemCount: filteredQuicxecs.length,
               itemBuilder: (context, index) {
                 var quicxec = filteredQuicxecs[index];

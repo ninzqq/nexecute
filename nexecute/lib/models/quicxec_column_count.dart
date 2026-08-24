@@ -12,5 +12,5 @@ class QuicxecsColumnCount extends ChangeNotifier {
     notifyListeners();
   }
 
-  QuicxecsColumnCount({this.columnCount = 1});
+  QuicxecsColumnCount({this.columnCount = 2});
 }
