@@ -41,6 +41,7 @@ class DayColumn extends StatelessWidget {
             ),
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               ColoredBox(
                 color:
@@ -64,8 +65,12 @@ class DayColumn extends StatelessWidget {
               ConstrainedBox(
                 constraints: const BoxConstraints(minHeight: 600),
                 child: Padding(
+                  key: ValueKey(
+                    'week-event-area-${day.date.year}-${day.date.month}-${day.date.day}',
+                  ),
                   padding: const EdgeInsets.fromLTRB(3, 6, 3, 12),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       for (var index = 0; index < events.length; index++) ...[
                         _WeekEventCard(
@@ -110,6 +115,9 @@ class _WeekEventCard extends StatelessWidget {
             : 'Continues';
 
     return Material(
+      key: ValueKey(
+        'week-event-${event.id}-${day.year}-${day.month}-${day.day}',
+      ),
       color: palette.primary.withValues(alpha: 0.2),
       borderRadius: BorderRadius.circular(4),
       child: InkWell(

@@ -80,6 +80,49 @@ void main() {
     expect(daySelections, 0);
   });
 
+  testWidgets('event cards fill the available day-column width', (
+    tester,
+  ) async {
+    final date = DateTime(2026, 8, 25);
+    final event = Event(
+      id: 'event-1',
+      title: 'Planning',
+      startTime: DateTime(2026, 8, 25, 9),
+      endTime: DateTime(2026, 8, 25, 10),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppThemes.forPreset(AppThemePreset.midnight),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: SizedBox(
+              width: 120,
+              child: DayColumn(
+                day: CalendarDay(date: date),
+                events: [event],
+                isSelected: false,
+                onSelected: () {},
+                onEventSelected: (_) {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final eventAreaWidth =
+        tester
+            .getSize(find.byKey(const ValueKey('week-event-area-2026-8-25')))
+            .width;
+    final eventWidth =
+        tester
+            .getSize(find.byKey(const ValueKey('week-event-event-1-2026-8-25')))
+            .width;
+
+    expect(eventWidth, eventAreaWidth - 6);
+  });
+
   testWidgets('selecting a week event also selects its date', (tester) async {
     final eventDate = DateTime(2026, 8, 25);
     final event = Event(
