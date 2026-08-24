@@ -79,10 +79,31 @@ class QuicxecItem extends StatelessWidget {
     }
   }
 
+  Future<void> _setChecklistItemChecked(
+    BuildContext context,
+    NoteChecklistItem item,
+    bool isChecked,
+  ) async {
+    try {
+      await FirestoreService().setQuicxecChecklistItemChecked(
+        quicxec,
+        item.id,
+        isChecked,
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not update checklist: $error')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final hasTitle = quicxec.title.trim().isNotEmpty;
     final hasText = quicxec.text.trim().isNotEmpty;
+    final hasContent =
+        quicxec.isChecklist ? quicxec.checklistItems.isNotEmpty : hasText;
 
     return GestureDetector(
       onLongPress: () => _showActions(context),
@@ -113,8 +134,18 @@ class QuicxecItem extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                  if (hasTitle && hasText) const SizedBox(height: 8),
-                  if (hasText)
+                  if (hasTitle && hasContent) const SizedBox(height: 8),
+                  if (quicxec.isChecklist)
+                    _ChecklistPreview(
+                      items: quicxec.checklistItems,
+                      onChanged:
+                          (item, isChecked) => _setChecklistItemChecked(
+                            context,
+                            item,
+                            isChecked,
+                          ),
+                    )
+                  else if (hasText)
                     Text(
                       quicxec.text,
                       style: Theme.of(context).textTheme.bodyLarge,
@@ -143,6 +174,80 @@ class QuicxecItem extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ChecklistPreview extends StatelessWidget {
+  const _ChecklistPreview({required this.items, required this.onChanged});
+
+  final List<NoteChecklistItem> items;
+  final void Function(NoteChecklistItem item, bool isChecked) onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.appPalette;
+    final visibleItems = items.take(5).toList();
+
+    return Column(
+      key: const Key('note-checklist-preview'),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final item in visibleItems)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 28,
+                height: 28,
+                child: Checkbox(
+                  key: ValueKey('preview-checkbox-${item.id}'),
+                  value: item.isChecked,
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  side: BorderSide(color: palette.primary, width: 1.4),
+                  onChanged:
+                      (value) => onChanged(item, value ?? item.isChecked),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 3),
+                  child: Text(
+                    item.text,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      decoration:
+                          item.isChecked ? TextDecoration.lineThrough : null,
+                      color:
+                          item.isChecked
+                              ? palette.onSurface.withValues(alpha: 0.62)
+                              : palette.onSurface,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        if (items.length > visibleItems.length)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4, left: 32),
+              child: Text(
+                '+${items.length - visibleItems.length} more',
+                style: Theme.of(
+                  context,
+                ).textTheme.labelSmall?.copyWith(color: palette.secondary),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

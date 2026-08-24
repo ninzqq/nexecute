@@ -70,4 +70,35 @@ void main() {
     expect(find.byIcon(Icons.restore_from_trash_rounded), findsOneWidget);
     expect(find.byIcon(Icons.delete_forever_rounded), findsOneWidget);
   });
+
+  testWidgets('checklist notes show interactive checklist previews', (
+    tester,
+  ) async {
+    final note = Quicxec(
+      id: 'note-3',
+      title: 'Packing list',
+      text: 'Passport\nCharger',
+      created: DateTime(2026, 8, 24, 9),
+      contentType: NoteContentType.checklist,
+      checklistItems: const [
+        NoteChecklistItem(id: 'passport', text: 'Passport', isChecked: true),
+        NoteChecklistItem(id: 'charger', text: 'Charger'),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppThemes.forPreset(AppThemePreset.cyberpunk),
+        home: Scaffold(
+          body: SizedBox(width: 240, child: QuicxecItem(quicxec: note)),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('note-checklist-preview')), findsOneWidget);
+    expect(find.text('Passport'), findsOneWidget);
+    expect(find.text('Charger'), findsOneWidget);
+    expect(find.byType(Checkbox), findsNWidgets(2));
+    expect(tester.takeException(), isNull);
+  });
 }

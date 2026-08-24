@@ -37,6 +37,8 @@ class TrashScreen extends StatelessWidget {
               trashed: quicxec.trashed,
               tags: quicxec.tags,
               created: quicxec.created,
+              contentType: quicxec.contentType,
+              checklistItems: quicxec.checklistItems,
             ),
           );
         },

@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
 class SubmitButton extends StatelessWidget {
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final bool isEditing;
+  final bool isLoading;
 
   const SubmitButton({
     super.key,
     required this.onPressed,
     required this.isEditing,
+    this.isLoading = false,
   });
 
   @override
@@ -16,7 +18,15 @@ class SubmitButton extends StatelessWidget {
       width: double.infinity,
       child: ElevatedButton(
         onPressed: onPressed,
-        child: isEditing ? const Text('Update') : const Text('Save'),
+        child:
+            isLoading
+                ? const SizedBox.square(
+                  dimension: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+                : isEditing
+                ? const Text('Update')
+                : const Text('Save'),
       ),
     );
   }

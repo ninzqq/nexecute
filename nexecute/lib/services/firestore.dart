@@ -132,35 +132,60 @@ class FirestoreService {
   }
 
   Future<void> addNewQuicxec(Quicxec quicxec) async {
-    var user = AuthService().user!;
+    var user = AuthService().user;
+    if (user == null) throw StateError('User is not logged in');
     var ref = _db.collection('users').doc(user.uid).collection('quicxecs');
     var id = uuid.v1();
-    var data = {
-      'id': id,
-      'text': quicxec.text,
-      'title': quicxec.title,
-      'trashed': false,
-      'tags': quicxec.tags,
-      'created': quicxec.created,
-    };
+    var data = quicxec.toFirestore();
+    data['id'] = id;
+    data['trashed'] = false;
 
     return ref.doc(id).set(data);
   }
 
   /// Modify currently open quicxec
   Future<void> modifyCurrentlyOpenQuicxec(
-    quicxec,
-    newText,
-    newTitle,
-    tags,
-  ) async {
+    Quicxec quicxec,
+    String newText,
+    String newTitle,
+    List<String> tags, {
+    NoteContentType? contentType,
+    List<NoteChecklistItem>? checklistItems,
+  }) async {
     var user = AuthService().user!;
     var ref = _db.collection('users').doc(user.uid).collection('quicxecs');
+    final resolvedType = contentType ?? quicxec.contentType;
+    final resolvedItems = checklistItems ?? quicxec.checklistItems;
 
     return ref.doc(quicxec.id).update({
       'text': newText,
       'title': newTitle,
       'tags': tags,
+      'contentType': resolvedType.name,
+      'checklistItems': resolvedItems.map((item) => item.toMap()).toList(),
+    });
+  }
+
+  Future<void> setQuicxecChecklistItemChecked(
+    Quicxec quicxec,
+    String itemId,
+    bool isChecked,
+  ) async {
+    final user = AuthService().user!;
+    final ref = _db.collection('users').doc(user.uid).collection('quicxecs');
+    final items =
+        quicxec.checklistItems
+            .map(
+              (item) =>
+                  item.id == itemId
+                      ? item.copyWith(isChecked: isChecked)
+                      : item,
+            )
+            .toList();
+
+    await ref.doc(quicxec.id).update({
+      'text': items.map((item) => item.text).join('\n'),
+      'checklistItems': items.map((item) => item.toMap()).toList(),
     });
   }
 
@@ -284,7 +309,7 @@ class FirestoreService {
       Event newEvent = Event(
         id: quicxec.id,
         title: quicxec.title,
-        description: quicxec.text,
+        description: quicxec.contentAsPlainText,
         startTime: quicxec.created,
         endTime: quicxec.created,
         tags: quicxec.tags,

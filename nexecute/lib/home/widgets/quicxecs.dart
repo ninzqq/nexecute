@@ -32,7 +32,7 @@ class _QuicxecsState extends State<Quicxecs> {
                       q.title.toLowerCase().contains(
                         searchQuery.toLowerCase(),
                       ) ||
-                      q.text.toLowerCase().contains(
+                      q.searchableText.toLowerCase().contains(
                         searchQuery.toLowerCase(),
                       ) ||
                       q.tags.any(

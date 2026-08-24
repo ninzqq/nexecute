@@ -6,22 +6,28 @@ import 'package:nexecute/home/bottomsheets/tag_selector.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/home/widgets/item_time_picker.dart';
+import 'package:nexecute/home/widgets/note_checklist_editor.dart';
 import 'package:nexecute/models/tag.dart';
 import 'package:nexecute/services/firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:nexecute/home/bottomsheets/item_type.dart';
+
+typedef SaveQuicxecCallback =
+    Future<void> Function(Quicxec note, bool isExisting);
 
 class ItemEditorSheet extends StatefulWidget {
   final Event? event;
   final Quicxec? quicxec;
   final DateTime? date;
   final bool isEditing;
+  final SaveQuicxecCallback? onSaveQuicxec;
   const ItemEditorSheet({
     super.key,
     this.event,
     this.quicxec,
     this.date,
     this.isEditing = false,
+    this.onSaveQuicxec,
   });
 
   @override
@@ -37,7 +43,11 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
   bool _isAllDay = false;
   DateTime? _selectedDate;
   ItemType _type = ItemType.quicxec;
+  NoteContentType _noteContentType = NoteContentType.text;
+  List<NoteChecklistItem> _checklistItems = [];
+  int _checklistIdSeed = 0;
   List<String> _tags = [];
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -55,6 +65,13 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
       _descriptionController.text = widget.quicxec!.text;
       _startTime = widget.quicxec!.created;
       _type = ItemType.quicxec;
+      _noteContentType = widget.quicxec!.contentType;
+      _checklistItems = List.of(widget.quicxec!.checklistItems);
+      if (_noteContentType == NoteContentType.checklist &&
+          _checklistItems.isEmpty &&
+          widget.quicxec!.text.trim().isNotEmpty) {
+        _checklistItems = _itemsFromText(widget.quicxec!.text);
+      }
       _tags = widget.quicxec!.tags;
     }
     _selectedDate = widget.date;
@@ -68,72 +85,193 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
   }
 
   void onItemTypeChanged(ItemType type) {
+    if (type == ItemType.event &&
+        _type == ItemType.quicxec &&
+        _noteContentType == NoteContentType.checklist) {
+      _descriptionController.text = _checklistAsText(includeStatus: true);
+    }
     setState(() {
       _type = type;
     });
   }
 
-  void _submitQuicxec(List<Quicxec> quicxecs) {
-    if (_formKey.currentState!.validate()) {
-      var id = '';
-      if (widget.quicxec != null) {
-        id = widget.quicxec!.id;
-      }
+  String _newChecklistItemId() {
+    return '${DateTime.now().microsecondsSinceEpoch}-${_checklistIdSeed++}';
+  }
 
-      final quicxec = Quicxec(
-        id: id,
-        title: _titleController.text,
-        text: _descriptionController.text,
-        created: _startTime,
-        tags: _tags,
-        trashed: false,
+  List<NoteChecklistItem> _itemsFromText(String text) {
+    final lines = text
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty);
+    return lines
+        .map((line) => NoteChecklistItem(id: _newChecklistItemId(), text: line))
+        .toList();
+  }
+
+  List<NoteChecklistItem> get _normalizedChecklistItems {
+    return _checklistItems
+        .where((item) => item.text.trim().isNotEmpty)
+        .map((item) => item.copyWith(text: item.text.trim()))
+        .toList();
+  }
+
+  String _checklistAsText({bool includeStatus = false}) {
+    return _normalizedChecklistItems
+        .map((item) {
+          if (!includeStatus) return item.text;
+          return '${item.isChecked ? '☑' : '☐'} ${item.text}';
+        })
+        .join('\n');
+  }
+
+  void _setNoteContentType(NoteContentType type) {
+    if (type == _noteContentType) return;
+
+    setState(() {
+      if (type == NoteContentType.checklist && _checklistItems.isEmpty) {
+        _checklistItems = _itemsFromText(_descriptionController.text);
+        if (_checklistItems.isEmpty) {
+          _checklistItems = [
+            NoteChecklistItem(id: _newChecklistItemId(), text: ''),
+          ];
+        }
+      } else if (type == NoteContentType.text) {
+        _descriptionController.text = _checklistAsText();
+      }
+      _noteContentType = type;
+    });
+  }
+
+  void _updateChecklistItem(NoteChecklistItem updatedItem) {
+    setState(() {
+      final index = _checklistItems.indexWhere(
+        (item) => item.id == updatedItem.id,
       );
+      if (index != -1) _checklistItems[index] = updatedItem;
+    });
+  }
 
-      if (existingQuicxec(quicxecs, widget.quicxec)) {
-        FirestoreService().modifyCurrentlyOpenQuicxec(
-          quicxec,
-          _descriptionController.text,
-          _titleController.text,
-          quicxec.tags,
-        );
-      } else {
-        FirestoreService().addNewQuicxec(quicxec);
-      }
-      Navigator.pop(context);
+  void _removeChecklistItem(String id) {
+    setState(() {
+      _checklistItems.removeWhere((item) => item.id == id);
+    });
+  }
+
+  void _addChecklistItem() {
+    setState(() {
+      _checklistItems.add(
+        NoteChecklistItem(id: _newChecklistItemId(), text: ''),
+      );
+    });
+  }
+
+  Future<void> _submitQuicxec(List<Quicxec> quicxecs) async {
+    var id = '';
+    if (widget.quicxec != null) {
+      id = widget.quicxec!.id;
+    }
+
+    final checklistItems =
+        _noteContentType == NoteContentType.checklist
+            ? _normalizedChecklistItems
+            : const <NoteChecklistItem>[];
+    final noteText =
+        _noteContentType == NoteContentType.checklist
+            ? checklistItems.map((item) => item.text).join('\n')
+            : _descriptionController.text;
+    final quicxec = Quicxec(
+      id: id,
+      title: _titleController.text.trim(),
+      text: noteText,
+      created: _startTime,
+      tags: _tags,
+      trashed: false,
+      contentType: _noteContentType,
+      checklistItems: checklistItems,
+    );
+    final isExisting = existingQuicxec(quicxecs, widget.quicxec);
+
+    if (widget.onSaveQuicxec case final onSave?) {
+      await onSave(quicxec, isExisting);
+    } else if (isExisting) {
+      await FirestoreService().modifyCurrentlyOpenQuicxec(
+        quicxec,
+        noteText,
+        quicxec.title,
+        quicxec.tags,
+        contentType: _noteContentType,
+        checklistItems: checklistItems,
+      );
+    } else {
+      await FirestoreService().addNewQuicxec(quicxec);
     }
   }
 
-  void _submitEvent(List<Event> events) {
-    if (_formKey.currentState!.validate()) {
-      var id = '';
-      if (widget.event != null) {
-        id = widget.event!.id;
-      }
+  Future<void> _submitEvent(List<Event> events) async {
+    var id = '';
+    if (widget.event != null) {
+      id = widget.event!.id;
+    }
 
-      final event = Event(
-        id: id,
-        title: _titleController.text,
-        description: _descriptionController.text,
-        startTime: _startTime,
-        endTime: _endTime,
-        isAllDay: _isAllDay,
-        tags: _tags,
+    final event = Event(
+      id: id,
+      title: _titleController.text,
+      description: _descriptionController.text,
+      startTime: _startTime,
+      endTime: _endTime,
+      isAllDay: _isAllDay,
+      tags: _tags,
+    );
+
+    if (existingEvent(events, widget.event)) {
+      await FirestoreService().modifyCurrentlyOpenEvent(
+        event,
+        _titleController.text,
+        _descriptionController.text,
+        _startTime,
+        _endTime,
+        _isAllDay,
+        _tags,
       );
+    } else {
+      await FirestoreService().addNewEvent(event);
+    }
+  }
 
-      if (existingEvent(events, widget.event)) {
-        FirestoreService().modifyCurrentlyOpenEvent(
-          event,
-          _titleController.text,
-          _descriptionController.text,
-          _startTime,
-          _endTime,
-          _isAllDay,
-          _tags,
-        );
+  Future<void> _submit(List<Quicxec> quicxecs, List<Event> events) async {
+    if (_isSaving || !_formKey.currentState!.validate()) return;
+
+    setState(() => _isSaving = true);
+    try {
+      if (widget.isEditing &&
+          widget.quicxec != null &&
+          widget.event == null &&
+          _type == ItemType.event) {
+        await FirestoreService().convertQuicxecToEvent(widget.quicxec!);
+      } else if (widget.isEditing &&
+          widget.event != null &&
+          widget.quicxec == null &&
+          _type == ItemType.quicxec) {
+        await FirestoreService().convertEventToQuicxec(widget.event!);
+      } else if (_type == ItemType.quicxec) {
+        await _submitQuicxec(quicxecs);
       } else {
-        FirestoreService().addNewEvent(event);
+        await _submitEvent(events);
       }
-      Navigator.popUntil(context, (route) => route.isFirst);
+
+      if (mounted) Navigator.of(context).pop();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Could not save ${_type == ItemType.quicxec ? 'note' : 'event'}: $error',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -195,21 +333,62 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                 border: OutlineInputBorder(),
               ),
               validator: (value) {
-                if (value == null || value.isEmpty) {
+                if (_type == ItemType.event &&
+                    (value == null || value.trim().isEmpty)) {
                   return 'Please enter a title';
                 }
                 return null;
               },
             ),
             const SizedBox(height: 16.0),
-            TextFormField(
-              controller: _descriptionController,
-              decoration: InputDecoration(
-                labelText: 'Description',
-                border: OutlineInputBorder(),
+            if (_type == ItemType.quicxec) ...[
+              Row(
+                children: [
+                  Text(
+                    'Note format',
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                  const Spacer(),
+                  SegmentedButton<NoteContentType>(
+                    key: const Key('note-format-selector'),
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment(
+                        value: NoteContentType.text,
+                        label: Text('Text'),
+                        icon: Icon(Icons.subject_rounded),
+                      ),
+                      ButtonSegment(
+                        value: NoteContentType.checklist,
+                        label: Text('Checklist'),
+                        icon: Icon(Icons.checklist_rounded),
+                      ),
+                    ],
+                    selected: {_noteContentType},
+                    onSelectionChanged:
+                        (selection) => _setNoteContentType(selection.first),
+                  ),
+                ],
               ),
-              maxLines: _type != ItemType.quicxec ? 3 : 9,
-            ),
+              const SizedBox(height: 12),
+            ],
+            if (_type == ItemType.quicxec &&
+                _noteContentType == NoteContentType.checklist)
+              NoteChecklistEditor(
+                items: _checklistItems,
+                onItemChanged: _updateChecklistItem,
+                onItemRemoved: _removeChecklistItem,
+                onItemAdded: _addChecklistItem,
+              )
+            else
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: _type != ItemType.quicxec ? 3 : 9,
+              ),
             const SizedBox(height: 8.0),
             if (_type != ItemType.quicxec) ...[
               Row(
@@ -331,30 +510,9 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
             ),
             const SizedBox(height: 8.0),
             SubmitButton(
-              onPressed: () {
-                if (widget.isEditing) {
-                  if (widget.quicxec != null &&
-                      widget.event == null &&
-                      _type == ItemType.event) {
-                    FirestoreService().convertQuicxecToEvent(widget.quicxec!);
-                  } else if (widget.event != null &&
-                      widget.quicxec == null &&
-                      _type == ItemType.quicxec) {
-                    FirestoreService().convertEventToQuicxec(widget.event!);
-                  } else {
-                    _type == ItemType.quicxec
-                        ? _submitQuicxec(quicxecs)
-                        : _submitEvent(events);
-                  }
-                } else {
-                  // Creating a new item
-                  _type == ItemType.quicxec
-                      ? _submitQuicxec(quicxecs)
-                      : _submitEvent(events);
-                }
-                Navigator.popUntil(context, (route) => route.isFirst);
-              },
+              onPressed: _isSaving ? null : () => _submit(quicxecs, events),
               isEditing: widget.isEditing,
+              isLoading: _isSaving,
             ),
             const SizedBox(height: 8.0),
           ],
