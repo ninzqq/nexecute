@@ -21,11 +21,14 @@ class CalendarPage extends StatefulWidget {
 }
 
 class _CalendarPageState extends State<CalendarPage> {
+  static const _swipeThreshold = 48.0;
+
   final _weekCalculator = IsoWeekCalculator();
   final _monthCalculator = GregorianMonthCalculator();
   CalendarViewMode _viewMode = CalendarViewMode.month;
   late DateTime _focusedDay;
   late DateTime _selectedDay;
+  double _horizontalDragDistance = 0;
 
   @override
   void initState() {
@@ -63,22 +66,33 @@ class _CalendarPageState extends State<CalendarPage> {
             child: Column(
               children: [
                 Expanded(
-                  child:
-                      _viewMode == CalendarViewMode.month
-                          ? MonthView(
-                            month: month,
-                            selectedDay: _selectedDay,
-                            events: events,
-                            onDaySelected: _selectDay,
-                            onEventSelected: _openEvent,
-                          )
-                          : WeekView(
-                            week: week,
-                            events: events,
-                            selectedDay: _selectedDay,
-                            onDaySelected: _selectDay,
-                            onEventSelected: _openEvent,
-                          ),
+                  child: GestureDetector(
+                    key: const Key('calendar-swipe-area'),
+                    behavior: HitTestBehavior.opaque,
+                    onHorizontalDragStart: (_) => _horizontalDragDistance = 0,
+                    onHorizontalDragUpdate:
+                        (details) =>
+                            _horizontalDragDistance +=
+                                details.primaryDelta ?? 0,
+                    onHorizontalDragEnd: (_) => _finishHorizontalSwipe(),
+                    onHorizontalDragCancel: () => _horizontalDragDistance = 0,
+                    child:
+                        _viewMode == CalendarViewMode.month
+                            ? MonthView(
+                              month: month,
+                              selectedDay: _selectedDay,
+                              events: events,
+                              onDaySelected: _selectDay,
+                              onEventSelected: _openEvent,
+                            )
+                            : WeekView(
+                              week: week,
+                              events: events,
+                              selectedDay: _selectedDay,
+                              onDaySelected: _selectDay,
+                              onEventSelected: _openEvent,
+                            ),
+                  ),
                 ),
                 const Divider(height: 1),
                 AnimatedContainer(
@@ -103,7 +117,11 @@ class _CalendarPageState extends State<CalendarPage> {
       _focusedDay =
           _viewMode == CalendarViewMode.month
               ? DateTime(_focusedDay.year, _focusedDay.month - 1, 1)
-              : _focusedDay.subtract(const Duration(days: 7));
+              : DateTime(
+                _focusedDay.year,
+                _focusedDay.month,
+                _focusedDay.day - 7,
+              );
     });
   }
 
@@ -112,8 +130,23 @@ class _CalendarPageState extends State<CalendarPage> {
       _focusedDay =
           _viewMode == CalendarViewMode.month
               ? DateTime(_focusedDay.year, _focusedDay.month + 1, 1)
-              : _focusedDay.add(const Duration(days: 7));
+              : DateTime(
+                _focusedDay.year,
+                _focusedDay.month,
+                _focusedDay.day + 7,
+              );
     });
+  }
+
+  void _finishHorizontalSwipe() {
+    final distance = _horizontalDragDistance;
+    _horizontalDragDistance = 0;
+
+    if (distance <= -_swipeThreshold) {
+      _showNext();
+    } else if (distance >= _swipeThreshold) {
+      _showPrevious();
+    }
   }
 
   void _showToday() {
