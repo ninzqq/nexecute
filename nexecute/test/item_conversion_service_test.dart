@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/quicxec.dart';
+import 'package:nexecute/domain/calendar/calendar_query_range.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/repositories/note_repository.dart';
 import 'package:nexecute/services/item_conversion_service.dart';
@@ -59,7 +60,8 @@ class _FakeEventRepository implements EventRepository {
   Event? deletedEvent;
 
   @override
-  Stream<List<Event>> watchEvents() => Stream.value(const []);
+  Stream<List<Event>> watchEvents(CalendarQueryRange range) =>
+      Stream.value(const []);
 
   @override
   Future<void> addEvent(Event event) async {

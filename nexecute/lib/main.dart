@@ -14,7 +14,6 @@ import 'package:nexecute/models/count.dart';
 import 'package:nexecute/models/quicxec_column_count.dart';
 import 'package:nexecute/models/asdf.dart';
 import 'package:nexecute/models/quicxec.dart';
-import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/tag.dart';
 import 'package:nexecute/models/todo_item.dart';
 
@@ -124,12 +123,6 @@ class NexecuteState extends State<Nexecute> {
               StreamProvider<List<Quicxec>>(
                 create:
                     (context) => context.read<NoteRepository>().watchNotes(),
-                initialData: const [],
-                catchError: (_, err) => [],
-              ),
-              StreamProvider<List<Event>>(
-                create:
-                    (context) => context.read<EventRepository>().watchEvents(),
                 initialData: const [],
                 catchError: (_, err) => [],
               ),

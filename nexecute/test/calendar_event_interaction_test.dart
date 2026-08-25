@@ -3,13 +3,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/calendar/bottomsheets/event_details.dart';
 import 'package:nexecute/home/bottomsheets/item_editor_sheet.dart';
 import 'package:nexecute/models/event.dart';
-import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/models/tag.dart' as models;
+import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/themes.dart';
 import 'package:nexecute/ui/calendar/calendar.dart';
 import 'package:nexecute/ui/calendar/selected_day_agenda.dart';
 import 'package:provider/provider.dart';
+
+import 'support/fake_event_repository.dart';
 
 void main() {
   test('agenda height grows with events and remains capped', () {
@@ -39,8 +41,9 @@ void main() {
     await tester.pumpWidget(
       MultiProvider(
         providers: [
-          Provider<List<Event>>.value(value: [event]),
-          Provider<List<Quicxec>>.value(value: const []),
+          Provider<EventRepository>.value(
+            value: FakeEventRepository(events: [event]),
+          ),
           Provider<models.Tags>.value(value: models.Tags()),
           ChangeNotifierProvider(create: (_) => SelectedDay()),
         ],

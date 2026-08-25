@@ -3,27 +3,18 @@ import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/repositories/note_repository.dart';
-import 'package:nexecute/home/bottomsheets/utils.dart';
 import 'package:provider/provider.dart';
 
 class DeleteButton extends StatelessWidget {
   final Quicxec? quicxec;
   final Event? event;
-  final List<Quicxec> quicxecs;
-  final List<Event> events;
 
-  const DeleteButton({
-    super.key,
-    required this.quicxec,
-    required this.event,
-    required this.quicxecs,
-    required this.events,
-  });
+  const DeleteButton({super.key, required this.quicxec, required this.event});
 
   @override
   Widget build(BuildContext context) {
-    final existsQuicxec = existingQuicxec(quicxecs, quicxec);
-    final existsEvent = existingEvent(events, event);
+    final existsQuicxec = quicxec != null && quicxec!.id.isNotEmpty;
+    final existsEvent = event != null && event!.id.isNotEmpty;
 
     return IconButton(
       onPressed: () {

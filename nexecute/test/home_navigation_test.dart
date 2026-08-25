@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/home/screens/homescreen.dart';
-import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/home_tab_index.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/quicxec_column_count.dart';
 import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/models/tag.dart' as models;
 import 'package:nexecute/models/todo_item.dart';
+import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
+
+import 'support/fake_event_repository.dart';
 
 void main() {
   testWidgets(
@@ -21,7 +23,7 @@ void main() {
             ChangeNotifierProvider(create: (_) => HomeTabIndex()),
             ChangeNotifierProvider(create: (_) => SelectedDay()),
             ChangeNotifierProvider(create: (_) => QuicxecsColumnCount()),
-            Provider<List<Event>>.value(value: const []),
+            Provider<EventRepository>.value(value: FakeEventRepository()),
             Provider<List<TodoItem>>.value(value: const []),
             Provider<List<Quicxec>>.value(value: const []),
             Provider<models.Tags>.value(value: models.Tags()),

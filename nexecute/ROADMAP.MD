@@ -370,8 +370,11 @@ These improvements should be considered before or alongside larger features.
   directly.~~
 - Add an independent assistant repository when AI work begins. Its interface
   must not depend on Odysseus or Ollama-specific response types.
-- Query calendar events by the visible date range instead of maintaining one
-  live stream containing the user's complete event history.
+- [x] ~~Query calendar events by a bounded visible range instead of maintaining
+  one live stream containing the user's complete event history. Month and week
+  views now include one adjacent `PageView` page in each direction as a swipe
+  buffer, preserve overlapping multi-day events, and use the deployed composite
+  index tracked in `firestore.indexes.json`.~~
 - Represent loading, empty, authentication, and error states separately rather
   than converting stream failures into empty lists.
 - Initialize Firebase through one clearly owned application startup path.

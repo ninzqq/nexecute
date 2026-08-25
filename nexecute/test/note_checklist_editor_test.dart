@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/home/bottomsheets/item_editor_sheet.dart';
-import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/tag.dart' as models;
 import 'package:nexecute/themes.dart';
@@ -25,11 +24,7 @@ void main() {
 
     await tester.pumpWidget(
       MultiProvider(
-        providers: [
-          Provider<List<Quicxec>>.value(value: [note]),
-          Provider<List<Event>>.value(value: const []),
-          Provider<models.Tags>.value(value: models.Tags()),
-        ],
+        providers: [Provider<models.Tags>.value(value: models.Tags())],
         child: MaterialApp(
           theme: AppThemes.forPreset(AppThemePreset.midnight),
           home: Scaffold(
@@ -74,11 +69,7 @@ void main() {
 
     await tester.pumpWidget(
       MultiProvider(
-        providers: [
-          Provider<List<Quicxec>>.value(value: const []),
-          Provider<List<Event>>.value(value: const []),
-          Provider<models.Tags>.value(value: models.Tags()),
-        ],
+        providers: [Provider<models.Tags>.value(value: models.Tags())],
         child: MaterialApp(
           theme: AppThemes.forPreset(AppThemePreset.midnight),
           home: Scaffold(

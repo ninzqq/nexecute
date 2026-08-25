@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:nexecute/domain/calendar/calendar_query_range.dart';
 import 'package:nexecute/domain/calendar/gregorian_month_calculator.dart';
 import 'package:nexecute/domain/calendar/iso_week_calculator.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/calendar/bottomsheets/event_details.dart';
+import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/ui/calendar/month_view.dart';
 import 'package:nexecute/ui/calendar/event_date_utils.dart';
 import 'package:nexecute/ui/calendar/selected_day_agenda.dart';
@@ -34,6 +36,9 @@ class _CalendarPageState extends State<CalendarPage> {
   late DateTime _selectedDay;
   int _monthPage = _initialPage;
   int _weekPage = _initialPage;
+  EventRepository? _eventRepository;
+  CalendarQueryRange? _eventRange;
+  Stream<List<Event>>? _eventsStream;
 
   @override
   void initState() {
@@ -54,10 +59,29 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final repository = context.read<EventRepository>();
+    if (identical(repository, _eventRepository)) return;
+
+    _eventRepository = repository;
+    _refreshEventStream(force: true);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    return StreamBuilder<List<Event>>(
+      stream: _eventsStream,
+      initialData: const [],
+      builder:
+          (context, snapshot) =>
+              _buildCalendar(context, snapshot.data ?? const []),
+    );
+  }
+
+  Widget _buildCalendar(BuildContext context, List<Event> events) {
     final week = _weekCalculator.fromDate(_weekDateForPage(_weekPage));
     final month = _monthCalculator.fromDate(_monthDateForPage(_monthPage));
-    final events = context.watch<List<Event>>();
     final selectedEvents = eventsForDay(events, _selectedDay);
 
     return Material(
@@ -189,6 +213,7 @@ class _CalendarPageState extends State<CalendarPage> {
     }
 
     setState(() => _viewMode = mode);
+    _refreshEventStream();
   }
 
   void _showToday() {
@@ -213,6 +238,7 @@ class _CalendarPageState extends State<CalendarPage> {
         _focusedDay = _monthDateForPage(page);
       }
     });
+    if (_viewMode == CalendarViewMode.month) _refreshEventStream();
   }
 
   void _onWeekPageChanged(int page) {
@@ -222,6 +248,27 @@ class _CalendarPageState extends State<CalendarPage> {
         _focusedDay = _weekDateForPage(page);
       }
     });
+    if (_viewMode == CalendarViewMode.week) _refreshEventStream();
+  }
+
+  void _refreshEventStream({bool force = false}) {
+    final repository = _eventRepository;
+    if (repository == null) return;
+
+    final range = switch (_viewMode) {
+      CalendarViewMode.month => monthQueryRange(
+        _monthCalculator.fromDate(_monthDateForPage(_monthPage)),
+        _monthCalculator,
+      ),
+      CalendarViewMode.week => weekQueryRange(
+        _weekCalculator.fromDate(_weekDateForPage(_weekPage)),
+        _weekCalculator,
+      ),
+    };
+    if (!force && range == _eventRange) return;
+
+    _eventRange = range;
+    _eventsStream = repository.watchEvents(range);
   }
 
   void _animateActivePageToDate(DateTime date) {

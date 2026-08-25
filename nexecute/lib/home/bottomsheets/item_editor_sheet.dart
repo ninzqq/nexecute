@@ -168,7 +168,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
     });
   }
 
-  Future<void> _submitQuicxec(List<Quicxec> quicxecs) async {
+  Future<void> _submitQuicxec() async {
     var id = '';
     if (widget.quicxec != null) {
       id = widget.quicxec!.id;
@@ -192,7 +192,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
       contentType: _noteContentType,
       checklistItems: checklistItems,
     );
-    final isExisting = existingQuicxec(quicxecs, widget.quicxec);
+    final isExisting = widget.quicxec?.id.isNotEmpty == true;
 
     if (widget.onSaveQuicxec case final onSave?) {
       await onSave(quicxec, isExisting);
@@ -210,7 +210,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
     }
   }
 
-  Future<void> _submitEvent(List<Event> events) async {
+  Future<void> _submitEvent() async {
     var id = '';
     if (widget.event != null) {
       id = widget.event!.id;
@@ -226,7 +226,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
       tags: _tags,
     );
 
-    if (existingEvent(events, widget.event)) {
+    if (widget.event?.id.isNotEmpty == true) {
       await context.read<EventRepository>().updateEvent(
         event,
         title: _titleController.text,
@@ -241,7 +241,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
     }
   }
 
-  Future<void> _submit(List<Quicxec> quicxecs, List<Event> events) async {
+  Future<void> _submit() async {
     if (_isSaving || !_formKey.currentState!.validate()) return;
 
     setState(() => _isSaving = true);
@@ -259,9 +259,9 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
           _type == ItemType.quicxec) {
         await context.read<ItemConversionService>().eventToNote(widget.event!);
       } else if (_type == ItemType.quicxec) {
-        await _submitQuicxec(quicxecs);
+        await _submitQuicxec();
       } else {
-        await _submitEvent(events);
+        await _submitEvent();
       }
 
       if (mounted) Navigator.of(context).pop();
@@ -281,8 +281,6 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
 
   @override
   Widget build(BuildContext context) {
-    List<Quicxec> quicxecs = context.watch<List<Quicxec>>();
-    List<Event> events = context.watch<List<Event>>();
     List<String> tags = context.watch<Tags>().tags;
 
     return Container(
@@ -302,12 +300,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
           children: [
             Row(
               children: [
-                DeleteButton(
-                  quicxec: widget.quicxec,
-                  event: widget.event,
-                  quicxecs: quicxecs,
-                  events: events,
-                ),
+                DeleteButton(quicxec: widget.quicxec, event: widget.event),
                 const Spacer(),
                 SegmentedButton<ItemType>(
                   segments: const [
@@ -514,7 +507,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
             ),
             const SizedBox(height: 8.0),
             SubmitButton(
-              onPressed: _isSaving ? null : () => _submit(quicxecs, events),
+              onPressed: _isSaving ? null : _submit,
               isEditing: widget.isEditing,
               isLoading: _isSaving,
             ),

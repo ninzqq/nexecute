@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
 import 'package:nexecute/domain/calendar/iso_week_calculator.dart';
-import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/selected_day.dart';
+import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/themes.dart';
 import 'package:nexecute/ui/calendar/calendar.dart';
 import 'package:provider/provider.dart';
+
+import 'support/fake_event_repository.dart';
 
 void main() {
   testWidgets('horizontal swipes navigate months and weeks', (tester) async {
@@ -15,10 +17,12 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
+    final eventRepository = FakeEventRepository();
+
     await tester.pumpWidget(
       MultiProvider(
         providers: [
-          Provider<List<Event>>.value(value: const []),
+          Provider<EventRepository>.value(value: eventRepository),
           ChangeNotifierProvider(create: (_) => SelectedDay()),
         ],
         child: MaterialApp(
@@ -28,6 +32,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+
+    expect(eventRepository.watchedRanges, hasLength(1));
 
     final today = DateTime.now();
     final currentMonth = DateTime(today.year, today.month);
@@ -57,6 +63,12 @@ void main() {
 
     await tester.drag(swipeArea, const Offset(-500, 0));
     await tester.pumpAndSettle();
+
+    expect(eventRepository.watchedRanges, hasLength(2));
+    expect(
+      eventRepository.watchedRanges.last,
+      isNot(eventRepository.watchedRanges.first),
+    );
 
     expect(
       find.text(DateFormat('MMMM yyyy').format(nextMonth)),
