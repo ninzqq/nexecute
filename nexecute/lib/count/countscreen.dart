@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nexecute/services/services.dart';
+import 'package:nexecute/repositories/count_repository.dart';
 import 'package:provider/provider.dart';
 import 'package:nexecute/models/count.dart';
 
@@ -36,7 +36,7 @@ class CountScreen extends StatelessWidget {
                 height: 120,
                 child: FittedBox(
                   child: FloatingActionButton(
-                    onPressed: FirestoreService().updateUserPressCount,
+                    onPressed: context.read<CountRepository>().increment,
                     tooltip: 'Add +1 to your counter',
                     child: const Icon(Icons.add_sharp),
                   ),

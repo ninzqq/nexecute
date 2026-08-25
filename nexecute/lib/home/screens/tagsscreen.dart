@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/home/widgets/taglisttile.dart';
-import 'package:nexecute/services/services.dart';
+import 'package:nexecute/repositories/tag_repository.dart';
 import 'package:provider/provider.dart';
 import 'package:nexecute/models/tag.dart';
 
@@ -56,7 +56,7 @@ class TagsScreen extends StatelessWidget {
               ElevatedButton(
                 onPressed: () {
                   if (newTagController.text.isNotEmpty) {
-                    FirestoreService().addNewTag(newTagController.text);
+                    context.read<TagRepository>().addTag(newTagController.text);
                     newTagController.text = '';
                   }
                 },

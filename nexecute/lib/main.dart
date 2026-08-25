@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/models/app_theme_controller.dart';
+import 'package:nexecute/repositories/repositories.dart';
 import 'package:nexecute/services/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -76,28 +77,70 @@ class NexecuteState extends State<Nexecute> {
         if (snapshot.connectionState == ConnectionState.done) {
           return MultiProvider(
             providers: [
+              Provider<AuthService>(create: (_) => AuthService()),
+              Provider<CountRepository>(
+                create:
+                    (context) => FirestoreCountRepository(
+                      authService: context.read<AuthService>(),
+                    ),
+              ),
+              Provider<NoteRepository>(
+                create:
+                    (context) => FirestoreNoteRepository(
+                      authService: context.read<AuthService>(),
+                    ),
+              ),
+              Provider<EventRepository>(
+                create:
+                    (context) => FirestoreEventRepository(
+                      authService: context.read<AuthService>(),
+                    ),
+              ),
+              Provider<TodoRepository>(
+                create:
+                    (context) => FirestoreTodoRepository(
+                      authService: context.read<AuthService>(),
+                    ),
+              ),
+              Provider<TagRepository>(
+                create:
+                    (context) => FirestoreTagRepository(
+                      authService: context.read<AuthService>(),
+                    ),
+              ),
+              Provider<ItemConversionService>(
+                create:
+                    (context) => ItemConversionService(
+                      eventRepository: context.read<EventRepository>(),
+                      noteRepository: context.read<NoteRepository>(),
+                    ),
+              ),
               StreamProvider<Count>(
-                create: (_) => FirestoreService().streamCount(),
+                create:
+                    (context) => context.read<CountRepository>().watchCount(),
                 initialData: Count(),
                 catchError: (_, err) => Count(),
               ),
               StreamProvider<List<Quicxec>>(
-                create: (_) => FirestoreService().streamQuicxecs(),
+                create:
+                    (context) => context.read<NoteRepository>().watchNotes(),
                 initialData: const [],
                 catchError: (_, err) => [],
               ),
               StreamProvider<List<Event>>(
-                create: (_) => FirestoreService().streamEvents(),
+                create:
+                    (context) => context.read<EventRepository>().watchEvents(),
                 initialData: const [],
                 catchError: (_, err) => [],
               ),
               StreamProvider<List<TodoItem>>(
-                create: (_) => FirestoreService().streamTodos(),
+                create:
+                    (context) => context.read<TodoRepository>().watchTodos(),
                 initialData: const [],
                 catchError: (_, err) => [],
               ),
               StreamProvider<Tags>(
-                create: (_) => FirestoreService().streamTags(),
+                create: (context) => context.read<TagRepository>().watchTags(),
                 initialData: Tags(),
                 catchError: (_, err) => Tags(),
               ),

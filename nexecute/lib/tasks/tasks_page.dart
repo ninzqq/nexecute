@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/models/todo_item.dart';
-import 'package:nexecute/services/firestore.dart';
+import 'package:nexecute/repositories/todo_repository.dart';
 import 'package:nexecute/tasks/todo_editor_sheet.dart';
 import 'package:nexecute/tasks/todo_list_utils.dart';
 import 'package:nexecute/themes.dart';
@@ -116,7 +116,7 @@ class _DismissibleTodo extends StatelessWidget {
   Future<bool> _delete(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await FirestoreService().deleteTodo(todo);
+      await context.read<TodoRepository>().deleteTodo(todo);
       if (!messenger.mounted) return true;
 
       messenger.hideCurrentSnackBar();
@@ -127,7 +127,7 @@ class _DismissibleTodo extends StatelessWidget {
             label: 'Undo',
             onPressed: () async {
               try {
-                await FirestoreService().restoreTodo(todo);
+                await context.read<TodoRepository>().restoreTodo(todo);
               } catch (error) {
                 if (!messenger.mounted) return;
                 messenger.showSnackBar(
@@ -244,7 +244,7 @@ class _TodoRow extends StatelessWidget {
 
   Future<void> _setCompleted(BuildContext context, bool value) async {
     try {
-      await FirestoreService().setTodoCompleted(todo, value);
+      await context.read<TodoRepository>().setCompleted(todo, value);
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(

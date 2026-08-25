@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/home/widgets/quicxecinputfields.dart';
-import 'package:nexecute/services/services.dart';
 import 'package:nexecute/models/quicxec.dart';
+import 'package:nexecute/repositories/note_repository.dart';
+import 'package:provider/provider.dart';
 
 class AddNewQuicxecScreen extends StatelessWidget {
   const AddNewQuicxecScreen({super.key});
@@ -30,7 +31,7 @@ class AddNewQuicxecScreen extends StatelessWidget {
                     }
                   else
                     {
-                      FirestoreService().addNewQuicxec(
+                      context.read<NoteRepository>().addNote(
                         Quicxec(
                           id: '',
                           text: textController.text,

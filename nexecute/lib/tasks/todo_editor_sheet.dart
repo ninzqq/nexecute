@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/models/todo_item.dart';
-import 'package:nexecute/services/firestore.dart';
+import 'package:nexecute/repositories/todo_repository.dart';
+import 'package:provider/provider.dart';
 
 Future<void> showTodoEditor(BuildContext context, {TodoItem? todo}) {
   return showModalBottomSheet<void>(
@@ -99,11 +100,11 @@ class _TodoEditorSheetState extends State<_TodoEditorSheet> {
     setState(() => _isSaving = true);
 
     try {
-      final service = FirestoreService();
+      final repository = context.read<TodoRepository>();
       if (widget.todo case final todo?) {
-        await service.updateTodoTitle(todo, _titleController.text);
+        await repository.updateTitle(todo, _titleController.text);
       } else {
-        await service.addTodo(_titleController.text);
+        await repository.addTodo(_titleController.text);
       }
       if (mounted) Navigator.pop(context);
     } catch (error) {

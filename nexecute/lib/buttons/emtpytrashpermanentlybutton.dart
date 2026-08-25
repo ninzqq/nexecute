@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:nexecute/services/firestore.dart';
+import 'package:nexecute/repositories/note_repository.dart';
+import 'package:provider/provider.dart';
 
 class EmptyTrashPermanentlyButton extends StatelessWidget {
   const EmptyTrashPermanentlyButton({super.key});
@@ -24,7 +25,7 @@ class EmptyTrashPermanentlyButton extends StatelessWidget {
                     TextButton(
                       onPressed:
                           () => {
-                            FirestoreService().emptyTrash(),
+                            context.read<NoteRepository>().emptyTrash(),
                             Navigator.pop(context, 'Yes'),
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Trash emptied')),

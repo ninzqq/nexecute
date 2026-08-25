@@ -8,7 +8,9 @@ import 'package:nexecute/models/event.dart';
 import 'package:nexecute/home/widgets/item_time_picker.dart';
 import 'package:nexecute/home/widgets/note_checklist_editor.dart';
 import 'package:nexecute/models/tag.dart';
-import 'package:nexecute/services/firestore.dart';
+import 'package:nexecute/repositories/event_repository.dart';
+import 'package:nexecute/repositories/note_repository.dart';
+import 'package:nexecute/services/item_conversion_service.dart';
 import 'package:provider/provider.dart';
 import 'package:nexecute/home/bottomsheets/item_type.dart';
 
@@ -195,16 +197,16 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
     if (widget.onSaveQuicxec case final onSave?) {
       await onSave(quicxec, isExisting);
     } else if (isExisting) {
-      await FirestoreService().modifyCurrentlyOpenQuicxec(
+      await context.read<NoteRepository>().updateNote(
         quicxec,
-        noteText,
-        quicxec.title,
-        quicxec.tags,
+        text: noteText,
+        title: quicxec.title,
+        tags: quicxec.tags,
         contentType: _noteContentType,
         checklistItems: checklistItems,
       );
     } else {
-      await FirestoreService().addNewQuicxec(quicxec);
+      await context.read<NoteRepository>().addNote(quicxec);
     }
   }
 
@@ -225,17 +227,17 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
     );
 
     if (existingEvent(events, widget.event)) {
-      await FirestoreService().modifyCurrentlyOpenEvent(
+      await context.read<EventRepository>().updateEvent(
         event,
-        _titleController.text,
-        _descriptionController.text,
-        _startTime,
-        _endTime,
-        _isAllDay,
-        _tags,
+        title: _titleController.text,
+        description: _descriptionController.text,
+        startTime: _startTime,
+        endTime: _endTime,
+        isAllDay: _isAllDay,
+        tags: _tags,
       );
     } else {
-      await FirestoreService().addNewEvent(event);
+      await context.read<EventRepository>().addEvent(event);
     }
   }
 
@@ -248,12 +250,14 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
           widget.quicxec != null &&
           widget.event == null &&
           _type == ItemType.event) {
-        await FirestoreService().convertQuicxecToEvent(widget.quicxec!);
+        await context.read<ItemConversionService>().noteToEvent(
+          widget.quicxec!,
+        );
       } else if (widget.isEditing &&
           widget.event != null &&
           widget.quicxec == null &&
           _type == ItemType.quicxec) {
-        await FirestoreService().convertEventToQuicxec(widget.event!);
+        await context.read<ItemConversionService>().eventToNote(widget.event!);
       } else if (_type == ItemType.quicxec) {
         await _submitQuicxec(quicxecs);
       } else {

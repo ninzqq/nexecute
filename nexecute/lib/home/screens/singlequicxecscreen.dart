@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/home/widgets/quicxecinputfields.dart';
 import 'package:nexecute/shared/bottommenubar.dart';
-import 'package:nexecute/services/services.dart';
 import 'package:nexecute/models/quicxec.dart';
+import 'package:nexecute/repositories/note_repository.dart';
+import 'package:provider/provider.dart';
 
 class SingleQuicxecScreen extends StatelessWidget {
   final Quicxec quicxec;
@@ -22,7 +23,7 @@ class SingleQuicxecScreen extends StatelessWidget {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Quicxec moved to trash')),
                   );
-                  FirestoreService().moveCurrentlyOpenQuicxec(quicxec);
+                  context.read<NoteRepository>().toggleTrashed(quicxec);
                   Navigator.pop(context);
                 },
                 icon: const Icon(Icons.delete_outlined),
@@ -33,7 +34,7 @@ class SingleQuicxecScreen extends StatelessWidget {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Quicxec restored')),
                   );
-                  FirestoreService().moveCurrentlyOpenQuicxec(quicxec);
+                  context.read<NoteRepository>().toggleTrashed(quicxec);
                   Navigator.pop(context);
                 },
                 icon: const Icon(Icons.restore_from_trash_rounded),
@@ -61,11 +62,11 @@ class SingleQuicxecScreen extends StatelessWidget {
                   else if ((textController.text != quicxec.text) ||
                       (titleController.text != quicxec.text))
                     {
-                      FirestoreService().modifyCurrentlyOpenQuicxec(
+                      context.read<NoteRepository>().updateNote(
                         quicxec,
-                        textController.text,
-                        titleController.text,
-                        quicxec.tags,
+                        text: textController.text,
+                        title: titleController.text,
+                        tags: quicxec.tags,
                       ),
                     }
                   else

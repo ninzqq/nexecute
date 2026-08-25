@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/models/todo_item.dart';
+import 'package:nexecute/repositories/todo_repository.dart';
 import 'package:nexecute/tasks/tasks_page.dart';
 import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
@@ -15,13 +16,19 @@ void main() {
     completedAt: completed ? DateTime(2026, 8, 23) : null,
   );
 
-  Widget appWith(List<TodoItem> todos) => Provider<List<TodoItem>>.value(
-    value: todos,
-    child: MaterialApp(
-      theme: AppThemes.forPreset(AppThemePreset.neutral),
-      home: const Scaffold(body: TasksPage()),
-    ),
-  );
+  Widget appWith(List<TodoItem> todos, {TodoRepository? repository}) =>
+      MultiProvider(
+        providers: [
+          Provider<List<TodoItem>>.value(value: todos),
+          Provider<TodoRepository>.value(
+            value: repository ?? _FakeTodoRepository(),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppThemes.forPreset(AppThemePreset.neutral),
+          home: const Scaffold(body: TasksPage()),
+        ),
+      );
 
   testWidgets('shows active tasks and hides completed tasks initially', (
     tester,
@@ -72,6 +79,19 @@ void main() {
     expect(find.byTooltip('Edit task'), findsNWidgets(2));
   });
 
+  testWidgets('completion uses the injected task repository', (tester) async {
+    final repository = _FakeTodoRepository();
+    final activeTodo = todo(id: 'Active task', completed: false);
+
+    await tester.pumpWidget(appWith([activeTodo], repository: repository));
+
+    await tester.tap(find.byType(Checkbox));
+    await tester.pump();
+
+    expect(repository.completedTodo, same(activeTodo));
+    expect(repository.completedValue, isTrue);
+  });
+
   for (final preset in AppThemePreset.values) {
     testWidgets('renders under the ${preset.name} theme', (tester) async {
       await tester.pumpWidget(
@@ -88,4 +108,30 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+}
+
+class _FakeTodoRepository implements TodoRepository {
+  TodoItem? completedTodo;
+  bool? completedValue;
+
+  @override
+  Stream<List<TodoItem>> watchTodos() => Stream.value(const []);
+
+  @override
+  Future<void> addTodo(String title) async {}
+
+  @override
+  Future<void> updateTitle(TodoItem todo, String title) async {}
+
+  @override
+  Future<void> setCompleted(TodoItem todo, bool isCompleted) async {
+    completedTodo = todo;
+    completedValue = isCompleted;
+  }
+
+  @override
+  Future<void> deleteTodo(TodoItem todo) async {}
+
+  @override
+  Future<void> restoreTodo(TodoItem todo) async {}
 }

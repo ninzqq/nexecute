@@ -1,0 +1,139 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:nexecute/models/quicxec.dart';
+import 'package:nexecute/services/auth.dart';
+import 'package:rxdart/rxdart.dart';
+import 'package:uuid/uuid.dart';
+
+abstract interface class NoteRepository {
+  Stream<List<Quicxec>> watchNotes();
+
+  Future<void> addNote(Quicxec note);
+
+  Future<void> updateNote(
+    Quicxec note, {
+    required String text,
+    required String title,
+    required List<String> tags,
+    NoteContentType? contentType,
+    List<NoteChecklistItem>? checklistItems,
+  });
+
+  Future<void> setChecklistItemChecked(
+    Quicxec note,
+    String itemId,
+    bool isChecked,
+  );
+
+  Future<void> toggleTrashed(Quicxec note);
+
+  Future<void> emptyTrash();
+
+  Future<void> deletePermanently(Quicxec note);
+}
+
+class FirestoreNoteRepository implements NoteRepository {
+  FirestoreNoteRepository({
+    required AuthService authService,
+    FirebaseFirestore? firestore,
+    Uuid uuid = const Uuid(),
+  }) : _authService = authService,
+       _db = firestore ?? FirebaseFirestore.instance,
+       _uuid = uuid;
+
+  final AuthService _authService;
+  final FirebaseFirestore _db;
+  final Uuid _uuid;
+
+  @override
+  Stream<List<Quicxec>> watchNotes() {
+    return _authService.userStream.switchMap((user) {
+      if (user == null) return Stream.value(const <Quicxec>[]);
+
+      return _db
+          .collection('users')
+          .doc(user.uid)
+          .collection('quicxecs')
+          .snapshots()
+          .map((snapshot) => snapshot.docs.map(Quicxec.fromFirestore).toList());
+    });
+  }
+
+  @override
+  Future<void> addNote(Quicxec note) async {
+    final id = _uuid.v1();
+    final data = note.toFirestore();
+    data['id'] = id;
+    data['trashed'] = false;
+    await _notesCollection().doc(id).set(data);
+  }
+
+  @override
+  Future<void> updateNote(
+    Quicxec note, {
+    required String text,
+    required String title,
+    required List<String> tags,
+    NoteContentType? contentType,
+    List<NoteChecklistItem>? checklistItems,
+  }) async {
+    final resolvedType = contentType ?? note.contentType;
+    final resolvedItems = checklistItems ?? note.checklistItems;
+    await _notesCollection().doc(note.id).update({
+      'text': text,
+      'title': title,
+      'tags': tags,
+      'contentType': resolvedType.name,
+      'checklistItems': resolvedItems.map((item) => item.toMap()).toList(),
+    });
+  }
+
+  @override
+  Future<void> setChecklistItemChecked(
+    Quicxec note,
+    String itemId,
+    bool isChecked,
+  ) async {
+    final items =
+        note.checklistItems
+            .map(
+              (item) =>
+                  item.id == itemId
+                      ? item.copyWith(isChecked: isChecked)
+                      : item,
+            )
+            .toList();
+
+    await _notesCollection().doc(note.id).update({
+      'text': items.map((item) => item.text).join('\n'),
+      'checklistItems': items.map((item) => item.toMap()).toList(),
+    });
+  }
+
+  @override
+  Future<void> toggleTrashed(Quicxec note) {
+    return _notesCollection().doc(note.id).update({'trashed': !note.trashed});
+  }
+
+  @override
+  Future<void> emptyTrash() async {
+    final batch = _db.batch();
+    final snapshot =
+        await _notesCollection().where('trashed', isEqualTo: true).get();
+
+    for (final document in snapshot.docs) {
+      batch.delete(document.reference);
+    }
+    await batch.commit();
+  }
+
+  @override
+  Future<void> deletePermanently(Quicxec note) {
+    return _notesCollection().doc(note.id).delete();
+  }
+
+  CollectionReference<Map<String, dynamic>> _notesCollection() {
+    final user = _authService.user;
+    if (user == null) throw StateError('User is not logged in');
+    return _db.collection('users').doc(user.uid).collection('quicxecs');
+  }
+}

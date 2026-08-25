@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:nexecute/home/bottomsheets/item_editor.dart';
 import 'package:nexecute/models/event.dart';
-import 'package:nexecute/services/firestore.dart';
+import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/themes.dart';
+import 'package:provider/provider.dart';
 
 Future<void> showEventDetails(BuildContext context, Event event) {
   return showModalBottomSheet<void>(
@@ -98,7 +99,7 @@ class EventDetailsBottomSheet extends StatelessWidget {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     try {
-      await FirestoreService().deleteCurrentlyOpenEvent(event);
+      await context.read<EventRepository>().deleteEvent(event);
       if (!context.mounted) return;
       navigator.pop();
       messenger.showSnackBar(const SnackBar(content: Text('Event deleted')));

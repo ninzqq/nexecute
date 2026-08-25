@@ -2,12 +2,19 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
-  final userStream = FirebaseAuth.instance.authStateChanges();
-  final user = FirebaseAuth.instance.currentUser;
+  AuthService({FirebaseAuth? firebaseAuth, GoogleSignIn? googleSignIn})
+    : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
+      _googleSignIn = googleSignIn ?? GoogleSignIn();
+
+  final FirebaseAuth _firebaseAuth;
+  final GoogleSignIn _googleSignIn;
+
+  Stream<User?> get userStream => _firebaseAuth.authStateChanges();
+  User? get user => _firebaseAuth.currentUser;
 
   Future<void> anonLogin() async {
     try {
-      await FirebaseAuth.instance.signInAnonymously();
+      await _firebaseAuth.signInAnonymously();
     } on FirebaseAuthException {
       // handle error
     }
@@ -15,18 +22,20 @@ class AuthService {
 
   Future<void> signOut() async {
     final googleCurrentUser =
-        GoogleSignIn().currentUser ?? await GoogleSignIn().signIn();
+        _googleSignIn.currentUser ?? await _googleSignIn.signIn();
     if (googleCurrentUser != null) {
-      await GoogleSignIn().disconnect().catchError((e, stack) {
-        // Handle error
-      });
+      try {
+        await _googleSignIn.disconnect();
+      } catch (_) {
+        // Firebase sign-out should still proceed if Google disconnect fails.
+      }
     }
-    await FirebaseAuth.instance.signOut();
+    await _firebaseAuth.signOut();
   }
 
   Future<void> googleLogin() async {
     try {
-      final googleUser = await GoogleSignIn().signIn();
+      final googleUser = await _googleSignIn.signIn();
 
       if (googleUser == null) return;
 
@@ -36,7 +45,7 @@ class AuthService {
         idToken: googleAuth.idToken,
       );
 
-      await FirebaseAuth.instance.signInWithCredential(authCredential);
+      await _firebaseAuth.signInWithCredential(authCredential);
     } on FirebaseAuthException {
       // handle error
     }

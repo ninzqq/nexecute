@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:nexecute/services/firestore.dart';
+import 'package:nexecute/repositories/tag_repository.dart';
+import 'package:provider/provider.dart';
 
 import 'package:nexecute/themes.dart';
 
@@ -23,7 +24,7 @@ class TagListTile extends StatelessWidget {
       items: [
         PopupMenuItem(
           onTap: () {
-            FirestoreService().removeSelectedTag(tag);
+            context.read<TagRepository>().removeTag(tag);
             ScaffoldMessenger.of(
               context,
             ).showSnackBar(const SnackBar(content: Text('Tag deleted')));
@@ -45,7 +46,7 @@ class TagListTile extends StatelessWidget {
         title: Text(tag, style: const TextStyle(fontSize: 16)),
         trailing: IconButton(
           onPressed: () {
-            FirestoreService().removeSelectedTag(tag);
+            context.read<TagRepository>().removeTag(tag);
             ScaffoldMessenger.of(
               context,
             ).showSnackBar(const SnackBar(content: Text('Tag deleted')));

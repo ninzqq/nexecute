@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:nexecute/home/bottomsheets/item_editor.dart';
 import 'package:nexecute/home/widgets/taglistitem.dart';
 import 'package:nexecute/models/tag.dart';
-import 'package:nexecute/services/services.dart';
 import 'package:nexecute/models/quicxec.dart';
+import 'package:nexecute/repositories/note_repository.dart';
 import 'package:nexecute/themes.dart';
+import 'package:provider/provider.dart';
 
 class QuicxecItem extends StatelessWidget {
   final Quicxec quicxec;
@@ -35,7 +36,7 @@ class QuicxecItem extends StatelessWidget {
     Navigator.of(sheetContext).pop();
 
     try {
-      await FirestoreService().moveCurrentlyOpenQuicxec(quicxec);
+      await context.read<NoteRepository>().toggleTrashed(quicxec);
       if (!context.mounted) return;
       messenger.showSnackBar(
         SnackBar(
@@ -66,7 +67,7 @@ class QuicxecItem extends StatelessWidget {
     Navigator.of(sheetContext).pop();
 
     try {
-      await FirestoreService().permanentlyDeleteSingleQuicxec(quicxec);
+      await context.read<NoteRepository>().deletePermanently(quicxec);
       if (!context.mounted) return;
       messenger.showSnackBar(
         const SnackBar(content: Text('Note permanently deleted')),
@@ -85,7 +86,7 @@ class QuicxecItem extends StatelessWidget {
     bool isChecked,
   ) async {
     try {
-      await FirestoreService().setQuicxecChecklistItemChecked(
+      await context.read<NoteRepository>().setChecklistItemChecked(
         quicxec,
         item.id,
         isChecked,

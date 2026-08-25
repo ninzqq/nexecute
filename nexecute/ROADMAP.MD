@@ -364,9 +364,12 @@ These improvements should be considered before or alongside larger features.
 
 ### High priority
 
-- Split `FirestoreService` into injected repositories for events, notes, tasks,
-  and tags. Add an independent assistant repository whose interface does not
-  depend on Odysseus or Ollama-specific response types.
+- [x] ~~Split `FirestoreService` into injected repositories for events, notes,
+  tasks, tags, and the legacy count feature. Register the repository interfaces
+  with Provider and migrate callers away from constructing Firestore services
+  directly.~~
+- Add an independent assistant repository when AI work begins. Its interface
+  must not depend on Odysseus or Ollama-specific response types.
 - Query calendar events by the visible date range instead of maintaining one
   live stream containing the user's complete event history.
 - Represent loading, empty, authentication, and error states separately rather
@@ -382,8 +385,9 @@ These improvements should be considered before or alongside larger features.
   current calendar contains all required behavior.
 - Remove prototype code and unused dependencies, including unused state
   providers and state-management packages.
-- Standardize on one state-management approach and inject services rather than
-  constructing them directly inside widgets.
+- [x] ~~Inject Firestore-backed repositories rather than constructing services
+  directly inside widgets.~~
+- Standardize on one state-management approach and remove unused alternatives.
 - Move Firestore serialization concerns out of domain models where practical.
 - Replace loosely typed update methods with typed parameters or command
   objects.
