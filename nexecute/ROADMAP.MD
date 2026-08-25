@@ -9,41 +9,43 @@
 - Record meaningful scope and architecture decisions here so work can resume
   later without relying on conversation history.
 
-## Tasks / to-do list
+## ~~Tasks / to-do list~~
 
-**Status:** Completed
+**Status:** ✅ Completed
 
 Add a deliberately simple, user-specific task list alongside Calendar and
 Notes (Quicxecs).
 
-### Version 1 scope
+### ~~Version 1 scope~~ ✅
 
-- Add a task with a required title.
-- Edit an existing task's title.
-- Mark a task as completed or active.
-- Delete a task, with an Undo snackbar where practical.
-- Keep completed tasks in the app.
-- Hide completed tasks by default inside a collapsed `Completed (n)` section.
-- Allow completed tasks to be expanded, viewed, and restored to the active
-  list.
-- Persist tasks under the authenticated user in Firestore.
-- Support all application themes.
+- [x] ~~Add a task with a required title.~~
+- [x] ~~Edit an existing task's title.~~
+- [x] ~~Mark a task as completed or active.~~
+- [x] ~~Delete a task, with an Undo snackbar where practical.~~
+- [x] ~~Keep completed tasks in the app.~~
+- [x] ~~Hide completed tasks by default inside a collapsed `Completed (n)`
+  section.~~
+- [x] ~~Allow completed tasks to be expanded, viewed, and restored to the
+  active list.~~
+- [x] ~~Persist tasks under the authenticated user in Firestore.~~
+- [x] ~~Support all application themes.~~
 
 Not included in version 1: descriptions, tags, priorities, due dates,
 subtasks, manual ordering, or task-to-event conversion.
 
-### Navigation and appearance
+### ~~Navigation and appearance~~ ✅
 
-- Replace the custom two-page bottom bar and center-notched Add button with a
-  Material 3 `NavigationBar`.
-- Use three labeled destinations: **Calendar**, **Tasks**, and **Notes**.
-- Add a context-aware floating action button at the bottom-right:
-  `+ Event`, `+ Task`, or `+ Note`.
-- Show active tasks as a clean checkbox list rather than note-style cards.
-- Show completed tasks with strikethrough text and reduced opacity.
-- Preserve each page's state while moving between destinations.
+- [x] ~~Replace the custom two-page bottom bar and center-notched Add button
+  with a Material 3 `NavigationBar`.~~
+- [x] ~~Use three labeled destinations: **Calendar**, **Tasks**, and **Notes**.~~
+- [x] ~~Add a context-aware floating action button at the bottom-right:
+  `+ Event`, `+ Task`, or `+ Note`.~~
+- [x] ~~Show active tasks as a clean checkbox list rather than note-style
+  cards.~~
+- [x] ~~Show completed tasks with strikethrough text and reduced opacity.~~
+- [x] ~~Preserve each page's state while moving between destinations.~~
 
-### Data model
+### ~~Data model~~ ✅
 
 Store tasks at:
 
@@ -64,40 +66,40 @@ completedAt (nullable)
 
 Required operations:
 
-- Stream the current user's tasks.
-- Add a task.
-- Edit a task title.
-- Set completed/active state.
-- Delete a task.
+- [x] ~~Stream the current user's tasks.~~
+- [x] ~~Add a task.~~
+- [x] ~~Edit a task title.~~
+- [x] ~~Set completed/active state.~~
+- [x] ~~Delete a task.~~
 
-### Implementation checklist
+### ~~Implementation checklist~~ ✅
 
-- [x] Refactor the app shell to the three-destination `NavigationBar`.
-- [x] Add the context-aware floating action button.
-- [x] Add the `TodoItem` model and Firestore serialization.
-- [x] Add task stream and CRUD operations.
-- [x] Register the task stream provider.
-- [x] Build the active task list and empty state.
-- [x] Build the collapsed completed-task section.
-- [x] Add the task creation and editing sheet.
-- [x] Add completion, restoration, deletion, and Undo interactions.
-- [x] Verify Firestore security rules for the `todos` collection.
-- [x] Add model, interaction, persistence, and navigation tests.
-- [x] Verify the page under Cyberpunk, Midnight, Forest, and Neutral themes.
+- [x] ~~Refactor the app shell to the three-destination `NavigationBar`.~~
+- [x] ~~Add the context-aware floating action button.~~
+- [x] ~~Add the `TodoItem` model and Firestore serialization.~~
+- [x] ~~Add task stream and CRUD operations.~~
+- [x] ~~Register the task stream provider.~~
+- [x] ~~Build the active task list and empty state.~~
+- [x] ~~Build the collapsed completed-task section.~~
+- [x] ~~Add the task creation and editing sheet.~~
+- [x] ~~Add completion, restoration, deletion, and Undo interactions.~~
+- [x] ~~Verify Firestore security rules for the `todos` collection.~~
+- [x] ~~Add model, interaction, persistence, and navigation tests.~~
+- [x] ~~Verify the page under Cyberpunk, Midnight, Forest, and Neutral themes.~~
 
 Firestore rules are tracked in `firestore.rules`. They restrict each
 authenticated user to their own `users/{userId}` document and its nested
 collections, including `todos`.
 
-### Acceptance criteria
+### ~~Acceptance criteria~~ ✅
 
-- Tasks persist separately for each authenticated user.
-- Adding, editing, completing, restoring, and deleting tasks work.
-- Completed tasks leave the active list and enter the collapsed completed
-  section immediately.
-- Navigation preserves Calendar, Tasks, and Notes page state.
-- The floating action button always communicates what it will create.
-- The Android build and relevant automated tests pass.
+- [x] ~~Tasks persist separately for each authenticated user.~~
+- [x] ~~Adding, editing, completing, restoring, and deleting tasks work.~~
+- [x] ~~Completed tasks leave the active list and enter the collapsed completed
+  section immediately.~~
+- [x] ~~Navigation preserves Calendar, Tasks, and Notes page state.~~
+- [x] ~~The floating action button always communicates what it will create.~~
+- [x] ~~The Android build and relevant automated tests pass.~~
 
 ## Future roadmap
 
