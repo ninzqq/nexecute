@@ -1,10 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nexecute/models/count.dart';
+import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/services/auth.dart';
-import 'package:rxdart/rxdart.dart';
+import 'package:nexecute/services/authenticated_data_stream.dart';
 
 abstract interface class CountRepository {
-  Stream<Count> watchCount();
+  Stream<DataState<Count>> watchCount();
 
   Future<void> increment();
 }
@@ -20,16 +21,17 @@ class FirestoreCountRepository implements CountRepository {
   final FirebaseFirestore _db;
 
   @override
-  Stream<Count> watchCount() {
-    return _authService.userStream.switchMap((user) {
-      if (user == null) return Stream.value(Count());
-
-      return _db
-          .collection('users')
-          .doc(user.uid)
-          .snapshots()
-          .map((document) => Count.fromJson(document.data() ?? const {}));
-    });
+  Stream<DataState<Count>> watchCount() {
+    return authenticatedDataStream(
+      authentication: _authService.userStream,
+      isEmpty: (_) => false,
+      load:
+          (user) => _db
+              .collection('users')
+              .doc(user.uid)
+              .snapshots()
+              .map((document) => Count.fromJson(document.data() ?? const {})),
+    );
   }
 
   @override

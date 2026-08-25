@@ -3,10 +3,12 @@ import 'package:intl/intl.dart';
 import 'package:nexecute/domain/calendar/calendar_query_range.dart';
 import 'package:nexecute/domain/calendar/gregorian_month_calculator.dart';
 import 'package:nexecute/domain/calendar/iso_week_calculator.dart';
+import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/calendar/bottomsheets/event_details.dart';
 import 'package:nexecute/repositories/event_repository.dart';
+import 'package:nexecute/shared/data_state_placeholder.dart';
 import 'package:nexecute/ui/calendar/month_view.dart';
 import 'package:nexecute/ui/calendar/event_date_utils.dart';
 import 'package:nexecute/ui/calendar/selected_day_agenda.dart';
@@ -38,7 +40,7 @@ class _CalendarPageState extends State<CalendarPage> {
   int _weekPage = _initialPage;
   EventRepository? _eventRepository;
   CalendarQueryRange? _eventRange;
-  Stream<List<Event>>? _eventsStream;
+  Stream<DataState<List<Event>>>? _eventsStream;
 
   @override
   void initState() {
@@ -70,16 +72,21 @@ class _CalendarPageState extends State<CalendarPage> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<Event>>(
+    return StreamBuilder<DataState<List<Event>>>(
       stream: _eventsStream,
-      initialData: const [],
-      builder:
-          (context, snapshot) =>
-              _buildCalendar(context, snapshot.data ?? const []),
+      initialData: const DataLoading<List<Event>>(),
+      builder: (context, snapshot) {
+        final state =
+            snapshot.hasError
+                ? DataFailure<List<Event>>(snapshot.error!)
+                : snapshot.data ?? const DataLoading<List<Event>>();
+        return _buildCalendar(context, state);
+      },
     );
   }
 
-  Widget _buildCalendar(BuildContext context, List<Event> events) {
+  Widget _buildCalendar(BuildContext context, DataState<List<Event>> state) {
+    final events = state.valueOrNull ?? const <Event>[];
     final week = _weekCalculator.fromDate(_weekDateForPage(_weekPage));
     final month = _monthCalculator.fromDate(_monthDateForPage(_monthPage));
     final selectedEvents = eventsForDay(events, _selectedDay);
@@ -161,12 +168,37 @@ class _CalendarPageState extends State<CalendarPage> {
                 const Divider(height: 1),
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 180),
-                  height: selectedDayAgendaHeight(selectedEvents.length),
-                  child: SelectedDayAgenda(
-                    day: _selectedDay,
-                    events: selectedEvents,
-                    onEventSelected: _openEvent,
-                  ),
+                  height:
+                      state is DataReady<List<Event>> ||
+                              state is DataEmpty<List<Event>>
+                          ? selectedDayAgendaHeight(selectedEvents.length)
+                          : 120,
+                  child: switch (state) {
+                    DataLoading<List<Event>>() => const DataStatePlaceholder(
+                      presentation: DataStatePresentation.loading,
+                      title: 'Loading events…',
+                      message: '',
+                      compact: true,
+                    ),
+                    DataUnauthenticated<List<Event>>() =>
+                      const DataStatePlaceholder(
+                        presentation: DataStatePresentation.unauthenticated,
+                        title: 'Sign in to access events',
+                        message: '',
+                        compact: true,
+                      ),
+                    DataFailure<List<Event>>() => const DataStatePlaceholder(
+                      presentation: DataStatePresentation.failure,
+                      title: 'Could not load events',
+                      compact: true,
+                    ),
+                    DataEmpty<List<Event>>() ||
+                    DataReady<List<Event>>() => SelectedDayAgenda(
+                      day: _selectedDay,
+                      events: selectedEvents,
+                      onEventSelected: _openEvent,
+                    ),
+                  },
                 ),
               ],
             ),

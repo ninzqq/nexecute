@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/services/auth.dart';
+import 'package:provider/provider.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -18,7 +19,7 @@ class LoginScreen extends StatelessWidget {
               child: LoginButton(
                 icon: Icons.account_circle_rounded,
                 text: 'Sign in with Google',
-                loginMethod: AuthService().googleLogin,
+                loginMethod: context.read<AuthService>().googleLogin,
                 color: Colors.blue,
               ),
             ),
@@ -26,7 +27,7 @@ class LoginScreen extends StatelessWidget {
               child: LoginButton(
                 icon: Icons.account_box,
                 text: 'Continue as guest',
-                loginMethod: AuthService().anonLogin,
+                loginMethod: context.read<AuthService>().anonLogin,
                 color: Colors.deepPurple,
               ),
             ),
@@ -41,7 +42,7 @@ class LoginButton extends StatelessWidget {
   final Color color;
   final IconData icon;
   final String text;
-  final Function loginMethod;
+  final Future<void> Function() loginMethod;
 
   const LoginButton({
     super.key,
@@ -62,7 +63,7 @@ class LoginButton extends StatelessWidget {
           padding: const EdgeInsets.all(24),
           backgroundColor: color,
         ),
-        onPressed: () => loginMethod(),
+        onPressed: loginMethod,
       ),
     );
   }

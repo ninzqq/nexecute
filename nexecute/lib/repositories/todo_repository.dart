@@ -1,11 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/todo_item.dart';
 import 'package:nexecute/services/auth.dart';
-import 'package:rxdart/rxdart.dart';
+import 'package:nexecute/services/authenticated_data_stream.dart';
 import 'package:uuid/uuid.dart';
 
 abstract interface class TodoRepository {
-  Stream<List<TodoItem>> watchTodos();
+  Stream<DataState<List<TodoItem>>> watchTodos();
 
   Future<void> addTodo(String title);
 
@@ -32,19 +33,21 @@ class FirestoreTodoRepository implements TodoRepository {
   final Uuid _uuid;
 
   @override
-  Stream<List<TodoItem>> watchTodos() {
-    return _authService.userStream.switchMap((user) {
-      if (user == null) return Stream.value(const <TodoItem>[]);
-
-      return _db
-          .collection('users')
-          .doc(user.uid)
-          .collection('todos')
-          .snapshots()
-          .map(
-            (snapshot) => snapshot.docs.map(TodoItem.fromFirestore).toList(),
-          );
-    });
+  Stream<DataState<List<TodoItem>>> watchTodos() {
+    return authenticatedDataStream(
+      authentication: _authService.userStream,
+      isEmpty: (todos) => todos.isEmpty,
+      load:
+          (user) => _db
+              .collection('users')
+              .doc(user.uid)
+              .collection('todos')
+              .snapshots()
+              .map(
+                (snapshot) =>
+                    snapshot.docs.map(TodoItem.fromFirestore).toList(),
+              ),
+    );
   }
 
   @override

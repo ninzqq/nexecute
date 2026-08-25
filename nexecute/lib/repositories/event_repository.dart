@@ -1,12 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nexecute/domain/calendar/calendar_query_range.dart';
+import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/services/auth.dart';
-import 'package:rxdart/rxdart.dart';
+import 'package:nexecute/services/authenticated_data_stream.dart';
 import 'package:uuid/uuid.dart';
 
 abstract interface class EventRepository {
-  Stream<List<Event>> watchEvents(CalendarQueryRange range);
+  Stream<DataState<List<Event>>> watchEvents(CalendarQueryRange range);
 
   Future<void> addEvent(Event event);
 
@@ -37,19 +38,22 @@ class FirestoreEventRepository implements EventRepository {
   final Uuid _uuid;
 
   @override
-  Stream<List<Event>> watchEvents(CalendarQueryRange range) {
-    return _authService.userStream.switchMap((user) {
-      if (user == null) return Stream.value(const <Event>[]);
-
-      return _db
-          .collection('users')
-          .doc(user.uid)
-          .collection('events')
-          .where('startTime', isLessThan: range.endExclusive)
-          .where('endTime', isGreaterThanOrEqualTo: range.startInclusive)
-          .snapshots()
-          .map((snapshot) => snapshot.docs.map(Event.fromFirestore).toList());
-    });
+  Stream<DataState<List<Event>>> watchEvents(CalendarQueryRange range) {
+    return authenticatedDataStream(
+      authentication: _authService.userStream,
+      isEmpty: (events) => events.isEmpty,
+      load:
+          (user) => _db
+              .collection('users')
+              .doc(user.uid)
+              .collection('events')
+              .where('startTime', isLessThan: range.endExclusive)
+              .where('endTime', isGreaterThanOrEqualTo: range.startInclusive)
+              .snapshots()
+              .map(
+                (snapshot) => snapshot.docs.map(Event.fromFirestore).toList(),
+              ),
+    );
   }
 
   @override

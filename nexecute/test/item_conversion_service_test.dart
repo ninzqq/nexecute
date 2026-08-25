@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/domain/calendar/calendar_query_range.dart';
@@ -60,8 +61,8 @@ class _FakeEventRepository implements EventRepository {
   Event? deletedEvent;
 
   @override
-  Stream<List<Event>> watchEvents(CalendarQueryRange range) =>
-      Stream.value(const []);
+  Stream<DataState<List<Event>>> watchEvents(CalendarQueryRange range) =>
+      Stream.value(const DataEmpty([]));
 
   @override
   Future<void> addEvent(Event event) async {
@@ -90,7 +91,8 @@ class _FakeNoteRepository implements NoteRepository {
   Quicxec? deletedNote;
 
   @override
-  Stream<List<Quicxec>> watchNotes() => Stream.value(const []);
+  Stream<DataState<List<Quicxec>>> watchNotes() =>
+      Stream.value(const DataEmpty([]));
 
   @override
   Future<void> addNote(Quicxec note) async {

@@ -7,10 +7,12 @@ import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/home/widgets/item_time_picker.dart';
 import 'package:nexecute/home/widgets/note_checklist_editor.dart';
+import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/tag.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/repositories/note_repository.dart';
 import 'package:nexecute/services/item_conversion_service.dart';
+import 'package:nexecute/shared/data_state_placeholder.dart';
 import 'package:provider/provider.dart';
 import 'package:nexecute/home/bottomsheets/item_type.dart';
 
@@ -281,7 +283,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
 
   @override
   Widget build(BuildContext context) {
-    List<String> tags = context.watch<Tags>().tags;
+    final tagState = context.watch<DataState<Tags>>();
 
     return Container(
       padding: const EdgeInsets.all(16.0),
@@ -492,19 +494,40 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
               ),
             ],
             const SizedBox(height: 8.0),
-            TagSelector(
-              tags: tags,
-              selectedTags: _tags,
-              onTagToggled: (tag) {
-                setState(() {
-                  if (!_tags.contains(tag)) {
-                    _tags.add(tag);
-                  } else {
-                    _tags.remove(tag);
-                  }
-                });
-              },
-            ),
+            switch (tagState) {
+              DataReady<Tags>(:final value) ||
+              DataEmpty<Tags>(:final value) => TagSelector(
+                tags: value.tags,
+                selectedTags: _tags,
+                onTagToggled: (tag) {
+                  setState(() {
+                    if (!_tags.contains(tag)) {
+                      _tags.add(tag);
+                    } else {
+                      _tags.remove(tag);
+                    }
+                  });
+                },
+              ),
+              DataLoading<Tags>() => const DataStatePlaceholder(
+                presentation: DataStatePresentation.loading,
+                title: 'Loading tags…',
+                message: '',
+                compact: true,
+              ),
+              DataUnauthenticated<Tags>() => const DataStatePlaceholder(
+                presentation: DataStatePresentation.unauthenticated,
+                title: 'Sign in to use tags',
+                message: '',
+                compact: true,
+              ),
+              DataFailure<Tags>() => const DataStatePlaceholder(
+                presentation: DataStatePresentation.failure,
+                title: 'Could not load tags',
+                message: 'You can still save this item.',
+                compact: true,
+              ),
+            },
             const SizedBox(height: 8.0),
             SubmitButton(
               onPressed: _isSaving ? null : _submit,

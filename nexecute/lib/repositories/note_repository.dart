@@ -1,11 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/services/auth.dart';
-import 'package:rxdart/rxdart.dart';
+import 'package:nexecute/services/authenticated_data_stream.dart';
 import 'package:uuid/uuid.dart';
 
 abstract interface class NoteRepository {
-  Stream<List<Quicxec>> watchNotes();
+  Stream<DataState<List<Quicxec>>> watchNotes();
 
   Future<void> addNote(Quicxec note);
 
@@ -45,17 +46,20 @@ class FirestoreNoteRepository implements NoteRepository {
   final Uuid _uuid;
 
   @override
-  Stream<List<Quicxec>> watchNotes() {
-    return _authService.userStream.switchMap((user) {
-      if (user == null) return Stream.value(const <Quicxec>[]);
-
-      return _db
-          .collection('users')
-          .doc(user.uid)
-          .collection('quicxecs')
-          .snapshots()
-          .map((snapshot) => snapshot.docs.map(Quicxec.fromFirestore).toList());
-    });
+  Stream<DataState<List<Quicxec>>> watchNotes() {
+    return authenticatedDataStream(
+      authentication: _authService.userStream,
+      isEmpty: (notes) => notes.isEmpty,
+      load:
+          (user) => _db
+              .collection('users')
+              .doc(user.uid)
+              .collection('quicxecs')
+              .snapshots()
+              .map(
+                (snapshot) => snapshot.docs.map(Quicxec.fromFirestore).toList(),
+              ),
+    );
   }
 
   @override

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/home/screens/homescreen.dart';
+import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/home_tab_index.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/quicxec_column_count.dart';
@@ -24,9 +25,15 @@ void main() {
             ChangeNotifierProvider(create: (_) => SelectedDay()),
             ChangeNotifierProvider(create: (_) => QuicxecsColumnCount()),
             Provider<EventRepository>.value(value: FakeEventRepository()),
-            Provider<List<TodoItem>>.value(value: const []),
-            Provider<List<Quicxec>>.value(value: const []),
-            Provider<models.Tags>.value(value: models.Tags()),
+            Provider<DataState<List<TodoItem>>>.value(
+              value: const DataEmpty([]),
+            ),
+            Provider<DataState<List<Quicxec>>>.value(
+              value: const DataEmpty([]),
+            ),
+            Provider<DataState<models.Tags>>.value(
+              value: DataEmpty(models.Tags()),
+            ),
           ],
           child: MaterialApp(
             theme: AppThemes.forPreset(AppThemePreset.midnight),

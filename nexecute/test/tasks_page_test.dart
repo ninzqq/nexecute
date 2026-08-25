@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/todo_item.dart';
 import 'package:nexecute/repositories/todo_repository.dart';
 import 'package:nexecute/tasks/tasks_page.dart';
@@ -16,19 +17,54 @@ void main() {
     completedAt: completed ? DateTime(2026, 8, 23) : null,
   );
 
+  Widget appWithState(
+    DataState<List<TodoItem>> state, {
+    TodoRepository? repository,
+  }) => MultiProvider(
+    providers: [
+      Provider<DataState<List<TodoItem>>>.value(value: state),
+      Provider<TodoRepository>.value(
+        value: repository ?? _FakeTodoRepository(),
+      ),
+    ],
+    child: MaterialApp(
+      theme: AppThemes.forPreset(AppThemePreset.neutral),
+      home: const Scaffold(body: TasksPage()),
+    ),
+  );
+
   Widget appWith(List<TodoItem> todos, {TodoRepository? repository}) =>
-      MultiProvider(
-        providers: [
-          Provider<List<TodoItem>>.value(value: todos),
-          Provider<TodoRepository>.value(
-            value: repository ?? _FakeTodoRepository(),
-          ),
-        ],
-        child: MaterialApp(
-          theme: AppThemes.forPreset(AppThemePreset.neutral),
-          home: const Scaffold(body: TasksPage()),
-        ),
+      appWithState(
+        todos.isEmpty ? DataEmpty(todos) : DataReady(todos),
+        repository: repository,
       );
+
+  testWidgets('keeps loading distinct from an empty task list', (tester) async {
+    await tester.pumpWidget(appWithState(const DataLoading<List<TodoItem>>()));
+
+    expect(find.text('Loading tasks…'), findsOneWidget);
+    expect(find.text('Nothing to do'), findsNothing);
+  });
+
+  testWidgets('shows the authentication state separately', (tester) async {
+    await tester.pumpWidget(
+      appWithState(const DataUnauthenticated<List<TodoItem>>()),
+    );
+
+    expect(find.text('Sign in required'), findsOneWidget);
+    expect(find.text('Nothing to do'), findsNothing);
+  });
+
+  testWidgets('keeps failures distinct from an empty task list', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      appWithState(DataFailure<List<TodoItem>>(StateError('offline'))),
+    );
+
+    expect(find.text('Could not load tasks'), findsOneWidget);
+    expect(find.text('Nothing to do'), findsNothing);
+  });
 
   testWidgets('shows active tasks and hides completed tasks initially', (
     tester,
@@ -95,8 +131,8 @@ void main() {
   for (final preset in AppThemePreset.values) {
     testWidgets('renders under the ${preset.name} theme', (tester) async {
       await tester.pumpWidget(
-        Provider<List<TodoItem>>.value(
-          value: const [],
+        Provider<DataState<List<TodoItem>>>.value(
+          value: const DataEmpty([]),
           child: MaterialApp(
             theme: AppThemes.forPreset(preset),
             home: const Scaffold(body: TasksPage()),
@@ -115,7 +151,8 @@ class _FakeTodoRepository implements TodoRepository {
   bool? completedValue;
 
   @override
-  Stream<List<TodoItem>> watchTodos() => Stream.value(const []);
+  Stream<DataState<List<TodoItem>>> watchTodos() =>
+      Stream.value(const DataEmpty([]));
 
   @override
   Future<void> addTodo(String title) async {}

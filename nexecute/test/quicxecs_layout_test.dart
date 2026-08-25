@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/home/widgets/quicxecs.dart';
+import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/quicxec_column_count.dart';
 import 'package:nexecute/themes.dart';
@@ -31,7 +32,7 @@ void main() {
       MultiProvider(
         providers: [
           ChangeNotifierProvider(create: (_) => QuicxecsColumnCount()),
-          Provider<List<Quicxec>>.value(value: notes),
+          Provider<DataState<List<Quicxec>>>.value(value: DataReady(notes)),
         ],
         child: MaterialApp(
           theme: AppThemes.forPreset(AppThemePreset.midnight),

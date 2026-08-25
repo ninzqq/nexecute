@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/calendar/bottomsheets/event_details.dart';
 import 'package:nexecute/home/bottomsheets/item_editor_sheet.dart';
+import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/models/tag.dart' as models;
@@ -44,7 +45,9 @@ void main() {
           Provider<EventRepository>.value(
             value: FakeEventRepository(events: [event]),
           ),
-          Provider<models.Tags>.value(value: models.Tags()),
+          Provider<DataState<models.Tags>>.value(
+            value: DataEmpty(models.Tags()),
+          ),
           ChangeNotifierProvider(create: (_) => SelectedDay()),
         ],
         child: MaterialApp(
@@ -72,5 +75,30 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(ItemEditorSheet), findsOneWidget);
+  });
+
+  testWidgets('shows event failures instead of an empty agenda', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<EventRepository>.value(
+            value: FakeEventRepository(
+              state: DataFailure(StateError('Firestore unavailable')),
+            ),
+          ),
+          ChangeNotifierProvider(create: (_) => SelectedDay()),
+        ],
+        child: MaterialApp(
+          theme: AppThemes.forPreset(AppThemePreset.midnight),
+          home: const CalendarPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Could not load events'), findsOneWidget);
+    expect(find.text('No events for this day'), findsNothing);
   });
 }

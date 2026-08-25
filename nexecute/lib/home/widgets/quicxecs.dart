@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/home/widgets/searchbox.dart';
+import 'package:nexecute/shared/data_state_placeholder.dart';
 import 'package:provider/provider.dart';
 import 'package:nexecute/home/widgets/quicxecitem.dart';
 import 'package:nexecute/models/quicxec.dart';
@@ -18,12 +20,32 @@ class _QuicxecsState extends State<Quicxecs> {
 
   @override
   Widget build(BuildContext context) {
-    var columnCount = context.watch<QuicxecsColumnCount>();
-    var allQuicxecs = context.watch<List<Quicxec>>();
-    var activeQuicxecs = allQuicxecs.where((q) => !q.trashed).toList();
+    final state = context.watch<DataState<List<Quicxec>>>();
+
+    return switch (state) {
+      DataLoading<List<Quicxec>>() => const DataStatePlaceholder(
+        presentation: DataStatePresentation.loading,
+        title: 'Loading notes…',
+      ),
+      DataUnauthenticated<List<Quicxec>>() => const DataStatePlaceholder(
+        presentation: DataStatePresentation.unauthenticated,
+        message: 'Sign in to access your notes.',
+      ),
+      DataFailure<List<Quicxec>>() => const DataStatePlaceholder(
+        presentation: DataStatePresentation.failure,
+        title: 'Could not load notes',
+      ),
+      DataEmpty<List<Quicxec>>(:final value) => _buildNotes(context, value),
+      DataReady<List<Quicxec>>(:final value) => _buildNotes(context, value),
+    };
+  }
+
+  Widget _buildNotes(BuildContext context, List<Quicxec> allQuicxecs) {
+    final columnCount = context.watch<QuicxecsColumnCount>();
+    final activeQuicxecs = allQuicxecs.where((q) => !q.trashed).toList();
 
     // Filtteröi hakusanan perusteella
-    var filteredQuicxecs =
+    final filteredQuicxecs =
         searchQuery.isEmpty
             ? activeQuicxecs
             : activeQuicxecs
@@ -56,20 +78,33 @@ class _QuicxecsState extends State<Quicxecs> {
           ),
         ),
         Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: MasonryGridView.count(
-              padding: const EdgeInsets.only(bottom: 96),
-              crossAxisCount: columnCount.columns,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              itemCount: filteredQuicxecs.length,
-              itemBuilder: (context, index) {
-                var quicxec = filteredQuicxecs[index];
-                return QuicxecItem(quicxec: quicxec);
-              },
-            ),
-          ),
+          child:
+              filteredQuicxecs.isEmpty
+                  ? DataStatePlaceholder(
+                    presentation: DataStatePresentation.empty,
+                    title:
+                        activeQuicxecs.isEmpty
+                            ? 'No notes yet'
+                            : 'No matching notes',
+                    message:
+                        activeQuicxecs.isEmpty
+                            ? 'Create a note when inspiration strikes.'
+                            : 'Try a different search.',
+                  )
+                  : Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: MasonryGridView.count(
+                      padding: const EdgeInsets.only(bottom: 96),
+                      crossAxisCount: columnCount.columns,
+                      mainAxisSpacing: 8,
+                      crossAxisSpacing: 8,
+                      itemCount: filteredQuicxecs.length,
+                      itemBuilder: (context, index) {
+                        final quicxec = filteredQuicxecs[index];
+                        return QuicxecItem(quicxec: quicxec);
+                      },
+                    ),
+                  ),
         ),
       ],
     );

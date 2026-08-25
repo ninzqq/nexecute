@@ -375,8 +375,10 @@ These improvements should be considered before or alongside larger features.
   views now include one adjacent `PageView` page in each direction as a swipe
   buffer, preserve overlapping multi-day events, and use the deployed composite
   index tracked in `firestore.indexes.json`.~~
-- Represent loading, empty, authentication, and error states separately rather
-  than converting stream failures into empty lists.
+- [x] ~~Represent loading, empty, authentication, and error states separately
+  rather than converting stream failures into empty lists. Authenticated
+  repository streams now publish typed `DataState` values, and calendar, tasks,
+  notes, tags, trash, count, and editor surfaces render those states explicitly.~~
 - Initialize Firebase through one clearly owned application startup path.
 - Add Firestore Emulator tests for repository behavior and security rules.
 

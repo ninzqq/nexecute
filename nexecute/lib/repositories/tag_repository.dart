@@ -1,10 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/tag.dart';
 import 'package:nexecute/services/auth.dart';
-import 'package:rxdart/rxdart.dart';
+import 'package:nexecute/services/authenticated_data_stream.dart';
 
 abstract interface class TagRepository {
-  Stream<Tags> watchTags();
+  Stream<DataState<Tags>> watchTags();
 
   Future<void> addTag(String tag);
 
@@ -22,16 +23,17 @@ class FirestoreTagRepository implements TagRepository {
   final FirebaseFirestore _db;
 
   @override
-  Stream<Tags> watchTags() {
-    return _authService.userStream.switchMap((user) {
-      if (user == null) return Stream.value(Tags());
-
-      return _db
-          .collection('users')
-          .doc(user.uid)
-          .snapshots()
-          .map((document) => Tags.fromJson(document.data() ?? const {}));
-    });
+  Stream<DataState<Tags>> watchTags() {
+    return authenticatedDataStream(
+      authentication: _authService.userStream,
+      isEmpty: (tags) => tags.tags.isEmpty,
+      load:
+          (user) => _db
+              .collection('users')
+              .doc(user.uid)
+              .snapshots()
+              .map((document) => Tags.fromJson(document.data() ?? const {})),
+    );
   }
 
   @override

@@ -1,25 +1,33 @@
 import 'package:nexecute/domain/calendar/calendar_query_range.dart';
+import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 
 class FakeEventRepository implements EventRepository {
-  FakeEventRepository({this.events = const []});
+  FakeEventRepository({this.events = const [], this.state});
 
   final List<Event> events;
+  final DataState<List<Event>>? state;
   final watchedRanges = <CalendarQueryRange>[];
   Event? addedEvent;
   Event? deletedEvent;
 
   @override
-  Stream<List<Event>> watchEvents(CalendarQueryRange range) {
+  Stream<DataState<List<Event>>> watchEvents(CalendarQueryRange range) {
     watchedRanges.add(range);
+    if (state case final state?) return Stream.value(state);
+
+    final matchingEvents =
+        events
+            .where(
+              (event) =>
+                  range.overlaps(start: event.startTime, end: event.endTime),
+            )
+            .toList();
     return Stream.value(
-      events
-          .where(
-            (event) =>
-                range.overlaps(start: event.startTime, end: event.endTime),
-          )
-          .toList(),
+      matchingEvents.isEmpty
+          ? DataEmpty(matchingEvents)
+          : DataReady(matchingEvents),
     );
   }
 
