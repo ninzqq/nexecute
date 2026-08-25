@@ -1,9 +1,10 @@
 import 'package:nexecute/models/quicxec.dart';
+import 'package:nexecute/repositories/firestore/note_document_mapper.dart';
 import 'package:test/test.dart';
 
 void main() {
   test('older notes without checklist fields remain text notes', () {
-    final note = Quicxec.fromMap('legacy-note', {
+    final note = NoteDocumentMapper.fromMap('legacy-note', {
       'title': 'Legacy',
       'text': 'Plain text',
       'created': DateTime(2026, 8, 24),
@@ -28,7 +29,10 @@ void main() {
       ],
     );
 
-    final restored = Quicxec.fromMap(note.id, note.toFirestore());
+    final restored = NoteDocumentMapper.fromMap(
+      note.id,
+      NoteDocumentMapper.toMap(note),
+    );
 
     expect(restored.contentType, NoteContentType.checklist);
     expect(restored.checklistItems, hasLength(2));

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/quicxec.dart';
+import 'package:nexecute/repositories/firestore/note_document_mapper.dart';
 import 'package:nexecute/services/auth.dart';
 import 'package:nexecute/services/authenticated_data_stream.dart';
 import 'package:uuid/uuid.dart';
@@ -57,7 +58,8 @@ class FirestoreNoteRepository implements NoteRepository {
               .collection('quicxecs')
               .snapshots()
               .map(
-                (snapshot) => snapshot.docs.map(Quicxec.fromFirestore).toList(),
+                (snapshot) =>
+                    snapshot.docs.map(NoteDocumentMapper.fromDocument).toList(),
               ),
     );
   }
@@ -65,7 +67,7 @@ class FirestoreNoteRepository implements NoteRepository {
   @override
   Future<void> addNote(Quicxec note) async {
     final id = _uuid.v1();
-    final data = note.toFirestore();
+    final data = NoteDocumentMapper.toMap(note);
     data['id'] = id;
     data['trashed'] = false;
     await _notesCollection().doc(id).set(data);
@@ -87,7 +89,7 @@ class FirestoreNoteRepository implements NoteRepository {
       'title': title,
       'tags': tags,
       'contentType': resolvedType.name,
-      'checklistItems': resolvedItems.map((item) => item.toMap()).toList(),
+      'checklistItems': NoteDocumentMapper.checklistItemsToData(resolvedItems),
     });
   }
 
@@ -109,7 +111,7 @@ class FirestoreNoteRepository implements NoteRepository {
 
     await _notesCollection().doc(note.id).update({
       'text': items.map((item) => item.text).join('\n'),
-      'checklistItems': items.map((item) => item.toMap()).toList(),
+      'checklistItems': NoteDocumentMapper.checklistItemsToData(items),
     });
   }
 

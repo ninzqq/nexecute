@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nexecute/domain/calendar/calendar_query_range.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/event.dart';
+import 'package:nexecute/repositories/firestore/event_document_mapper.dart';
 import 'package:nexecute/services/auth.dart';
 import 'package:nexecute/services/authenticated_data_stream.dart';
 import 'package:uuid/uuid.dart';
@@ -51,7 +52,10 @@ class FirestoreEventRepository implements EventRepository {
               .where('endTime', isGreaterThanOrEqualTo: range.startInclusive)
               .snapshots()
               .map(
-                (snapshot) => snapshot.docs.map(Event.fromFirestore).toList(),
+                (snapshot) =>
+                    snapshot.docs
+                        .map(EventDocumentMapper.fromDocument)
+                        .toList(),
               ),
     );
   }
@@ -60,7 +64,7 @@ class FirestoreEventRepository implements EventRepository {
   Future<void> addEvent(Event event) async {
     final ref = _eventsCollection();
     final id = _uuid.v1();
-    final data = event.toFirestore();
+    final data = EventDocumentMapper.toMap(event);
     data['id'] = id;
     await ref.doc(id).set(data);
   }

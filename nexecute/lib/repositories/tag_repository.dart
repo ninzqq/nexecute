@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/tag.dart';
+import 'package:nexecute/repositories/firestore/tag_document_mapper.dart';
 import 'package:nexecute/services/auth.dart';
 import 'package:nexecute/services/authenticated_data_stream.dart';
 
@@ -32,7 +33,10 @@ class FirestoreTagRepository implements TagRepository {
               .collection('users')
               .doc(user.uid)
               .snapshots()
-              .map((document) => Tags.fromJson(document.data() ?? const {})),
+              .map(
+                (document) =>
+                    TagDocumentMapper.fromMap(document.data() ?? const {}),
+              ),
     );
   }
 

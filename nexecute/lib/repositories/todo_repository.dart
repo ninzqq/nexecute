@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/todo_item.dart';
+import 'package:nexecute/repositories/firestore/todo_document_mapper.dart';
 import 'package:nexecute/services/auth.dart';
 import 'package:nexecute/services/authenticated_data_stream.dart';
 import 'package:uuid/uuid.dart';
@@ -45,7 +46,7 @@ class FirestoreTodoRepository implements TodoRepository {
               .snapshots()
               .map(
                 (snapshot) =>
-                    snapshot.docs.map(TodoItem.fromFirestore).toList(),
+                    snapshot.docs.map(TodoDocumentMapper.fromDocument).toList(),
               ),
     );
   }
@@ -61,7 +62,7 @@ class FirestoreTodoRepository implements TodoRepository {
       createdAt: now,
       updatedAt: now,
     );
-    await _todosCollection().doc(id).set(todo.toFirestore());
+    await _todosCollection().doc(id).set(TodoDocumentMapper.toMap(todo));
   }
 
   @override
@@ -89,7 +90,7 @@ class FirestoreTodoRepository implements TodoRepository {
 
   @override
   Future<void> restoreTodo(TodoItem todo) {
-    return _todosCollection().doc(todo.id).set(todo.toFirestore());
+    return _todosCollection().doc(todo.id).set(TodoDocumentMapper.toMap(todo));
   }
 
   CollectionReference<Map<String, dynamic>> _todosCollection() {

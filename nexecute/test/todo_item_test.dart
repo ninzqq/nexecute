@@ -1,4 +1,5 @@
 import 'package:nexecute/models/todo_item.dart';
+import 'package:nexecute/repositories/firestore/todo_document_mapper.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -6,7 +7,7 @@ void main() {
     final createdAt = DateTime(2026, 8, 23, 9);
     final completedAt = DateTime(2026, 8, 24, 10);
 
-    final todo = TodoItem.fromMap('todo-1', {
+    final todo = TodoDocumentMapper.fromMap('todo-1', {
       'title': 'Buy groceries',
       'isCompleted': true,
       'createdAt': createdAt,
@@ -22,7 +23,7 @@ void main() {
   });
 
   test('uses safe defaults for older or incomplete data', () {
-    final todo = TodoItem.fromMap('todo-2', const {});
+    final todo = TodoDocumentMapper.fromMap('todo-2', const {});
 
     expect(todo.title, isEmpty);
     expect(todo.isCompleted, isFalse);

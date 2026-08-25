@@ -8,8 +8,10 @@ import 'package:nexecute/firebase_options.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/quicxec.dart';
-import 'package:nexecute/models/todo_item.dart';
 import 'package:nexecute/repositories/repositories.dart';
+import 'package:nexecute/repositories/firestore/event_document_mapper.dart';
+import 'package:nexecute/repositories/firestore/note_document_mapper.dart';
+import 'package:nexecute/repositories/firestore/todo_document_mapper.dart';
 import 'package:nexecute/services/auth.dart';
 
 const emulatorHost = String.fromEnvironment(
@@ -66,7 +68,7 @@ void main() {
 
     await todos.addTodo('  Ship emulator tests  ');
     final addedTodo = (await user.collection('todos').get()).docs.single;
-    final todo = TodoItem.fromFirestore(addedTodo);
+    final todo = TodoDocumentMapper.fromDocument(addedTodo);
     expect(todo.title, 'Ship emulator tests');
 
     await todos.updateTitle(todo, 'Run emulator tests');
@@ -85,7 +87,7 @@ void main() {
       ),
     );
     final addedNote = (await user.collection('quicxecs').get()).docs.single;
-    final note = Quicxec.fromFirestore(addedNote);
+    final note = NoteDocumentMapper.fromDocument(addedNote);
     await notes.toggleTrashed(note);
     await notes.emptyTrash();
     expect((await user.collection('quicxecs').get()).docs, isEmpty);
@@ -101,7 +103,7 @@ void main() {
       ),
     );
     final addedEvent = (await user.collection('events').get()).docs.single;
-    final event = Event.fromFirestore(addedEvent);
+    final event = EventDocumentMapper.fromDocument(addedEvent);
     final range = CalendarQueryRange(
       startInclusive: DateTime.utc(2026, 1, 10),
       endExclusive: DateTime.utc(2026, 1, 11),

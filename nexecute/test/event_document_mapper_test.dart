@@ -1,0 +1,44 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:nexecute/models/event.dart';
+import 'package:nexecute/repositories/firestore/event_document_mapper.dart';
+import 'package:test/test.dart';
+
+void main() {
+  test('maps Firestore-compatible event data into a domain event', () {
+    final start = DateTime.utc(2026, 8, 25, 9);
+    final end = DateTime.utc(2026, 8, 25, 10);
+
+    final event = EventDocumentMapper.fromMap('event-1', {
+      'title': 'Planning',
+      'description': 'Prepare the release',
+      'startTime': Timestamp.fromDate(start),
+      'endTime': Timestamp.fromDate(end),
+      'isAllDay': false,
+      'tags': ['work'],
+    });
+
+    expect(event.id, 'event-1');
+    expect(event.title, 'Planning');
+    expect(event.startTime.toUtc(), start);
+    expect(event.endTime.toUtc(), end);
+    expect(event.tags, ['work']);
+  });
+
+  test(
+    'maps a domain event without adding Firestore behavior to the model',
+    () {
+      final event = Event(
+        id: 'event-2',
+        title: 'Review',
+        startTime: DateTime.utc(2026, 8, 26, 14),
+        endTime: DateTime.utc(2026, 8, 26, 15),
+      );
+
+      final data = EventDocumentMapper.toMap(event);
+
+      expect(data['id'], 'event-2');
+      expect(data['title'], 'Review');
+      expect(data['tags'], isEmpty);
+    },
+  );
+}
