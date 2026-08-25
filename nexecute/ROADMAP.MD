@@ -23,10 +23,10 @@ Notes (Quicxecs).
 - [x] ~~Mark a task as completed or active.~~
 - [x] ~~Delete a task, with an Undo snackbar where practical.~~
 - [x] ~~Keep completed tasks in the app.~~
-- [x] ~~Hide completed tasks by default inside a collapsed `Completed (n)`
-  section.~~
-- [x] ~~Allow completed tasks to be expanded, viewed, and restored to the
-  active list.~~
+- [x] ~~Hide completed tasks by default inside a collapsed `Completed (n)`~~
+  ~~section.~~
+- [x] ~~Allow completed tasks to be expanded, viewed, and restored to the~~
+  ~~active list.~~
 - [x] ~~Persist tasks under the authenticated user in Firestore.~~
 - [x] ~~Support all application themes.~~
 
@@ -35,13 +35,13 @@ subtasks, manual ordering, or task-to-event conversion.
 
 ### ~~Navigation and appearance~~ ✅
 
-- [x] ~~Replace the custom two-page bottom bar and center-notched Add button
-  with a Material 3 `NavigationBar`.~~
+- [x] ~~Replace the custom two-page bottom bar and center-notched Add button~~
+  ~~with a Material 3 `NavigationBar`.~~
 - [x] ~~Use three labeled destinations: **Calendar**, **Tasks**, and **Notes**.~~
-- [x] ~~Add a context-aware floating action button at the bottom-right:
-  `+ Event`, `+ Task`, or `+ Note`.~~
-- [x] ~~Show active tasks as a clean checkbox list rather than note-style
-  cards.~~
+- [x] ~~Add a context-aware floating action button at the bottom-right:~~
+  ~~`+ Event`, `+ Task`, or `+ Note`.~~
+- [x] ~~Show active tasks as a clean checkbox list rather than note-style~~
+  ~~cards.~~
 - [x] ~~Show completed tasks with strikethrough text and reduced opacity.~~
 - [x] ~~Preserve each page's state while moving between destinations.~~
 
@@ -95,8 +95,8 @@ collections, including `todos`.
 
 - [x] ~~Tasks persist separately for each authenticated user.~~
 - [x] ~~Adding, editing, completing, restoring, and deleting tasks work.~~
-- [x] ~~Completed tasks leave the active list and enter the collapsed completed
-  section immediately.~~
+- [x] ~~Completed tasks leave the active list and enter the collapsed completed~~
+  ~~section immediately.~~
 - [x] ~~Navigation preserves Calendar, Tasks, and Notes page state.~~
 - [x] ~~The floating action button always communicates what it will create.~~
 - [x] ~~The Android build and relevant automated tests pass.~~
@@ -364,21 +364,21 @@ These improvements should be considered before or alongside larger features.
 
 ### High priority
 
-- [x] ~~Split `FirestoreService` into injected repositories for events, notes,
-  tasks, tags, and the legacy count feature. Register the repository interfaces
-  with Provider and migrate callers away from constructing Firestore services
-  directly.~~
+- [x] ~~Split `FirestoreService` into injected repositories for events, notes,~~
+  ~~tasks, tags, and the legacy count feature. Register the repository interfaces~~
+  ~~with Provider and migrate callers away from constructing Firestore services~~
+  ~~directly.~~
 - Add an independent assistant repository when AI work begins. Its interface
   must not depend on Odysseus or Ollama-specific response types.
-- [x] ~~Query calendar events by a bounded visible range instead of maintaining
-  one live stream containing the user's complete event history. Month and week
-  views now include one adjacent `PageView` page in each direction as a swipe
-  buffer, preserve overlapping multi-day events, and use the deployed composite
-  index tracked in `firestore.indexes.json`.~~
-- [x] ~~Represent loading, empty, authentication, and error states separately
-  rather than converting stream failures into empty lists. Authenticated
-  repository streams now publish typed `DataState` values, and calendar, tasks,
-  notes, tags, trash, count, and editor surfaces render those states explicitly.~~
+- [x] ~~Query calendar events by a bounded visible range instead of maintaining~~
+  ~~one live stream containing the user's complete event history. Month and week~~
+  ~~views now include one adjacent `PageView` page in each direction as a swipe~~
+  ~~buffer, preserve overlapping multi-day events, and use the deployed composite~~
+  ~~index tracked in `firestore.indexes.json`.~~
+- [x] ~~Represent loading, empty, authentication, and error states separately~~
+  ~~rather than converting stream failures into empty lists. Authenticated~~
+  ~~repository streams now publish typed `DataState` values, and calendar, tasks,~~
+  ~~notes, tags, trash, count, and editor surfaces render those states explicitly.~~
 - [x] ~~Initialize Firebase through one clearly owned application startup path.~~
 - [x] ~~Add Firestore Emulator tests for repository behavior and security rules.~~
 
@@ -390,8 +390,8 @@ These improvements should be considered before or alongside larger features.
   current calendar contains all required behavior.
 - Remove prototype code and unused dependencies, including unused state
   providers and state-management packages.
-- [x] ~~Inject Firestore-backed repositories rather than constructing services
-  directly inside widgets.~~
+- [x] ~~Inject Firestore-backed repositories rather than constructing services~~
+  ~~directly inside widgets.~~
 - Standardize on one state-management approach and remove unused alternatives.
 - Move Firestore serialization concerns out of domain models where practical.
 - Replace loosely typed update methods with typed parameters or command
