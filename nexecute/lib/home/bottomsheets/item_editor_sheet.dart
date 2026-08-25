@@ -1,30 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:nexecute/home/bottomsheets/delete_button.dart';
+import 'package:nexecute/home/bottomsheets/editor_tag_selector.dart';
+import 'package:nexecute/home/bottomsheets/event_schedule_fields.dart';
+import 'package:nexecute/home/bottomsheets/item_editor_header.dart';
+import 'package:nexecute/home/bottomsheets/item_type.dart';
+import 'package:nexecute/home/bottomsheets/note_editor_fields.dart';
 import 'package:nexecute/home/bottomsheets/submit_button.dart';
 import 'package:nexecute/home/bottomsheets/utils.dart';
-import 'package:nexecute/home/bottomsheets/tag_selector.dart';
-import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/event.dart';
-import 'package:nexecute/home/widgets/item_time_picker.dart';
-import 'package:nexecute/home/widgets/note_checklist_editor.dart';
-import 'package:nexecute/models/data_state.dart';
-import 'package:nexecute/models/tag.dart';
+import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/repositories/note_repository.dart';
 import 'package:nexecute/services/item_conversion_service.dart';
-import 'package:nexecute/shared/data_state_placeholder.dart';
 import 'package:provider/provider.dart';
-import 'package:nexecute/home/bottomsheets/item_type.dart';
 
 typedef SaveQuicxecCallback =
     Future<void> Function(Quicxec note, bool isExisting);
 
 class ItemEditorSheet extends StatefulWidget {
-  final Event? event;
-  final Quicxec? quicxec;
-  final DateTime? date;
-  final bool isEditing;
-  final SaveQuicxecCallback? onSaveQuicxec;
   const ItemEditorSheet({
     super.key,
     this.event,
@@ -33,6 +25,12 @@ class ItemEditorSheet extends StatefulWidget {
     this.isEditing = false,
     this.onSaveQuicxec,
   });
+
+  final Event? event;
+  final Quicxec? quicxec;
+  final DateTime? date;
+  final bool isEditing;
+  final SaveQuicxecCallback? onSaveQuicxec;
 
   @override
   State<ItemEditorSheet> createState() => _ItemEditorSheetState();
@@ -94,9 +92,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
         _noteContentType == NoteContentType.checklist) {
       _descriptionController.text = _checklistAsText(includeStatus: true);
     }
-    setState(() {
-      _type = type;
-    });
+    setState(() => _type = type);
   }
 
   String _newChecklistItemId() {
@@ -157,9 +153,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
   }
 
   void _removeChecklistItem(String id) {
-    setState(() {
-      _checklistItems.removeWhere((item) => item.id == id);
-    });
+    setState(() => _checklistItems.removeWhere((item) => item.id == id));
   }
 
   void _addChecklistItem() {
@@ -170,12 +164,32 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
     });
   }
 
-  Future<void> _submitQuicxec() async {
-    var id = '';
-    if (widget.quicxec != null) {
-      id = widget.quicxec!.id;
-    }
+  void _toggleTag(String tag) {
+    setState(() {
+      _tags.contains(tag) ? _tags.remove(tag) : _tags.add(tag);
+    });
+  }
 
+  void _setStartTime(DateTime time) {
+    setState(() {
+      _startTime = time;
+      if (time.isAfter(_endTime)) {
+        _endTime = time.add(const Duration(hours: 1));
+      }
+    });
+  }
+
+  void _setStartDate(DateTime date) {
+    setState(() {
+      _selectedDate = date;
+      _startTime = combineDateAndTime(date, _startTime);
+      if (_startTime.isAfter(_endTime)) {
+        _endTime = _startTime.add(const Duration(hours: 1));
+      }
+    });
+  }
+
+  Future<void> _submitQuicxec() async {
     final checklistItems =
         _noteContentType == NoteContentType.checklist
             ? _normalizedChecklistItems
@@ -185,7 +199,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
             ? checklistItems.map((item) => item.text).join('\n')
             : _descriptionController.text;
     final quicxec = Quicxec(
-      id: id,
+      id: widget.quicxec?.id ?? '',
       title: _titleController.text.trim(),
       text: noteText,
       created: _startTime,
@@ -213,13 +227,8 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
   }
 
   Future<void> _submitEvent() async {
-    var id = '';
-    if (widget.event != null) {
-      id = widget.event!.id;
-    }
-
     final event = Event(
-      id: id,
+      id: widget.event?.id ?? '',
       title: _titleController.text,
       description: _descriptionController.text,
       startTime: _startTime,
@@ -283,15 +292,13 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final tagState = context.watch<DataState<Tags>>();
-
     return Container(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(16.0),
-          topRight: Radius.circular(16.0),
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
         ),
       ),
       child: Form(
@@ -300,31 +307,13 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                DeleteButton(quicxec: widget.quicxec, event: widget.event),
-                const Spacer(),
-                SegmentedButton<ItemType>(
-                  segments: const [
-                    ButtonSegment(
-                      value: ItemType.event,
-                      label: Text('Event'),
-                      icon: Icon(Icons.event),
-                    ),
-                    ButtonSegment(
-                      value: ItemType.quicxec,
-                      label: Text('Quicxec'),
-                      icon: Icon(Icons.note),
-                    ),
-                  ],
-                  selected: {_type},
-                  onSelectionChanged: (Set<ItemType> newSelection) {
-                    onItemTypeChanged(newSelection.first);
-                  },
-                ),
-              ],
+            ItemEditorHeader(
+              type: _type,
+              event: widget.event,
+              note: widget.quicxec,
+              onTypeChanged: onItemTypeChanged,
             ),
-            const SizedBox(height: 16.0),
+            const SizedBox(height: 16),
             TextFormField(
               controller: _titleController,
               decoration: const InputDecoration(
@@ -339,202 +328,52 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                 return null;
               },
             ),
-            const SizedBox(height: 16.0),
-            if (_type == ItemType.quicxec) ...[
-              Row(
-                children: [
-                  Text(
-                    'Note format',
-                    style: Theme.of(context).textTheme.labelLarge,
-                  ),
-                  const Spacer(),
-                  SegmentedButton<NoteContentType>(
-                    key: const Key('note-format-selector'),
-                    showSelectedIcon: false,
-                    segments: const [
-                      ButtonSegment(
-                        value: NoteContentType.text,
-                        label: Text('Text'),
-                        icon: Icon(Icons.subject_rounded),
-                      ),
-                      ButtonSegment(
-                        value: NoteContentType.checklist,
-                        label: Text('Checklist'),
-                        icon: Icon(Icons.checklist_rounded),
-                      ),
-                    ],
-                    selected: {_noteContentType},
-                    onSelectionChanged:
-                        (selection) => _setNoteContentType(selection.first),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-            ],
-            if (_type == ItemType.quicxec &&
-                _noteContentType == NoteContentType.checklist)
-              NoteChecklistEditor(
-                items: _checklistItems,
-                onItemChanged: _updateChecklistItem,
-                onItemRemoved: _removeChecklistItem,
-                onItemAdded: _addChecklistItem,
+            const SizedBox(height: 16),
+            if (_type == ItemType.quicxec)
+              NoteEditorFields(
+                contentType: _noteContentType,
+                descriptionController: _descriptionController,
+                checklistItems: _checklistItems,
+                onContentTypeChanged: _setNoteContentType,
+                onChecklistItemChanged: _updateChecklistItem,
+                onChecklistItemRemoved: _removeChecklistItem,
+                onChecklistItemAdded: _addChecklistItem,
               )
-            else
+            else ...[
               TextFormField(
                 controller: _descriptionController,
                 decoration: const InputDecoration(
                   labelText: 'Description',
                   border: OutlineInputBorder(),
                 ),
-                maxLines: _type != ItemType.quicxec ? 3 : 9,
+                maxLines: 3,
               ),
-            const SizedBox(height: 8.0),
-            if (_type != ItemType.quicxec) ...[
-              Row(
-                children: [
-                  if (!_isAllDay) ...[
-                    const SizedBox(width: 8.0),
-                    ItemTimePicker(
-                      time: _startTime,
-                      icon: Icons.access_time,
-                      onTimeChanged: (time) {
-                        setState(() {
-                          _startTime = time;
-                          if (time.isAfter(_endTime)) {
-                            _endTime = time.add(const Duration(hours: 1));
-                          }
-                        });
-                      },
+              const SizedBox(height: 8),
+              EventScheduleFields(
+                startTime: _startTime,
+                endTime: _endTime,
+                isAllDay: _isAllDay,
+                selectedStartDate: _selectedDate,
+                onStartTimeChanged: _setStartTime,
+                onEndTimeChanged: (time) => setState(() => _endTime = time),
+                onStartDateChanged: _setStartDate,
+                onEndDateChanged:
+                    (date) => setState(
+                      () => _endTime = combineDateAndTime(date, _endTime),
                     ),
-                    const SizedBox(width: 8.0),
-                    if (_type != ItemType.quicxec) ...[
-                      const Icon(Icons.arrow_right_alt),
-                      const SizedBox(width: 16.0),
-                      ItemTimePicker(
-                        time: _endTime,
-                        icon: Icons.access_time,
-                        onTimeChanged: (time) {
-                          setState(() {
-                            _endTime = time;
-                          });
-                        },
-                      ),
-                    ],
-                  ],
-                ],
-              ),
-              Row(
-                children: [
-                  const SizedBox(width: 8.0),
-                  const Icon(Icons.calendar_today),
-                  const SizedBox(width: 8.0),
-                  TextButton(
-                    onPressed: () async {
-                      _selectedDate = await showDatePicker(
-                        locale: const Locale('fi', 'FI'),
-                        context: context,
-                        initialDate: _startTime,
-                        firstDate: DateTime.now(),
-                        lastDate: DateTime.now().add(
-                          const Duration(days: 3650),
-                        ),
-                      );
-                      if (_selectedDate != null) {
-                        setState(() {
-                          _startTime = combineDateAndTime(
-                            _selectedDate!,
-                            _startTime,
-                          );
-                          if (_startTime.isAfter(_endTime)) {
-                            _endTime = _startTime.add(const Duration(hours: 1));
-                          }
-                        });
-                      }
-                    },
-                    child: Text(formatDate(_selectedDate ?? _startTime)),
-                  ),
-                  const SizedBox(width: 8.0),
-                  const Icon(Icons.arrow_right_alt),
-                  const SizedBox(width: 16),
-                  const Icon(Icons.calendar_today),
-                  const SizedBox(width: 8.0),
-                  TextButton(
-                    onPressed: () async {
-                      final date = await showDatePicker(
-                        context: context,
-                        initialDate: _endTime,
-                        firstDate: DateTime.now(),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                      );
-                      if (date != null) {
-                        setState(() {
-                          _endTime = combineDateAndTime(date, _endTime);
-                        });
-                      }
-                    },
-                    child: Text(formatDate(_endTime)),
-                  ),
-                ],
-              ),
-              Row(
-                children: [
-                  Expanded(
-                    child: CheckboxListTile(
-                      title: const Text('All day'),
-                      value: _isAllDay,
-                      checkColor: Theme.of(context).colorScheme.onPrimary,
-                      onChanged: (bool? value) {
-                        setState(() {
-                          _isAllDay = value ?? false;
-                        });
-                      },
-                    ),
-                  ),
-                ],
+                onAllDayChanged:
+                    (isAllDay) => setState(() => _isAllDay = isAllDay),
               ),
             ],
-            const SizedBox(height: 8.0),
-            switch (tagState) {
-              DataReady<Tags>(:final value) ||
-              DataEmpty<Tags>(:final value) => TagSelector(
-                tags: value.tags,
-                selectedTags: _tags,
-                onTagToggled: (tag) {
-                  setState(() {
-                    if (!_tags.contains(tag)) {
-                      _tags.add(tag);
-                    } else {
-                      _tags.remove(tag);
-                    }
-                  });
-                },
-              ),
-              DataLoading<Tags>() => const DataStatePlaceholder(
-                presentation: DataStatePresentation.loading,
-                title: 'Loading tags…',
-                message: '',
-                compact: true,
-              ),
-              DataUnauthenticated<Tags>() => const DataStatePlaceholder(
-                presentation: DataStatePresentation.unauthenticated,
-                title: 'Sign in to use tags',
-                message: '',
-                compact: true,
-              ),
-              DataFailure<Tags>() => const DataStatePlaceholder(
-                presentation: DataStatePresentation.failure,
-                title: 'Could not load tags',
-                message: 'You can still save this item.',
-                compact: true,
-              ),
-            },
-            const SizedBox(height: 8.0),
+            const SizedBox(height: 8),
+            EditorTagSelector(selectedTags: _tags, onTagToggled: _toggleTag),
+            const SizedBox(height: 8),
             SubmitButton(
               onPressed: _isSaving ? null : _submit,
               isEditing: widget.isEditing,
               isLoading: _isSaving,
             ),
-            const SizedBox(height: 8.0),
+            const SizedBox(height: 8),
           ],
         ),
       ),
