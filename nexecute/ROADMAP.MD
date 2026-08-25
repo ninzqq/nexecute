@@ -380,7 +380,7 @@ These improvements should be considered before or alongside larger features.
   repository streams now publish typed `DataState` values, and calendar, tasks,
   notes, tags, trash, count, and editor surfaces render those states explicitly.~~
 - [x] ~~Initialize Firebase through one clearly owned application startup path.~~
-- Add Firestore Emulator tests for repository behavior and security rules.
+- [x] ~~Add Firestore Emulator tests for repository behavior and security rules.~~
 
 ### Maintainability cleanup
 

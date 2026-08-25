@@ -1,16 +1,28 @@
 # nexecute
 
-A new Flutter project.
+## Firestore Emulator tests
 
-## Getting Started
+Install the Java runtime and Firebase Emulator Suite dependencies, then start
+the Auth and Firestore emulators:
 
-This project is a starting point for a Flutter application.
+```sh
+firebase emulators:start --only auth,firestore
+```
 
-A few resources to get you started if this is your first Flutter project:
+In a second terminal, install and run the rules tests:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+```sh
+npm --prefix emulator_tests install
+npm --prefix emulator_tests test
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+The repository integration test runs on an Android emulator and connects to
+the host machine through `10.0.2.2` by default:
+
+```sh
+flutter test integration_test/firestore_repository_emulator_test.dart \
+  -d <android-emulator-id>
+```
+
+Use `--dart-define=FIREBASE_EMULATOR_HOST=<host>` when the test device reaches
+the emulator through a different address.

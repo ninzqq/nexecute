@@ -34,6 +34,7 @@ google-services.json
 .pub-cache/
 .pub/
 /build/
+node_modules/
 
 # Symbolication related
 app.*.symbols
