@@ -25,11 +25,6 @@ void main() async {
   runApp(Nexecute(themeController: themeController));
 }
 
-/// We are using a StatefulWidget such that we only create the [Future] once,
-/// no matter how many times our widget rebuild.
-/// If we used a [StatelessWidget], in the event where [App] is rebuilt, that
-/// would re-initialize FlutterFire and make our application re-enter loading state,
-/// which is undesired.
 class Nexecute extends StatefulWidget {
   const Nexecute({super.key, this.themeController});
 
@@ -41,9 +36,6 @@ class Nexecute extends StatefulWidget {
 }
 
 class NexecuteState extends State<Nexecute> {
-  /// The future is part of the state of our widget. We should not call `initializeApp`
-  /// directly inside [build].
-  final Future<FirebaseApp> _initialization = Firebase.initializeApp();
   late final AppThemeController _themeController;
   late final bool _ownsThemeController;
 
@@ -64,115 +56,88 @@ class NexecuteState extends State<Nexecute> {
   Widget build(BuildContext context) {
     print(kIsWeb);
     print(defaultTargetPlatform);
-    return FutureBuilder(
-      // Initialize FlutterFire:
-      future: _initialization,
-      builder: (context, snapshot) {
-        // Check for errors
-        if (snapshot.hasError) {
-          return const Text('error');
-        }
-
-        // Once complete, show your application
-        if (snapshot.connectionState == ConnectionState.done) {
-          return MultiProvider(
-            providers: [
-              Provider<AuthService>(create: (_) => AuthService()),
-              Provider<CountRepository>(
-                create:
-                    (context) => FirestoreCountRepository(
-                      authService: context.read<AuthService>(),
+    return MultiProvider(
+      providers: [
+        Provider<AuthService>(create: (_) => AuthService()),
+        Provider<CountRepository>(
+          create:
+              (context) => FirestoreCountRepository(
+                authService: context.read<AuthService>(),
+              ),
+        ),
+        Provider<NoteRepository>(
+          create:
+              (context) => FirestoreNoteRepository(
+                authService: context.read<AuthService>(),
+              ),
+        ),
+        Provider<EventRepository>(
+          create:
+              (context) => FirestoreEventRepository(
+                authService: context.read<AuthService>(),
+              ),
+        ),
+        Provider<TodoRepository>(
+          create:
+              (context) => FirestoreTodoRepository(
+                authService: context.read<AuthService>(),
+              ),
+        ),
+        Provider<TagRepository>(
+          create:
+              (context) => FirestoreTagRepository(
+                authService: context.read<AuthService>(),
+              ),
+        ),
+        Provider<ItemConversionService>(
+          create:
+              (context) => ItemConversionService(
+                eventRepository: context.read<EventRepository>(),
+                noteRepository: context.read<NoteRepository>(),
+              ),
+        ),
+        StreamProvider<DataState<Count>>(
+          create: (context) => context.read<CountRepository>().watchCount(),
+          initialData: const DataLoading<Count>(),
+        ),
+        StreamProvider<DataState<List<Quicxec>>>(
+          create: (context) => context.read<NoteRepository>().watchNotes(),
+          initialData: const DataLoading<List<Quicxec>>(),
+        ),
+        StreamProvider<DataState<List<TodoItem>>>(
+          create: (context) => context.read<TodoRepository>().watchTodos(),
+          initialData: const DataLoading<List<TodoItem>>(),
+        ),
+        StreamProvider<DataState<Tags>>(
+          create: (context) => context.read<TagRepository>().watchTags(),
+          initialData: const DataLoading<Tags>(),
+        ),
+        ChangeNotifierProvider(create: (context) => QuicxecsColumnCount()),
+        ChangeNotifierProvider(create: (context) => Asdf()),
+        ChangeNotifierProvider(create: (context) => HomeTabIndex()),
+        ChangeNotifierProvider(create: (context) => SelectedDay()),
+        ChangeNotifierProvider.value(value: _themeController),
+      ],
+      child: Consumer<AppThemeController>(
+        builder:
+            (context, themeController, _) =>
+                defaultTargetPlatform == TargetPlatform.android
+                    ? MaterialApp(
+                      routes: appRoutes,
+                      theme: themeController.themeData,
+                      localizationsDelegates:
+                          GlobalMaterialLocalizations.delegates,
+                      supportedLocales: [const Locale('fi', 'FI')],
+                    )
+                    : kIsWeb
+                    ? const Text('WEEEEEEEEB', textDirection: TextDirection.ltr)
+                    : const Center(
+                      child: Text(
+                        'JOTAI VITUN MUUUTAAAAAA',
+                        textDirection: TextDirection.ltr,
+                      ),
                     ),
-              ),
-              Provider<NoteRepository>(
-                create:
-                    (context) => FirestoreNoteRepository(
-                      authService: context.read<AuthService>(),
-                    ),
-              ),
-              Provider<EventRepository>(
-                create:
-                    (context) => FirestoreEventRepository(
-                      authService: context.read<AuthService>(),
-                    ),
-              ),
-              Provider<TodoRepository>(
-                create:
-                    (context) => FirestoreTodoRepository(
-                      authService: context.read<AuthService>(),
-                    ),
-              ),
-              Provider<TagRepository>(
-                create:
-                    (context) => FirestoreTagRepository(
-                      authService: context.read<AuthService>(),
-                    ),
-              ),
-              Provider<ItemConversionService>(
-                create:
-                    (context) => ItemConversionService(
-                      eventRepository: context.read<EventRepository>(),
-                      noteRepository: context.read<NoteRepository>(),
-                    ),
-              ),
-              StreamProvider<DataState<Count>>(
-                create:
-                    (context) => context.read<CountRepository>().watchCount(),
-                initialData: const DataLoading<Count>(),
-              ),
-              StreamProvider<DataState<List<Quicxec>>>(
-                create:
-                    (context) => context.read<NoteRepository>().watchNotes(),
-                initialData: const DataLoading<List<Quicxec>>(),
-              ),
-              StreamProvider<DataState<List<TodoItem>>>(
-                create:
-                    (context) => context.read<TodoRepository>().watchTodos(),
-                initialData: const DataLoading<List<TodoItem>>(),
-              ),
-              StreamProvider<DataState<Tags>>(
-                create: (context) => context.read<TagRepository>().watchTags(),
-                initialData: const DataLoading<Tags>(),
-              ),
-              ChangeNotifierProvider(
-                create: (context) => QuicxecsColumnCount(),
-              ),
-              ChangeNotifierProvider(create: (context) => Asdf()),
-              ChangeNotifierProvider(create: (context) => HomeTabIndex()),
-              ChangeNotifierProvider(create: (context) => SelectedDay()),
-              ChangeNotifierProvider.value(value: _themeController),
-            ],
-            child: Consumer<AppThemeController>(
-              builder:
-                  (context, themeController, _) =>
-                      defaultTargetPlatform == TargetPlatform.android
-                          ? MaterialApp(
-                            routes: appRoutes,
-                            theme: themeController.themeData,
-                            localizationsDelegates:
-                                GlobalMaterialLocalizations.delegates,
-                            supportedLocales: [const Locale('fi', 'FI')],
-                          )
-                          : kIsWeb
-                          ? const Text(
-                            'WEEEEEEEEB',
-                            textDirection: TextDirection.ltr,
-                          )
-                          : const Center(
-                            child: Text(
-                              'JOTAI VITUN MUUUTAAAAAA',
-                              textDirection: TextDirection.ltr,
-                            ),
-                          ),
-            ),
-          );
-        }
-
-        // Otherwise, show something whilst waiting for initialization to complete
-        return const Center(
-          child: Text('loading', textDirection: TextDirection.ltr),
-        );
-      },
+      ),
     );
   }
 }

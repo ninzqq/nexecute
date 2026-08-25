@@ -379,7 +379,7 @@ These improvements should be considered before or alongside larger features.
   rather than converting stream failures into empty lists. Authenticated
   repository streams now publish typed `DataState` values, and calendar, tasks,
   notes, tags, trash, count, and editor surfaces render those states explicitly.~~
-- Initialize Firebase through one clearly owned application startup path.
+- [x] ~~Initialize Firebase through one clearly owned application startup path.~~
 - Add Firestore Emulator tests for repository behavior and security rules.
 
 ### Maintainability cleanup
