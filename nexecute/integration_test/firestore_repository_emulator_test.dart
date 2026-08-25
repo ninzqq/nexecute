@@ -44,10 +44,6 @@ void main() {
     tester,
   ) async {
     final user = firestore.collection('users').doc(uid);
-    final counts = FirestoreCountRepository(
-      authService: authService,
-      firestore: firestore,
-    );
     final tags = FirestoreTagRepository(
       authService: authService,
       firestore: firestore,
@@ -65,9 +61,7 @@ void main() {
       firestore: firestore,
     );
 
-    await counts.increment();
     await tags.addTag('work');
-    expect((await user.get()).data(), containsPair('count', 1));
     expect((await user.get()).data(), containsPair('tags', ['work']));
 
     await todos.addTodo('  Ship emulator tests  ');

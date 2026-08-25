@@ -6,7 +6,6 @@ import 'package:nexecute/shared/data_state_placeholder.dart';
 import 'package:provider/provider.dart';
 import 'package:nexecute/home/widgets/quicxecitem.dart';
 import 'package:nexecute/models/quicxec.dart';
-import 'package:nexecute/models/quicxec_column_count.dart';
 
 class Quicxecs extends StatefulWidget {
   const Quicxecs({super.key});
@@ -41,7 +40,6 @@ class _QuicxecsState extends State<Quicxecs> {
   }
 
   Widget _buildNotes(BuildContext context, List<Quicxec> allQuicxecs) {
-    final columnCount = context.watch<QuicxecsColumnCount>();
     final activeQuicxecs = allQuicxecs.where((q) => !q.trashed).toList();
 
     // Filtteröi hakusanan perusteella
@@ -95,7 +93,7 @@ class _QuicxecsState extends State<Quicxecs> {
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: MasonryGridView.count(
                       padding: const EdgeInsets.only(bottom: 96),
-                      crossAxisCount: columnCount.columns,
+                      crossAxisCount: 2,
                       mainAxisSpacing: 8,
                       crossAxisSpacing: 8,
                       itemCount: filteredQuicxecs.length,

@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/home/widgets/quicxecs.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/quicxec.dart';
-import 'package:nexecute/models/quicxec_column_count.dart';
 import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
 
@@ -31,7 +30,6 @@ void main() {
     await tester.pumpWidget(
       MultiProvider(
         providers: [
-          ChangeNotifierProvider(create: (_) => QuicxecsColumnCount()),
           Provider<DataState<List<Quicxec>>>.value(value: DataReady(notes)),
         ],
         child: MaterialApp(

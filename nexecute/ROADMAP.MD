@@ -388,8 +388,8 @@ These improvements should be considered before or alongside larger features.
   ~~components.~~
 - [x] ~~Remove the unused legacy calendar implementation after confirming that the~~
   ~~current calendar contains all required behavior.~~
-- Remove prototype code and unused dependencies, including unused state
-  providers and state-management packages.
+- [x] ~~Remove prototype code and unused dependencies, including unused state~~
+  ~~providers and state-management packages.~~
 - [x] ~~Inject Firestore-backed repositories rather than constructing services~~
   ~~directly inside widgets.~~
 - Standardize on one state-management approach and remove unused alternatives.

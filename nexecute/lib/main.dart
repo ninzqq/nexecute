@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:nexecute/models/selected_day.dart';
@@ -10,10 +9,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'firebase_options.dart';
 import 'package:nexecute/routes.dart';
 import 'package:nexecute/models/home_tab_index.dart';
-import 'package:nexecute/models/count.dart';
 import 'package:nexecute/models/data_state.dart';
-import 'package:nexecute/models/quicxec_column_count.dart';
-import 'package:nexecute/models/asdf.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/tag.dart';
 import 'package:nexecute/models/todo_item.dart';
@@ -54,17 +50,9 @@ class NexecuteState extends State<Nexecute> {
 
   @override
   Widget build(BuildContext context) {
-    print(kIsWeb);
-    print(defaultTargetPlatform);
     return MultiProvider(
       providers: [
         Provider<AuthService>(create: (_) => AuthService()),
-        Provider<CountRepository>(
-          create:
-              (context) => FirestoreCountRepository(
-                authService: context.read<AuthService>(),
-              ),
-        ),
         Provider<NoteRepository>(
           create:
               (context) => FirestoreNoteRepository(
@@ -96,10 +84,6 @@ class NexecuteState extends State<Nexecute> {
                 noteRepository: context.read<NoteRepository>(),
               ),
         ),
-        StreamProvider<DataState<Count>>(
-          create: (context) => context.read<CountRepository>().watchCount(),
-          initialData: const DataLoading<Count>(),
-        ),
         StreamProvider<DataState<List<Quicxec>>>(
           create: (context) => context.read<NoteRepository>().watchNotes(),
           initialData: const DataLoading<List<Quicxec>>(),
@@ -112,31 +96,18 @@ class NexecuteState extends State<Nexecute> {
           create: (context) => context.read<TagRepository>().watchTags(),
           initialData: const DataLoading<Tags>(),
         ),
-        ChangeNotifierProvider(create: (context) => QuicxecsColumnCount()),
-        ChangeNotifierProvider(create: (context) => Asdf()),
         ChangeNotifierProvider(create: (context) => HomeTabIndex()),
         ChangeNotifierProvider(create: (context) => SelectedDay()),
         ChangeNotifierProvider.value(value: _themeController),
       ],
       child: Consumer<AppThemeController>(
         builder:
-            (context, themeController, _) =>
-                defaultTargetPlatform == TargetPlatform.android
-                    ? MaterialApp(
-                      routes: appRoutes,
-                      theme: themeController.themeData,
-                      localizationsDelegates:
-                          GlobalMaterialLocalizations.delegates,
-                      supportedLocales: [const Locale('fi', 'FI')],
-                    )
-                    : kIsWeb
-                    ? const Text('WEEEEEEEEB', textDirection: TextDirection.ltr)
-                    : const Center(
-                      child: Text(
-                        'JOTAI VITUN MUUUTAAAAAA',
-                        textDirection: TextDirection.ltr,
-                      ),
-                    ),
+            (context, themeController, _) => MaterialApp(
+              routes: appRoutes,
+              theme: themeController.themeData,
+              localizationsDelegates: GlobalMaterialLocalizations.delegates,
+              supportedLocales: const [Locale('fi', 'FI')],
+            ),
       ),
     );
   }

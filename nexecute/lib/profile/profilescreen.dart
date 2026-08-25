@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:nexecute/services/auth.dart';
-import 'package:nexecute/models/count.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    var count = Provider.of<Count>(context);
-    var user = AuthService().user;
+    final authService = context.read<AuthService>();
+    final user = authService.user;
 
     if (user != null) {
       return Scaffold(
@@ -33,23 +32,15 @@ class ProfileScreen extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const Spacer(),
-                Text(
-                  '${count.count}',
-                  style: Theme.of(context).textTheme.displayMedium,
-                ),
-                Text(
-                  'Buttons tapped',
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-                const Spacer(),
                 ElevatedButton(
-                  child: const Text('logout'),
                   onPressed: () async {
-                    await AuthService().signOut();
+                    await authService.signOut();
+                    if (!context.mounted) return;
                     Navigator.of(
                       context,
                     ).pushNamedAndRemoveUntil('/', (route) => false);
                   },
+                  child: const Text('Log out'),
                 ),
                 const Spacer(),
               ],
@@ -58,7 +49,7 @@ class ProfileScreen extends StatelessWidget {
         ),
       );
     } else {
-      return const Text('jaaaaa');
+      return const Scaffold(body: Center(child: Text('Not signed in')));
     }
   }
 }

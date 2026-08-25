@@ -27,16 +27,6 @@ class MainDrawer extends StatelessWidget {
         'selected': false,
       },
       {
-        "title": const Text("Button pressinks"),
-        "icon": const Icon(Icons.add),
-        "function":
-            () => {
-              Navigator.pop(context),
-              Navigator.pushNamed(context, "/count"),
-            },
-        "selected": false,
-      },
-      {
         "title": const Text("Trash"),
         "icon": const Icon(Icons.delete_forever),
         "function":

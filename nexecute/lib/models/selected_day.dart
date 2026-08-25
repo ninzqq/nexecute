@@ -10,7 +10,6 @@ class SelectedDay with ChangeNotifier {
 
   void setSelectedDay(DateTime newSelectedDay) {
     _selectedDay = newSelectedDay;
-    print('Selected day set to: $_selectedDay');
     notifyListeners();
   }
 }

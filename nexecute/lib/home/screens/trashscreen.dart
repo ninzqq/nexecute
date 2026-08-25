@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nexecute/home/home.dart';
+import 'package:nexecute/home/widgets/quicxecitem.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/shared/data_state_placeholder.dart';
 import 'package:provider/provider.dart';

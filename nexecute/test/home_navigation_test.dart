@@ -4,7 +4,6 @@ import 'package:nexecute/home/screens/homescreen.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/home_tab_index.dart';
 import 'package:nexecute/models/quicxec.dart';
-import 'package:nexecute/models/quicxec_column_count.dart';
 import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/models/tag.dart' as models;
 import 'package:nexecute/models/todo_item.dart';
@@ -23,7 +22,6 @@ void main() {
           providers: [
             ChangeNotifierProvider(create: (_) => HomeTabIndex()),
             ChangeNotifierProvider(create: (_) => SelectedDay()),
-            ChangeNotifierProvider(create: (_) => QuicxecsColumnCount()),
             Provider<EventRepository>.value(value: FakeEventRepository()),
             Provider<DataState<List<TodoItem>>>.value(
               value: const DataEmpty([]),
