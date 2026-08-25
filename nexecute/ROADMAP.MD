@@ -392,7 +392,7 @@ These improvements should be considered before or alongside larger features.
   ~~providers and state-management packages.~~
 - [x] ~~Inject Firestore-backed repositories rather than constructing services~~
   ~~directly inside widgets.~~
-- Standardize on one state-management approach and remove unused alternatives.
+- [x] ~~Standardize on one state-management approach and remove unused alternatives.~~
 - Move Firestore serialization concerns out of domain models where practical.
 - Replace loosely typed update methods with typed parameters or command
   objects.

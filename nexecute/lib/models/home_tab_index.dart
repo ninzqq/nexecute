@@ -1,11 +1,15 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 class HomeTabIndex with ChangeNotifier {
-  int idx;
-  HomeTabIndex({this.idx = 2});
+  HomeTabIndex({int initialIndex = 2}) : _index = initialIndex;
 
-  void changeIndex(int index) {
-    idx = index;
+  int _index;
+
+  int get index => _index;
+
+  void select(int index) {
+    if (_index == index) return;
+    _index = index;
     notifyListeners();
   }
 }

@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:nexecute/models/data_state.dart';
 
 class AuthService {
   AuthService({FirebaseAuth? firebaseAuth, GoogleSignIn? googleSignIn})
@@ -11,6 +12,18 @@ class AuthService {
 
   Stream<User?> get userStream => _firebaseAuth.authStateChanges();
   User? get user => _firebaseAuth.currentUser;
+
+  Stream<DataState<User>> watchAuthentication() async* {
+    try {
+      await for (final user in userStream) {
+        yield user == null
+            ? const DataUnauthenticated<User>()
+            : DataReady<User>(user);
+      }
+    } catch (error, stackTrace) {
+      yield DataFailure<User>(error, stackTrace);
+    }
+  }
 
   Future<void> anonLogin() async {
     try {

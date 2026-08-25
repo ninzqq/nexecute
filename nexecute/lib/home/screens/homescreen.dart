@@ -20,15 +20,16 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tab = context.watch<HomeTabIndex>();
+    final tabIndex = tab.index;
     final palette = context.appPalette;
 
     return SafeArea(
       child: Scaffold(
-        appBar: tab.idx == 0 ? null : AppBar(title: Text(_titles[tab.idx])),
+        appBar: tabIndex == 0 ? null : AppBar(title: Text(_titles[tabIndex])),
         drawer: const MainDrawer(),
         resizeToAvoidBottomInset: true,
         body: IndexedStack(
-          index: tab.idx,
+          index: tabIndex,
           children: const [CalendarPage(), TasksPage(), Quicxecs()],
         ),
         bottomNavigationBar: Container(
@@ -39,8 +40,8 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           child: NavigationBar(
-            selectedIndex: tab.idx,
-            onDestinationSelected: tab.changeIndex,
+            selectedIndex: tabIndex,
+            onDestinationSelected: tab.select,
             destinations: const [
               NavigationDestination(
                 icon: Icon(Icons.calendar_month_outlined),
@@ -61,9 +62,9 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
         floatingActionButton: FloatingActionButton(
-          onPressed: () => _createItem(context, tab.idx),
-          tooltip: _fabLabel(tab.idx),
-          child: Icon(_fabIcon(tab.idx)),
+          onPressed: () => _createItem(context, tabIndex),
+          tooltip: _fabLabel(tabIndex),
+          child: Icon(_fabIcon(tabIndex)),
         ),
       ),
     );

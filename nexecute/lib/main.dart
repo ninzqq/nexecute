@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/models/app_theme_controller.dart';
@@ -53,6 +54,11 @@ class NexecuteState extends State<Nexecute> {
     return MultiProvider(
       providers: [
         Provider<AuthService>(create: (_) => AuthService()),
+        StreamProvider<DataState<User>>(
+          create:
+              (context) => context.read<AuthService>().watchAuthentication(),
+          initialData: const DataLoading<User>(),
+        ),
         Provider<NoteRepository>(
           create:
               (context) => FirestoreNoteRepository(
@@ -96,8 +102,8 @@ class NexecuteState extends State<Nexecute> {
           create: (context) => context.read<TagRepository>().watchTags(),
           initialData: const DataLoading<Tags>(),
         ),
-        ChangeNotifierProvider(create: (context) => HomeTabIndex()),
-        ChangeNotifierProvider(create: (context) => SelectedDay()),
+        ChangeNotifierProvider(create: (_) => HomeTabIndex()),
+        ChangeNotifierProvider(create: (_) => SelectedDay()),
         ChangeNotifierProvider.value(value: _themeController),
       ],
       child: Consumer<AppThemeController>(
