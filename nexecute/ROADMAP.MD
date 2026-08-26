@@ -38,6 +38,8 @@ subtasks, manual ordering, or task-to-event conversion.
 - [x] ~~Replace the custom two-page bottom bar and center-notched Add button~~
   ~~with a Material 3 `NavigationBar`.~~
 - [x] ~~Use three labeled destinations: **Calendar**, **Tasks**, and **Notes**.~~
+- [x] ~~Keep the labeled bottom navigation compact at 64 logical pixels so it~~
+  ~~does not consume unnecessary content height.~~
 - [x] ~~Add a context-aware floating action button at the bottom-right:~~
   ~~`+ Event`, `+ Task`, or `+ Note`.~~
 - [x] ~~Show active tasks as a clean checkbox list rather than note-style~~
@@ -378,6 +380,13 @@ Example requests:
 - [x] ~~Lay out the week view as an hourly time grid and position timed events~~
   ~~according to their start time and duration. The full 24-hour timeline fits~~
   ~~the available height without vertical scrolling.~~
+
+### Notes usability
+
+**Status:** Completed
+
+- [x] ~~Focus a newly added checklist item immediately so typing can continue~~
+  ~~without another tap.~~
 
 ### Export and data ownership
 

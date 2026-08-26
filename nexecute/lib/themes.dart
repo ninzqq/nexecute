@@ -116,6 +116,7 @@ abstract final class AppThemes {
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
+        height: 64,
         backgroundColor: palette.chrome,
         surfaceTintColor: Colors.transparent,
         elevation: 8,

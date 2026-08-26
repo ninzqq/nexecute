@@ -50,9 +50,27 @@ void main() {
     expect(find.byType(Checkbox), findsNWidgets(2));
 
     await tester.tap(find.byKey(const Key('add-checklist-item')));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.byTooltip('Remove checklist item'), findsNWidgets(3));
+
+    final checklistFields = find.descendant(
+      of: find.byKey(const Key('note-checklist-editor')),
+      matching: find.byType(EditableText),
+    );
+    final newItemField = tester.widget<EditableText>(checklistFields.last);
+    expect(newItemField.focusNode.hasFocus, isTrue);
+
+    tester.testTextInput.enterText('Eggs');
+    await tester.pump();
+
+    expect(find.text('Eggs'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Remove checklist item').last);
+    await tester.pump();
+
+    expect(find.byTooltip('Remove checklist item'), findsNWidgets(2));
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('saves a titleless checklist and awaits persistence', (

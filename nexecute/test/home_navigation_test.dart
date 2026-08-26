@@ -43,6 +43,7 @@ void main() {
       expect(find.byTooltip('New note'), findsOneWidget);
       expect(find.text('New note'), findsNothing);
       expect(find.byType(NavigationDestination), findsNWidgets(3));
+      expect(tester.getSize(find.byType(NavigationBar)).height, 64);
 
       await tester.tap(find.byIcon(Icons.checklist_outlined));
       await tester.pumpAndSettle();
