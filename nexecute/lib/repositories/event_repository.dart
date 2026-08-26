@@ -2,25 +2,20 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nexecute/domain/calendar/calendar_query_range.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/event.dart';
+import 'package:nexecute/repositories/commands/update_event_command.dart';
 import 'package:nexecute/repositories/firestore/event_document_mapper.dart';
 import 'package:nexecute/services/auth.dart';
 import 'package:nexecute/services/authenticated_data_stream.dart';
 import 'package:uuid/uuid.dart';
+
+export 'package:nexecute/repositories/commands/update_event_command.dart';
 
 abstract interface class EventRepository {
   Stream<DataState<List<Event>>> watchEvents(CalendarQueryRange range);
 
   Future<void> addEvent(Event event);
 
-  Future<void> updateEvent(
-    Event event, {
-    required String title,
-    required String description,
-    required DateTime startTime,
-    required DateTime endTime,
-    required bool isAllDay,
-    required List<String> tags,
-  });
+  Future<void> updateEvent(UpdateEventCommand command);
 
   Future<void> deleteEvent(Event event);
 }
@@ -70,22 +65,16 @@ class FirestoreEventRepository implements EventRepository {
   }
 
   @override
-  Future<void> updateEvent(
-    Event event, {
-    required String title,
-    required String description,
-    required DateTime startTime,
-    required DateTime endTime,
-    required bool isAllDay,
-    required List<String> tags,
-  }) async {
-    await _eventsCollection().doc(event.id).update({
-      'title': title,
-      'description': description,
-      'startTime': startTime,
-      'endTime': endTime,
-      'isAllDay': isAllDay,
-      'tags': tags,
+  Future<void> updateEvent(UpdateEventCommand command) async {
+    if (command.eventId.isEmpty) throw StateError('Event has no ID');
+
+    await _eventsCollection().doc(command.eventId).update({
+      'title': command.title,
+      'description': command.description,
+      'startTime': command.startTime,
+      'endTime': command.endTime,
+      'isAllDay': command.isAllDay,
+      'tags': command.tags,
     });
   }
 

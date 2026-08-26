@@ -11,6 +11,7 @@ class FakeEventRepository implements EventRepository {
   final watchedRanges = <CalendarQueryRange>[];
   Event? addedEvent;
   Event? deletedEvent;
+  UpdateEventCommand? updateCommand;
 
   @override
   Stream<DataState<List<Event>>> watchEvents(CalendarQueryRange range) {
@@ -37,15 +38,9 @@ class FakeEventRepository implements EventRepository {
   }
 
   @override
-  Future<void> updateEvent(
-    Event event, {
-    required String title,
-    required String description,
-    required DateTime startTime,
-    required DateTime endTime,
-    required bool isAllDay,
-    required List<String> tags,
-  }) async {}
+  Future<void> updateEvent(UpdateEventCommand command) async {
+    updateCommand = command;
+  }
 
   @override
   Future<void> deleteEvent(Event event) async {

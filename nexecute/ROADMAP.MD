@@ -394,8 +394,8 @@ These improvements should be considered before or alongside larger features.
   ~~directly inside widgets.~~
 - [x] ~~Standardize on one state-management approach and remove unused alternatives.~~
 - [x] ~~Move Firestore serialization concerns out of domain models where practical.~~
-- Replace loosely typed update methods with typed parameters or command
-  objects.
+- [x] ~~Replace loosely typed update methods with typed parameters or command~~
+  ~~objects.~~
 - Introduce an explicit data schema version and migrations before models gain
   substantially more fields.
 

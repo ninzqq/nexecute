@@ -1,24 +1,20 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/quicxec.dart';
+import 'package:nexecute/repositories/commands/update_note_command.dart';
 import 'package:nexecute/repositories/firestore/note_document_mapper.dart';
 import 'package:nexecute/services/auth.dart';
 import 'package:nexecute/services/authenticated_data_stream.dart';
 import 'package:uuid/uuid.dart';
+
+export 'package:nexecute/repositories/commands/update_note_command.dart';
 
 abstract interface class NoteRepository {
   Stream<DataState<List<Quicxec>>> watchNotes();
 
   Future<void> addNote(Quicxec note);
 
-  Future<void> updateNote(
-    Quicxec note, {
-    required String text,
-    required String title,
-    required List<String> tags,
-    NoteContentType? contentType,
-    List<NoteChecklistItem>? checklistItems,
-  });
+  Future<void> updateNote(UpdateNoteCommand command);
 
   Future<void> setChecklistItemChecked(
     Quicxec note,
@@ -74,22 +70,17 @@ class FirestoreNoteRepository implements NoteRepository {
   }
 
   @override
-  Future<void> updateNote(
-    Quicxec note, {
-    required String text,
-    required String title,
-    required List<String> tags,
-    NoteContentType? contentType,
-    List<NoteChecklistItem>? checklistItems,
-  }) async {
-    final resolvedType = contentType ?? note.contentType;
-    final resolvedItems = checklistItems ?? note.checklistItems;
-    await _notesCollection().doc(note.id).update({
-      'text': text,
-      'title': title,
-      'tags': tags,
-      'contentType': resolvedType.name,
-      'checklistItems': NoteDocumentMapper.checklistItemsToData(resolvedItems),
+  Future<void> updateNote(UpdateNoteCommand command) async {
+    if (command.noteId.isEmpty) throw StateError('Note has no ID');
+
+    await _notesCollection().doc(command.noteId).update({
+      'text': command.text,
+      'title': command.title,
+      'tags': command.tags,
+      'contentType': command.contentType.name,
+      'checklistItems': NoteDocumentMapper.checklistItemsToData(
+        command.checklistItems,
+      ),
     });
   }
 

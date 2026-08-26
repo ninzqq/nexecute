@@ -70,15 +70,7 @@ class _FakeEventRepository implements EventRepository {
   }
 
   @override
-  Future<void> updateEvent(
-    Event event, {
-    required String title,
-    required String description,
-    required DateTime startTime,
-    required DateTime endTime,
-    required bool isAllDay,
-    required List<String> tags,
-  }) async {}
+  Future<void> updateEvent(UpdateEventCommand command) async {}
 
   @override
   Future<void> deleteEvent(Event event) async {
@@ -100,14 +92,7 @@ class _FakeNoteRepository implements NoteRepository {
   }
 
   @override
-  Future<void> updateNote(
-    Quicxec note, {
-    required String text,
-    required String title,
-    required List<String> tags,
-    NoteContentType? contentType,
-    List<NoteChecklistItem>? checklistItems,
-  }) async {}
+  Future<void> updateNote(UpdateNoteCommand command) async {}
 
   @override
   Future<void> setChecklistItemChecked(

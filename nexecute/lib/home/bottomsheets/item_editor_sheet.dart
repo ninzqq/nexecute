@@ -214,12 +214,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
       await onSave(quicxec, isExisting);
     } else if (isExisting) {
       await context.read<NoteRepository>().updateNote(
-        quicxec,
-        text: noteText,
-        title: quicxec.title,
-        tags: quicxec.tags,
-        contentType: _noteContentType,
-        checklistItems: checklistItems,
+        UpdateNoteCommand.fromNote(quicxec),
       );
     } else {
       await context.read<NoteRepository>().addNote(quicxec);
@@ -239,13 +234,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
 
     if (widget.event?.id.isNotEmpty == true) {
       await context.read<EventRepository>().updateEvent(
-        event,
-        title: _titleController.text,
-        description: _descriptionController.text,
-        startTime: _startTime,
-        endTime: _endTime,
-        isAllDay: _isAllDay,
-        tags: _tags,
+        UpdateEventCommand.fromEvent(event),
       );
     } else {
       await context.read<EventRepository>().addEvent(event);

@@ -114,13 +114,15 @@ void main() {
     expect((state as DataReady<List<Event>>).value.single.id, event.id);
 
     await events.updateEvent(
-      event,
-      title: 'Updated planning',
-      description: 'Agenda',
-      startTime: start,
-      endTime: end,
-      isAllDay: false,
-      tags: ['work'],
+      UpdateEventCommand(
+        eventId: event.id,
+        title: 'Updated planning',
+        description: 'Agenda',
+        startTime: start,
+        endTime: end,
+        isAllDay: false,
+        tags: ['work'],
+      ),
     );
     expect(
       (await addedEvent.reference.get()).data()!['title'],
