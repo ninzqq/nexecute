@@ -2,6 +2,7 @@ import 'package:nexecute/domain/calendar/calendar_query_range.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/repositories/event_repository.dart';
+import 'package:nexecute/search/search_matcher.dart';
 
 class FakeEventRepository implements EventRepository {
   FakeEventRepository({this.events = const [], this.state});
@@ -9,6 +10,7 @@ class FakeEventRepository implements EventRepository {
   final List<Event> events;
   final DataState<List<Event>>? state;
   final watchedRanges = <CalendarQueryRange>[];
+  final searchedQueries = <String>[];
   Event? addedEvent;
   Event? deletedEvent;
   UpdateEventCommand? updateCommand;
@@ -30,6 +32,15 @@ class FakeEventRepository implements EventRepository {
           ? DataEmpty(matchingEvents)
           : DataReady(matchingEvents),
     );
+  }
+
+  @override
+  Future<List<Event>> searchEvents(String query, {int limit = 50}) async {
+    searchedQueries.add(query);
+    return events
+        .where((event) => eventMatchesSearch(event, query))
+        .take(limit)
+        .toList();
   }
 
   @override

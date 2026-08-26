@@ -329,7 +329,10 @@ Example requests:
 
 ### Today dashboard and universal quick capture
 
-**Status:** Candidate
+**Status:** Deferred
+
+The Today dashboard is not currently expected to fit the owner's workflow.
+Universal quick capture can be reconsidered independently later.
 
 - Consider a focused Today view containing today's events, active or due
   tasks, and pinned or recent notes.
@@ -341,7 +344,10 @@ Example requests:
 
 ### Task enhancements
 
-**Status:** Candidate
+**Status:** Deferred
+
+Task due dates and Today/Upcoming/Overdue groupings are intentionally deferred
+because the current undated task workflow better matches the owner's needs.
 
 - Add optional due dates before introducing more complex task organization.
 - Add Today, Upcoming, and Overdue groupings.
@@ -350,13 +356,25 @@ Example requests:
 - Consider priorities, subtasks, recurrence, and projects only after the basic
   due-date workflow is proven useful.
 
-### Unified search and linked items
+### Unified search
+
+**Status:** Completed
+
+- [x] ~~Search events, tasks, notes, tags, and checklist contents from one~~
+  ~~dedicated screen.~~
+- [x] ~~Begin with predictable text-based matching while preserving the~~
+  ~~existing Notes-tab filter as a separate interaction.~~
+
+Event search performs a debounced, one-shot read only while the Search screen
+is in use, filters locally, and caps returned matches. It does not restore the
+removed application-wide live event-history stream.
+
+- Consider local Ollama embeddings and semantic search as a later enhancement.
+
+### Linked items
 
 **Status:** Candidate
 
-- Search events, tasks, notes, tags, and checklist contents from one place.
-- Begin with predictable text and filter-based search.
-- Consider local Ollama embeddings and semantic search as a later enhancement.
 - Support links between notes, tasks, and events without deleting the source
   item.
 - Display relationships and backlinks such as "Created from note."
@@ -439,6 +457,10 @@ These improvements should be considered before or alongside larger features.
   ~~substantially more fields.~~
 
 ### Quality and accessibility
+
+Release distribution, signing documentation, and store-oriented hardening are
+deferred while Nexecute remains a personal-only application. Functional
+testing and accessibility checks remain relevant.
 
 - Add end-to-end Android tests for authentication and the main creation flows.
 - Check text scaling, screen-reader labels, touch-target sizes, and theme

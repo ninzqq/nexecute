@@ -17,6 +17,16 @@ class MainDrawer extends StatelessWidget {
         "selected": false,
       },
       {
+        "title": const Text("Search"),
+        "icon": const Icon(Icons.search_rounded),
+        "function":
+            () => {
+              Navigator.pop(context),
+              Navigator.pushNamed(context, "/search"),
+            },
+        "selected": false,
+      },
+      {
         "title": const Text('Tags'),
         'icon': const Icon(Icons.label_outlined),
         'function':

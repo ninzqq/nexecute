@@ -65,6 +65,7 @@ void main() {
 
       expect(find.text('Nexecute'), findsOneWidget);
       expect(find.text('Profile'), findsOneWidget);
+      expect(find.text('Search'), findsOneWidget);
 
       await tester.tapAt(const Offset(790, 400));
       await tester.pumpAndSettle();

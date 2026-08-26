@@ -150,6 +150,9 @@ void main() {
       (await addedEvent.reference.get()).data()!['reminderMinutesBefore'],
       15,
     );
+    final eventSearchResults = await events.searchEvents('agenda WORK');
+    expect(eventSearchResults.single.id, event.id);
+    expect(await events.searchEvents('not present'), isEmpty);
     await events.deleteEvent(event);
     expect((await user.collection('events').get()).docs, isEmpty);
   });

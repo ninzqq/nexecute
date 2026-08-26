@@ -20,6 +20,11 @@ class ReminderSchedulingEventRepository implements EventRepository {
   }
 
   @override
+  Future<List<Event>> searchEvents(String query, {int limit = 50}) {
+    return _delegate.searchEvents(query, limit: limit);
+  }
+
+  @override
   Future<Event> addEvent(Event event) async {
     final savedEvent = await _delegate.addEvent(event);
     await _scheduleSafely(savedEvent);

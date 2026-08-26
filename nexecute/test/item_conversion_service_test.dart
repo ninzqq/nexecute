@@ -65,6 +65,10 @@ class _FakeEventRepository implements EventRepository {
       Stream.value(const DataEmpty([]));
 
   @override
+  Future<List<Event>> searchEvents(String query, {int limit = 50}) async =>
+      const [];
+
+  @override
   Future<Event> addEvent(Event event) async {
     addedEvent = event;
     return event;

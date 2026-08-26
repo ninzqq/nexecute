@@ -5,6 +5,7 @@ import 'package:nexecute/models/event.dart';
 import 'package:nexecute/repositories/commands/update_event_command.dart';
 import 'package:nexecute/repositories/firestore/event_document_mapper.dart';
 import 'package:nexecute/repositories/firestore/schema/app_data_schema.dart';
+import 'package:nexecute/search/search_matcher.dart';
 import 'package:nexecute/services/auth.dart';
 import 'package:nexecute/services/authenticated_data_stream.dart';
 import 'package:uuid/uuid.dart';
@@ -13,6 +14,8 @@ export 'package:nexecute/repositories/commands/update_event_command.dart';
 
 abstract interface class EventRepository {
   Stream<DataState<List<Event>>> watchEvents(CalendarQueryRange range);
+
+  Future<List<Event>> searchEvents(String query, {int limit = 50});
 
   Future<Event> addEvent(Event event);
 
@@ -54,6 +57,23 @@ class FirestoreEventRepository implements EventRepository {
                         .toList(),
               ),
     );
+  }
+
+  @override
+  Future<List<Event>> searchEvents(String query, {int limit = 50}) async {
+    final normalizedQuery = normalizeSearchQuery(query);
+    if (normalizedQuery.isEmpty || limit <= 0) return const [];
+
+    final snapshot = await _eventsCollection().get();
+    final matches =
+        snapshot.docs
+            .map(EventDocumentMapper.fromDocument)
+            .where((event) => eventMatchesSearch(event, normalizedQuery))
+            .toList()
+          ..sort(
+            (first, second) => second.startTime.compareTo(first.startTime),
+          );
+    return matches.take(limit).toList(growable: false);
   }
 
   @override

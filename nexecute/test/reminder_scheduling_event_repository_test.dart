@@ -60,6 +60,24 @@ void main() {
     expect(delegate.addedEvent, isNotNull);
   });
 
+  test(
+    'forwards event searches without involving the reminder scheduler',
+    () async {
+      final delegate = _RecordingEventRepository();
+      final scheduler = _RecordingReminderScheduler();
+      final repository = ReminderSchedulingEventRepository(
+        delegate: delegate,
+        reminderScheduler: scheduler,
+      );
+
+      await repository.searchEvents('planning', limit: 12);
+
+      expect(delegate.searchQuery, 'planning');
+      expect(delegate.searchLimit, 12);
+      expect(scheduler.scheduledEvents, isEmpty);
+    },
+  );
+
   test('notification IDs are stable and non-negative', () {
     final first = eventReminderNotificationId('event-1');
 
@@ -83,10 +101,19 @@ class _RecordingEventRepository implements EventRepository {
   Event? addedEvent;
   Event? deletedEvent;
   UpdateEventCommand? updateCommand;
+  String? searchQuery;
+  int? searchLimit;
 
   @override
   Stream<DataState<List<Event>>> watchEvents(CalendarQueryRange range) {
     return Stream.value(const DataEmpty([]));
+  }
+
+  @override
+  Future<List<Event>> searchEvents(String query, {int limit = 50}) async {
+    searchQuery = query;
+    searchLimit = limit;
+    return const [];
   }
 
   @override
