@@ -19,13 +19,20 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   final themeController = await AppThemeController.load();
-  runApp(Nexecute(themeController: themeController));
+  final reminderScheduler = await createDefaultEventReminderScheduler();
+  runApp(
+    Nexecute(
+      themeController: themeController,
+      reminderScheduler: reminderScheduler,
+    ),
+  );
 }
 
 class Nexecute extends StatefulWidget {
-  const Nexecute({super.key, this.themeController});
+  const Nexecute({super.key, this.themeController, this.reminderScheduler});
 
   final AppThemeController? themeController;
+  final EventReminderScheduler? reminderScheduler;
 
   // Create the initialization Future outside of `build`:
   @override
@@ -35,12 +42,15 @@ class Nexecute extends StatefulWidget {
 class NexecuteState extends State<Nexecute> {
   late final AppThemeController _themeController;
   late final bool _ownsThemeController;
+  late final EventReminderScheduler _reminderScheduler;
 
   @override
   void initState() {
     super.initState();
     _ownsThemeController = widget.themeController == null;
     _themeController = widget.themeController ?? AppThemeController();
+    _reminderScheduler =
+        widget.reminderScheduler ?? const NoopEventReminderScheduler();
   }
 
   @override
@@ -54,6 +64,7 @@ class NexecuteState extends State<Nexecute> {
     return MultiProvider(
       providers: [
         Provider<AuthService>(create: (_) => AuthService()),
+        Provider<EventReminderScheduler>.value(value: _reminderScheduler),
         StreamProvider<DataState<User>>(
           create:
               (context) => context.read<AuthService>().watchAuthentication(),
@@ -66,10 +77,15 @@ class NexecuteState extends State<Nexecute> {
               ),
         ),
         Provider<EventRepository>(
-          create:
-              (context) => FirestoreEventRepository(
-                authService: context.read<AuthService>(),
-              ),
+          create: (context) {
+            final firestoreRepository = FirestoreEventRepository(
+              authService: context.read<AuthService>(),
+            );
+            return ReminderSchedulingEventRepository(
+              delegate: firestoreRepository,
+              reminderScheduler: context.read<EventReminderScheduler>(),
+            );
+          },
         ),
         Provider<TodoRepository>(
           create:

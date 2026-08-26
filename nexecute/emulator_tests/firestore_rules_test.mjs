@@ -48,11 +48,10 @@ test('unauthenticated requests cannot access user data', async () => {
 });
 
 test('a different user cannot access another user or any nested document', async () => {
-  await testEnvironment.withSecurityRulesDisabled(async (context) => {
-    await setDoc(doc(context.firestore(), 'users/owner'), {tags: ['private']});
-    await setDoc(doc(context.firestore(), 'users/owner/todos/todo-1'), {
-      title: 'Private task',
-    });
+  const owner = testEnvironment.authenticatedContext('owner').firestore();
+  await setDoc(doc(owner, 'users/owner'), {tags: ['private']});
+  await setDoc(doc(owner, 'users/owner/todos/todo-1'), {
+    title: 'Private task',
   });
 
   const otherUser = testEnvironment.authenticatedContext('other').firestore();

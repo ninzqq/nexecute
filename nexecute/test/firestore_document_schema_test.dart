@@ -10,6 +10,7 @@ void main() {
         0: (document) {
           document['title'] = document.remove('legacyTitle');
         },
+        1: noOpFirestoreDocumentMigration,
       },
     );
 

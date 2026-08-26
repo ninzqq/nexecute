@@ -1,10 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nexecute/models/event.dart';
+import 'package:nexecute/models/event_reminder.dart';
 import 'package:nexecute/repositories/firestore/schema/firestore_document_schema.dart';
 
 abstract final class EventDocumentMapper {
   static final _schema = FirestoreDocumentSchema(
-    migrations: {0: _migrateV0ToV1},
+    migrations: {0: _migrateV0ToV1, 1: _migrateV1ToV2},
   );
 
   static Map<String, dynamic> toMap(Event event) => _schema.stamp({
@@ -15,6 +16,7 @@ abstract final class EventDocumentMapper {
     'endTime': event.endTime,
     'isAllDay': event.isAllDay,
     'tags': event.tags,
+    'reminderMinutesBefore': event.reminder.minutesBefore,
   });
 
   static Event fromDocument(DocumentSnapshot<Map<String, dynamic>> document) {
@@ -31,6 +33,9 @@ abstract final class EventDocumentMapper {
       endTime: _requiredDate(migrated['endTime'], 'endTime'),
       isAllDay: migrated['isAllDay'] == true,
       tags: _stringList(migrated['tags']),
+      reminder: EventReminder.fromMinutesBefore(
+        migrated['reminderMinutesBefore'],
+      ),
     );
   }
 
@@ -38,6 +43,10 @@ abstract final class EventDocumentMapper {
     document.putIfAbsent('description', () => '');
     document.putIfAbsent('isAllDay', () => false);
     document.putIfAbsent('tags', () => <String>[]);
+  }
+
+  static void _migrateV1ToV2(Map<String, dynamic> document) {
+    document.putIfAbsent('reminderMinutesBefore', () => null);
   }
 
   static DateTime _requiredDate(Object? value, String field) {

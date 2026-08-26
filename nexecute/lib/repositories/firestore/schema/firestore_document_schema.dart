@@ -3,6 +3,8 @@ import 'package:nexecute/repositories/firestore/schema/app_data_schema.dart';
 typedef FirestoreDocumentMigration =
     void Function(Map<String, dynamic> document);
 
+void noOpFirestoreDocumentMigration(Map<String, dynamic> _) {}
+
 class FirestoreDocumentSchema {
   FirestoreDocumentSchema({
     required Map<int, FirestoreDocumentMigration> migrations,

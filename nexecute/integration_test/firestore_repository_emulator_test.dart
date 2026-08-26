@@ -7,6 +7,7 @@ import 'package:nexecute/domain/calendar/calendar_query_range.dart';
 import 'package:nexecute/firebase_options.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/event.dart';
+import 'package:nexecute/models/event_reminder.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/repositories/repositories.dart';
 import 'package:nexecute/repositories/firestore/event_document_mapper.dart';
@@ -138,11 +139,16 @@ void main() {
         endTime: end,
         isAllDay: false,
         tags: ['work'],
+        reminder: EventReminder.fifteenMinutesBefore,
       ),
     );
     expect(
       (await addedEvent.reference.get()).data()!['title'],
       'Updated planning',
+    );
+    expect(
+      (await addedEvent.reference.get()).data()!['reminderMinutesBefore'],
+      15,
     );
     await events.deleteEvent(event);
     expect((await user.collection('events').get()).docs, isEmpty);

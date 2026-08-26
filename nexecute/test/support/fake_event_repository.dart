@@ -33,8 +33,9 @@ class FakeEventRepository implements EventRepository {
   }
 
   @override
-  Future<void> addEvent(Event event) async {
+  Future<Event> addEvent(Event event) async {
     addedEvent = event;
+    return event;
   }
 
   @override

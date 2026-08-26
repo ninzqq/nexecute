@@ -4,6 +4,7 @@ import 'package:nexecute/calendar/bottomsheets/event_details.dart';
 import 'package:nexecute/home/bottomsheets/item_editor_sheet.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/event.dart';
+import 'package:nexecute/models/event_reminder.dart';
 import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/models/tag.dart' as models;
 import 'package:nexecute/repositories/event_repository.dart';
@@ -39,12 +40,12 @@ void main() {
       tags: const ['Work'],
     );
 
+    final repository = FakeEventRepository(events: [event]);
+
     await tester.pumpWidget(
       MultiProvider(
         providers: [
-          Provider<EventRepository>.value(
-            value: FakeEventRepository(events: [event]),
-          ),
+          Provider<EventRepository>.value(value: repository),
           Provider<DataState<models.Tags>>.value(
             value: DataEmpty(models.Tags()),
           ),
@@ -75,6 +76,20 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(ItemEditorSheet), findsOneWidget);
+    expect(find.text('No reminder'), findsOneWidget);
+
+    await tester.tap(find.text('No reminder'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('15 minutes before').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Update'));
+    await tester.tap(find.text('Update'));
+    await tester.pumpAndSettle();
+
+    expect(
+      repository.updateCommand?.reminder,
+      EventReminder.fifteenMinutesBefore,
+    );
   });
 
   testWidgets('shows event failures instead of an empty agenda', (

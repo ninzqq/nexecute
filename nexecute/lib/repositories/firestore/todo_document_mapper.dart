@@ -4,7 +4,7 @@ import 'package:nexecute/repositories/firestore/schema/firestore_document_schema
 
 abstract final class TodoDocumentMapper {
   static final _schema = FirestoreDocumentSchema(
-    migrations: {0: _migrateV0ToV1},
+    migrations: {0: _migrateV0ToV1, 1: noOpFirestoreDocumentMigration},
   );
 
   static Map<String, dynamic> toMap(TodoItem todo) => _schema.stamp({

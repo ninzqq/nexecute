@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nexecute/models/event.dart';
+import 'package:nexecute/models/event_reminder.dart';
 import 'package:nexecute/repositories/firestore/event_document_mapper.dart';
 import 'package:nexecute/repositories/firestore/schema/app_data_schema.dart';
 import 'package:test/test.dart';
@@ -33,6 +34,7 @@ void main() {
         title: 'Review',
         startTime: DateTime.utc(2026, 8, 26, 14),
         endTime: DateTime.utc(2026, 8, 26, 15),
+        reminder: EventReminder.thirtyMinutesBefore,
       );
 
       final data = EventDocumentMapper.toMap(event);
@@ -40,6 +42,7 @@ void main() {
       expect(data['id'], 'event-2');
       expect(data['title'], 'Review');
       expect(data['tags'], isEmpty);
+      expect(data['reminderMinutesBefore'], 30);
       expect(data[AppDataSchema.versionField], AppDataSchema.currentVersion);
     },
   );
@@ -54,5 +57,17 @@ void main() {
     expect(event.description, isEmpty);
     expect(event.isAllDay, isFalse);
     expect(event.tags, isEmpty);
+    expect(event.reminder, EventReminder.none);
+  });
+
+  test('migrates a version one event to the reminder schema', () {
+    final event = EventDocumentMapper.fromMap('version-one-event', {
+      AppDataSchema.versionField: 1,
+      'title': 'Before reminders',
+      'startTime': DateTime.utc(2026, 8, 26, 14),
+      'endTime': DateTime.utc(2026, 8, 26, 15),
+    });
+
+    expect(event.reminder, EventReminder.none);
   });
 }

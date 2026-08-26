@@ -1,6 +1,6 @@
 abstract final class AppDataSchema {
   static const versionField = 'schemaVersion';
-  static const currentVersion = 1;
+  static const currentVersion = 2;
 
   static Map<String, dynamic> stamp(Map<String, dynamic> document) => {
     ...document,

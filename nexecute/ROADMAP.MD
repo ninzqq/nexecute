@@ -101,6 +101,26 @@ collections, including `todos`.
 - [x] ~~The floating action button always communicates what it will create.~~
 - [x] ~~The Android build and relevant automated tests pass.~~
 
+## Calendar event reminders
+
+**Status:** ✅ Completed
+
+- [x] ~~Let users choose no reminder, the event start, or a preset from five~~
+  ~~minutes through one week before the event.~~
+- [x] ~~Persist the reminder preference with the event using data schema version~~
+  ~~2 and migrate older events to no reminder.~~
+- [x] ~~Schedule exact local Android notifications after event creation or edits~~
+  ~~and cancel them when reminders are disabled or events are deleted.~~
+- [x] ~~Request Android notification and exact-alarm access only when a reminder~~
+  ~~is enabled, and restore scheduled notifications after reboot or app update.~~
+- [x] ~~Show reminder settings in the event editor and event details.~~
+- [x] ~~Cover reminder timing, persistence, mutation lifecycle, editor behavior,~~
+  ~~Android scheduling and cancellation, and the debug APK build.~~
+
+The reminder preference synchronizes through Firestore, while the scheduled
+alarm itself is local to the Android device where the event is created or
+edited. Cross-device reminder reconciliation can be added later if needed.
+
 ## Future roadmap
 
 The application should continue developing as a focused personal productivity

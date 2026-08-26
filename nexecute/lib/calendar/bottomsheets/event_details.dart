@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:nexecute/home/bottomsheets/item_editor.dart';
 import 'package:nexecute/models/event.dart';
+import 'package:nexecute/models/event_reminder.dart';
 import 'package:nexecute/repositories/event_repository.dart';
+import 'package:nexecute/shared/event_reminder_labels.dart';
 import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
 
@@ -62,6 +64,13 @@ class EventDetailsBottomSheet extends StatelessWidget {
                 icon: Icons.calendar_today_rounded,
                 text: _dateLabel(),
               ),
+              if (event.reminder != EventReminder.none) ...[
+                const SizedBox(height: 12),
+                _DetailRow(
+                  icon: Icons.notifications_outlined,
+                  text: event.reminder.label,
+                ),
+              ],
               if (event.description.trim().isNotEmpty) ...[
                 const SizedBox(height: 20),
                 Text(

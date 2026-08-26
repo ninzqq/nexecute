@@ -1,4 +1,5 @@
 import 'package:nexecute/models/event.dart';
+import 'package:nexecute/models/event_reminder.dart';
 
 class UpdateEventCommand {
   UpdateEventCommand({
@@ -9,6 +10,7 @@ class UpdateEventCommand {
     required this.endTime,
     required this.isAllDay,
     required List<String> tags,
+    required this.reminder,
   }) : tags = List.unmodifiable(tags);
 
   factory UpdateEventCommand.fromEvent(Event event) {
@@ -20,6 +22,7 @@ class UpdateEventCommand {
       endTime: event.endTime,
       isAllDay: event.isAllDay,
       tags: event.tags,
+      reminder: event.reminder,
     );
   }
 
@@ -30,4 +33,18 @@ class UpdateEventCommand {
   final DateTime endTime;
   final bool isAllDay;
   final List<String> tags;
+  final EventReminder reminder;
+
+  Event toEvent() {
+    return Event(
+      id: eventId,
+      title: title,
+      description: description,
+      startTime: startTime,
+      endTime: endTime,
+      isAllDay: isAllDay,
+      tags: tags,
+      reminder: reminder,
+    );
+  }
 }

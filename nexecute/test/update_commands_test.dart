@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/models/event.dart';
+import 'package:nexecute/models/event_reminder.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/repositories/note_repository.dart';
@@ -15,6 +16,7 @@ void main() {
       endTime: DateTime(2026, 8, 26, 10),
       isAllDay: false,
       tags: tags,
+      reminder: EventReminder.fifteenMinutesBefore,
     );
 
     final command = UpdateEventCommand.fromEvent(event);
@@ -27,6 +29,8 @@ void main() {
     expect(command.endTime, event.endTime);
     expect(command.isAllDay, event.isAllDay);
     expect(command.tags, ['work']);
+    expect(command.reminder, EventReminder.fifteenMinutesBefore);
+    expect(command.toEvent().reminder, EventReminder.fifteenMinutesBefore);
     expect(() => command.tags.add('another'), throwsUnsupportedError);
   });
 

@@ -7,6 +7,7 @@ import 'package:nexecute/home/bottomsheets/note_editor_fields.dart';
 import 'package:nexecute/home/bottomsheets/submit_button.dart';
 import 'package:nexecute/home/bottomsheets/utils.dart';
 import 'package:nexecute/models/event.dart';
+import 'package:nexecute/models/event_reminder.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/repositories/note_repository.dart';
@@ -43,6 +44,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
   DateTime _startTime = DateTime.now();
   DateTime _endTime = DateTime.now().add(const Duration(hours: 1));
   bool _isAllDay = false;
+  EventReminder _eventReminder = EventReminder.none;
   DateTime? _selectedDate;
   ItemType _type = ItemType.quicxec;
   NoteContentType _noteContentType = NoteContentType.text;
@@ -60,6 +62,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
       _startTime = widget.event!.startTime;
       _endTime = widget.event!.endTime;
       _isAllDay = widget.event!.isAllDay;
+      _eventReminder = widget.event!.reminder;
       _type = ItemType.event;
       _tags = widget.event!.tags;
     } else if (widget.quicxec != null) {
@@ -230,6 +233,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
       endTime: _endTime,
       isAllDay: _isAllDay,
       tags: _tags,
+      reminder: _eventReminder,
     );
 
     if (widget.event?.id.isNotEmpty == true) {
@@ -342,6 +346,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                 startTime: _startTime,
                 endTime: _endTime,
                 isAllDay: _isAllDay,
+                reminder: _eventReminder,
                 selectedStartDate: _selectedDate,
                 onStartTimeChanged: _setStartTime,
                 onEndTimeChanged: (time) => setState(() => _endTime = time),
@@ -352,6 +357,8 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                     ),
                 onAllDayChanged:
                     (isAllDay) => setState(() => _isAllDay = isAllDay),
+                onReminderChanged:
+                    (reminder) => setState(() => _eventReminder = reminder),
               ),
             ],
             const SizedBox(height: 8),

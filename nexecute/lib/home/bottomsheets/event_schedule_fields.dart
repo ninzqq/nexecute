@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:nexecute/home/bottomsheets/event_reminder_field.dart';
 import 'package:nexecute/home/bottomsheets/utils.dart';
 import 'package:nexecute/home/widgets/item_time_picker.dart';
+import 'package:nexecute/models/event_reminder.dart';
 
 class EventScheduleFields extends StatelessWidget {
   const EventScheduleFields({
@@ -8,23 +10,27 @@ class EventScheduleFields extends StatelessWidget {
     required this.startTime,
     required this.endTime,
     required this.isAllDay,
+    required this.reminder,
     required this.onStartTimeChanged,
     required this.onEndTimeChanged,
     required this.onStartDateChanged,
     required this.onEndDateChanged,
     required this.onAllDayChanged,
+    required this.onReminderChanged,
     this.selectedStartDate,
   });
 
   final DateTime startTime;
   final DateTime endTime;
   final bool isAllDay;
+  final EventReminder reminder;
   final DateTime? selectedStartDate;
   final ValueChanged<DateTime> onStartTimeChanged;
   final ValueChanged<DateTime> onEndTimeChanged;
   final ValueChanged<DateTime> onStartDateChanged;
   final ValueChanged<DateTime> onEndDateChanged;
   final ValueChanged<bool> onAllDayChanged;
+  final ValueChanged<EventReminder> onReminderChanged;
 
   Future<void> _pickStartDate(BuildContext context) async {
     final date = await showDatePicker(
@@ -96,6 +102,7 @@ class EventScheduleFields extends StatelessWidget {
           checkColor: Theme.of(context).colorScheme.onPrimary,
           onChanged: (value) => onAllDayChanged(value ?? false),
         ),
+        EventReminderField(reminder: reminder, onChanged: onReminderChanged),
       ],
     );
   }

@@ -14,7 +14,7 @@ export 'package:nexecute/repositories/commands/update_event_command.dart';
 abstract interface class EventRepository {
   Stream<DataState<List<Event>>> watchEvents(CalendarQueryRange range);
 
-  Future<void> addEvent(Event event);
+  Future<Event> addEvent(Event event);
 
   Future<void> updateEvent(UpdateEventCommand command);
 
@@ -57,12 +57,13 @@ class FirestoreEventRepository implements EventRepository {
   }
 
   @override
-  Future<void> addEvent(Event event) async {
+  Future<Event> addEvent(Event event) async {
     final ref = _eventsCollection();
     final id = _uuid.v1();
-    final data = EventDocumentMapper.toMap(event);
-    data['id'] = id;
+    final savedEvent = event.copyWith(id: id);
+    final data = EventDocumentMapper.toMap(savedEvent);
     await ref.doc(id).set(data);
+    return savedEvent;
   }
 
   @override
@@ -79,6 +80,7 @@ class FirestoreEventRepository implements EventRepository {
             'endTime': command.endTime,
             'isAllDay': command.isAllDay,
             'tags': command.tags,
+            'reminderMinutesBefore': command.reminder.minutesBefore,
           }),
         );
   }

@@ -27,6 +27,26 @@ flutter test integration_test/firestore_repository_emulator_test.dart \
 Use `--dart-define=FIREBASE_EMULATOR_HOST=<host>` when the test device reaches
 the emulator through a different address.
 
+The Android reminder scheduler has a separate device integration test. Grant
+the test installation notification and exact-alarm permissions, then run:
+
+```sh
+flutter test integration_test/event_reminder_scheduler_android_test.dart \
+  -d <android-emulator-id>
+```
+
+## Android calendar reminders
+
+Calendar events can store an optional reminder from the event editor. Android
+schedules it as an exact local notification and asks for notification and
+Alarms & reminders access when the first reminder is enabled. Updating an event
+replaces its pending notification; disabling the reminder or deleting the event
+cancels it. Android restores pending reminders after a reboot or application
+update.
+
+The reminder preference is stored in Firestore, but the pending Android alarm
+belongs to the device where the event was created or edited.
+
 ## Firestore data schema
 
 Every user, event, note, and task document written by the app includes the
