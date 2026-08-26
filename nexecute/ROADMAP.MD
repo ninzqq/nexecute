@@ -375,6 +375,9 @@ Example requests:
 
 - [x] ~~Show ISO week numbers in the month view, with a persisted setting to~~
   ~~show or hide the week-number column.~~
+- [x] ~~Lay out the week view as an hourly time grid and position timed events~~
+  ~~according to their start time and duration. The full 24-hour timeline fits~~
+  ~~the available height without vertical scrolling.~~
 
 ### Export and data ownership
 
