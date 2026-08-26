@@ -1,8 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nexecute/models/quicxec.dart';
+import 'package:nexecute/repositories/firestore/schema/firestore_document_schema.dart';
 
 abstract final class NoteDocumentMapper {
-  static Map<String, dynamic> toMap(Quicxec note) => {
+  static final _schema = FirestoreDocumentSchema(
+    migrations: {0: _migrateV0ToV1},
+  );
+
+  static Map<String, dynamic> toMap(Quicxec note) => _schema.stamp({
     'id': note.id,
     'text': note.text,
     'title': note.title,
@@ -11,23 +16,24 @@ abstract final class NoteDocumentMapper {
     'created': note.created,
     'contentType': note.contentType.name,
     'checklistItems': checklistItemsToData(note.checklistItems),
-  };
+  });
 
   static Quicxec fromDocument(DocumentSnapshot<Map<String, dynamic>> document) {
     return fromMap(document.id, document.data() ?? const {});
   }
 
   static Quicxec fromMap(String id, Map<String, dynamic> data) {
-    final rawItems = data['checklistItems'];
+    final migrated = _schema.migrate(data);
+    final rawItems = migrated['checklistItems'];
     return Quicxec(
       id: id,
-      text: data['text']?.toString() ?? '',
-      title: data['title']?.toString() ?? '',
-      trashed: data['trashed'] == true,
-      tags: _stringList(data['tags']),
-      created: _date(data['created']) ?? DateTime.now(),
+      text: migrated['text']?.toString() ?? '',
+      title: migrated['title']?.toString() ?? '',
+      trashed: migrated['trashed'] == true,
+      tags: _stringList(migrated['tags']),
+      created: _date(migrated['created']) ?? DateTime.now(),
       contentType: NoteContentType.values.firstWhere(
-        (type) => type.name == data['contentType'],
+        (type) => type.name == migrated['contentType'],
         orElse: () => NoteContentType.text,
       ),
       checklistItems:
@@ -41,6 +47,14 @@ abstract final class NoteDocumentMapper {
                   .toList()
               : const [],
     );
+  }
+
+  static void _migrateV0ToV1(Map<String, dynamic> document) {
+    document.putIfAbsent('title', () => '');
+    document.putIfAbsent('trashed', () => false);
+    document.putIfAbsent('tags', () => <String>[]);
+    document.putIfAbsent('contentType', () => NoteContentType.text.name);
+    document.putIfAbsent('checklistItems', () => <Map<String, dynamic>>[]);
   }
 
   static List<Map<String, dynamic>> checklistItemsToData(

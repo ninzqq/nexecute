@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/tag.dart';
 import 'package:nexecute/repositories/firestore/tag_document_mapper.dart';
+import 'package:nexecute/repositories/firestore/schema/app_data_schema.dart';
 import 'package:nexecute/services/auth.dart';
 import 'package:nexecute/services/authenticated_data_stream.dart';
 
@@ -42,16 +43,22 @@ class FirestoreTagRepository implements TagRepository {
 
   @override
   Future<void> addTag(String tag) {
-    return _userDocument().update({
-      'tags': FieldValue.arrayUnion([tag]),
-    });
+    return _userDocument().set(
+      AppDataSchema.stamp({
+        'tags': FieldValue.arrayUnion([tag]),
+      }),
+      SetOptions(merge: true),
+    );
   }
 
   @override
   Future<void> removeTag(String tag) {
-    return _userDocument().update({
-      'tags': FieldValue.arrayRemove([tag]),
-    });
+    return _userDocument().set(
+      AppDataSchema.stamp({
+        'tags': FieldValue.arrayRemove([tag]),
+      }),
+      SetOptions(merge: true),
+    );
   }
 
   DocumentReference<Map<String, dynamic>> _userDocument() {

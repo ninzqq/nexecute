@@ -11,6 +11,7 @@ import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/repositories/repositories.dart';
 import 'package:nexecute/repositories/firestore/event_document_mapper.dart';
 import 'package:nexecute/repositories/firestore/note_document_mapper.dart';
+import 'package:nexecute/repositories/firestore/schema/app_data_schema.dart';
 import 'package:nexecute/repositories/firestore/todo_document_mapper.dart';
 import 'package:nexecute/services/auth.dart';
 
@@ -37,7 +38,6 @@ void main() {
     uid = credential.user!.uid;
     firestore = FirebaseFirestore.instance;
     authService = AuthService(firebaseAuth: FirebaseAuth.instance);
-    await firestore.collection('users').doc(uid).set({'tags': <String>[]});
   });
 
   tearDownAll(() => FirebaseAuth.instance.signOut());
@@ -65,11 +65,19 @@ void main() {
 
     await tags.addTag('work');
     expect((await user.get()).data(), containsPair('tags', ['work']));
+    expect(
+      (await user.get()).data(),
+      containsPair(AppDataSchema.versionField, AppDataSchema.currentVersion),
+    );
 
     await todos.addTodo('  Ship emulator tests  ');
     final addedTodo = (await user.collection('todos').get()).docs.single;
     final todo = TodoDocumentMapper.fromDocument(addedTodo);
     expect(todo.title, 'Ship emulator tests');
+    expect(
+      addedTodo.data(),
+      containsPair(AppDataSchema.versionField, AppDataSchema.currentVersion),
+    );
 
     await todos.updateTitle(todo, 'Run emulator tests');
     await todos.setCompleted(todo, true);
@@ -88,6 +96,10 @@ void main() {
     );
     final addedNote = (await user.collection('quicxecs').get()).docs.single;
     final note = NoteDocumentMapper.fromDocument(addedNote);
+    expect(
+      addedNote.data(),
+      containsPair(AppDataSchema.versionField, AppDataSchema.currentVersion),
+    );
     await notes.toggleTrashed(note);
     await notes.emptyTrash();
     expect((await user.collection('quicxecs').get()).docs, isEmpty);
@@ -104,6 +116,10 @@ void main() {
     );
     final addedEvent = (await user.collection('events').get()).docs.single;
     final event = EventDocumentMapper.fromDocument(addedEvent);
+    expect(
+      addedEvent.data(),
+      containsPair(AppDataSchema.versionField, AppDataSchema.currentVersion),
+    );
     final range = CalendarQueryRange(
       startInclusive: DateTime.utc(2026, 1, 10),
       endExclusive: DateTime.utc(2026, 1, 11),

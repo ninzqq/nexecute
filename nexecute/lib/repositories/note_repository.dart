@@ -3,6 +3,7 @@ import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/repositories/commands/update_note_command.dart';
 import 'package:nexecute/repositories/firestore/note_document_mapper.dart';
+import 'package:nexecute/repositories/firestore/schema/app_data_schema.dart';
 import 'package:nexecute/services/auth.dart';
 import 'package:nexecute/services/authenticated_data_stream.dart';
 import 'package:uuid/uuid.dart';
@@ -73,15 +74,19 @@ class FirestoreNoteRepository implements NoteRepository {
   Future<void> updateNote(UpdateNoteCommand command) async {
     if (command.noteId.isEmpty) throw StateError('Note has no ID');
 
-    await _notesCollection().doc(command.noteId).update({
-      'text': command.text,
-      'title': command.title,
-      'tags': command.tags,
-      'contentType': command.contentType.name,
-      'checklistItems': NoteDocumentMapper.checklistItemsToData(
-        command.checklistItems,
-      ),
-    });
+    await _notesCollection()
+        .doc(command.noteId)
+        .update(
+          AppDataSchema.stamp({
+            'text': command.text,
+            'title': command.title,
+            'tags': command.tags,
+            'contentType': command.contentType.name,
+            'checklistItems': NoteDocumentMapper.checklistItemsToData(
+              command.checklistItems,
+            ),
+          }),
+        );
   }
 
   @override
@@ -100,15 +105,21 @@ class FirestoreNoteRepository implements NoteRepository {
             )
             .toList();
 
-    await _notesCollection().doc(note.id).update({
-      'text': items.map((item) => item.text).join('\n'),
-      'checklistItems': NoteDocumentMapper.checklistItemsToData(items),
-    });
+    await _notesCollection()
+        .doc(note.id)
+        .update(
+          AppDataSchema.stamp({
+            'text': items.map((item) => item.text).join('\n'),
+            'checklistItems': NoteDocumentMapper.checklistItemsToData(items),
+          }),
+        );
   }
 
   @override
   Future<void> toggleTrashed(Quicxec note) {
-    return _notesCollection().doc(note.id).update({'trashed': !note.trashed});
+    return _notesCollection()
+        .doc(note.id)
+        .update(AppDataSchema.stamp({'trashed': !note.trashed}));
   }
 
   @override

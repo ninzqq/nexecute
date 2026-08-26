@@ -1,15 +1,20 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nexecute/models/todo_item.dart';
+import 'package:nexecute/repositories/firestore/schema/firestore_document_schema.dart';
 
 abstract final class TodoDocumentMapper {
-  static Map<String, dynamic> toMap(TodoItem todo) => {
+  static final _schema = FirestoreDocumentSchema(
+    migrations: {0: _migrateV0ToV1},
+  );
+
+  static Map<String, dynamic> toMap(TodoItem todo) => _schema.stamp({
     'id': todo.id,
     'title': todo.title,
     'isCompleted': todo.isCompleted,
     'createdAt': todo.createdAt,
     'updatedAt': todo.updatedAt,
     'completedAt': todo.completedAt,
-  };
+  });
 
   static TodoItem fromDocument(
     DocumentSnapshot<Map<String, dynamic>> document,
@@ -18,15 +23,22 @@ abstract final class TodoDocumentMapper {
   }
 
   static TodoItem fromMap(String id, Map<String, dynamic> data) {
-    final createdAt = _date(data['createdAt']) ?? DateTime.now();
+    final migrated = _schema.migrate(data);
+    final createdAt = _date(migrated['createdAt']) ?? DateTime.now();
     return TodoItem(
       id: id,
-      title: data['title']?.toString() ?? '',
-      isCompleted: data['isCompleted'] == true,
+      title: migrated['title']?.toString() ?? '',
+      isCompleted: migrated['isCompleted'] == true,
       createdAt: createdAt,
-      updatedAt: _date(data['updatedAt']) ?? createdAt,
-      completedAt: _date(data['completedAt']),
+      updatedAt: _date(migrated['updatedAt']) ?? createdAt,
+      completedAt: _date(migrated['completedAt']),
     );
+  }
+
+  static void _migrateV0ToV1(Map<String, dynamic> document) {
+    document.putIfAbsent('title', () => '');
+    document.putIfAbsent('isCompleted', () => false);
+    document.putIfAbsent('completedAt', () => null);
   }
 
   static DateTime? _date(Object? value) => switch (value) {

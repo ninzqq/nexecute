@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/todo_item.dart';
 import 'package:nexecute/repositories/firestore/todo_document_mapper.dart';
+import 'package:nexecute/repositories/firestore/schema/app_data_schema.dart';
 import 'package:nexecute/services/auth.dart';
 import 'package:nexecute/services/authenticated_data_stream.dart';
 import 'package:uuid/uuid.dart';
@@ -67,20 +68,28 @@ class FirestoreTodoRepository implements TodoRepository {
 
   @override
   Future<void> updateTitle(TodoItem todo, String title) {
-    return _todosCollection().doc(todo.id).update({
-      'title': title.trim(),
-      'updatedAt': DateTime.now(),
-    });
+    return _todosCollection()
+        .doc(todo.id)
+        .update(
+          AppDataSchema.stamp({
+            'title': title.trim(),
+            'updatedAt': DateTime.now(),
+          }),
+        );
   }
 
   @override
   Future<void> setCompleted(TodoItem todo, bool isCompleted) {
     final now = DateTime.now();
-    return _todosCollection().doc(todo.id).update({
-      'isCompleted': isCompleted,
-      'completedAt': isCompleted ? now : null,
-      'updatedAt': now,
-    });
+    return _todosCollection()
+        .doc(todo.id)
+        .update(
+          AppDataSchema.stamp({
+            'isCompleted': isCompleted,
+            'completedAt': isCompleted ? now : null,
+            'updatedAt': now,
+          }),
+        );
   }
 
   @override

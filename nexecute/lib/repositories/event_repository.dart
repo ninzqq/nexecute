@@ -4,6 +4,7 @@ import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/repositories/commands/update_event_command.dart';
 import 'package:nexecute/repositories/firestore/event_document_mapper.dart';
+import 'package:nexecute/repositories/firestore/schema/app_data_schema.dart';
 import 'package:nexecute/services/auth.dart';
 import 'package:nexecute/services/authenticated_data_stream.dart';
 import 'package:uuid/uuid.dart';
@@ -68,14 +69,18 @@ class FirestoreEventRepository implements EventRepository {
   Future<void> updateEvent(UpdateEventCommand command) async {
     if (command.eventId.isEmpty) throw StateError('Event has no ID');
 
-    await _eventsCollection().doc(command.eventId).update({
-      'title': command.title,
-      'description': command.description,
-      'startTime': command.startTime,
-      'endTime': command.endTime,
-      'isAllDay': command.isAllDay,
-      'tags': command.tags,
-    });
+    await _eventsCollection()
+        .doc(command.eventId)
+        .update(
+          AppDataSchema.stamp({
+            'title': command.title,
+            'description': command.description,
+            'startTime': command.startTime,
+            'endTime': command.endTime,
+            'isAllDay': command.isAllDay,
+            'tags': command.tags,
+          }),
+        );
   }
 
   @override

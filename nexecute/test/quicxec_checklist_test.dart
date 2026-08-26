@@ -1,5 +1,6 @@
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/repositories/firestore/note_document_mapper.dart';
+import 'package:nexecute/repositories/firestore/schema/app_data_schema.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -33,7 +34,9 @@ void main() {
       note.id,
       NoteDocumentMapper.toMap(note),
     );
+    final data = NoteDocumentMapper.toMap(note);
 
+    expect(data[AppDataSchema.versionField], AppDataSchema.currentVersion);
     expect(restored.contentType, NoteContentType.checklist);
     expect(restored.checklistItems, hasLength(2));
     expect(restored.checklistItems.first.text, 'Milk');

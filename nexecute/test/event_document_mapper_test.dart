@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/repositories/firestore/event_document_mapper.dart';
+import 'package:nexecute/repositories/firestore/schema/app_data_schema.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -39,6 +40,19 @@ void main() {
       expect(data['id'], 'event-2');
       expect(data['title'], 'Review');
       expect(data['tags'], isEmpty);
+      expect(data[AppDataSchema.versionField], AppDataSchema.currentVersion);
     },
   );
+
+  test('migrates a version zero event before mapping it', () {
+    final event = EventDocumentMapper.fromMap('legacy-event', {
+      'title': 'Legacy',
+      'startTime': DateTime.utc(2026, 8, 26, 14),
+      'endTime': DateTime.utc(2026, 8, 26, 15),
+    });
+
+    expect(event.description, isEmpty);
+    expect(event.isAllDay, isFalse);
+    expect(event.tags, isEmpty);
+  });
 }

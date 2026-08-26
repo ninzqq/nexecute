@@ -1,4 +1,5 @@
 import 'package:nexecute/models/todo_item.dart';
+import 'package:nexecute/repositories/firestore/schema/app_data_schema.dart';
 import 'package:nexecute/repositories/firestore/todo_document_mapper.dart';
 import 'package:test/test.dart';
 
@@ -44,5 +45,21 @@ void main() {
 
     expect(restored.isCompleted, isFalse);
     expect(restored.completedAt, isNull);
+  });
+
+  test('writes todos at the current schema version', () {
+    final now = DateTime(2026, 8, 26);
+    final todo = TodoItem(
+      id: 'todo-4',
+      title: 'Versioned task',
+      isCompleted: false,
+      createdAt: now,
+      updatedAt: now,
+    );
+
+    expect(
+      TodoDocumentMapper.toMap(todo)[AppDataSchema.versionField],
+      AppDataSchema.currentVersion,
+    );
   });
 }

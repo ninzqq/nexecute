@@ -396,8 +396,8 @@ These improvements should be considered before or alongside larger features.
 - [x] ~~Move Firestore serialization concerns out of domain models where practical.~~
 - [x] ~~Replace loosely typed update methods with typed parameters or command~~
   ~~objects.~~
-- Introduce an explicit data schema version and migrations before models gain
-  substantially more fields.
+- [x] ~~Introduce an explicit data schema version and migrations before models gain~~
+  ~~substantially more fields.~~
 
 ### Quality and accessibility
 
