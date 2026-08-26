@@ -369,6 +369,13 @@ Example requests:
 - Add notification actions for completing or postponing tasks.
 - Consider optional Android system-calendar integration.
 
+### Calendar usability
+
+**Status:** Completed
+
+- [x] ~~Show ISO week numbers in the month view, with a persisted setting to~~
+  ~~show or hide the week-number column.~~
+
 ### Export and data ownership
 
 **Status:** Candidate

@@ -12,6 +12,7 @@ const _eventMarkerHeight = 17.0;
 const _eventMarkerSpacing = 2.0;
 const _overflowLabelHeight = 14.0;
 const _minimumMonthCellHeight = 32.0;
+const _weekNumberColumnWidth = 30.0;
 
 int visibleMonthEventCount({
   required int eventCount,
@@ -38,6 +39,7 @@ class MonthView extends StatelessWidget {
   const MonthView({
     super.key,
     required this.month,
+    this.showWeekNumbers = true,
     required this.selectedDay,
     required this.events,
     required this.onDaySelected,
@@ -45,6 +47,7 @@ class MonthView extends StatelessWidget {
   });
 
   final CalendarMonth month;
+  final bool showWeekNumbers;
   final DateTime selectedDay;
   final List<Event> events;
   final ValueChanged<DateTime> onDaySelected;
@@ -52,17 +55,14 @@ class MonthView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final days = month.days;
-
     return Column(
       children: [
-        const _WeekdayHeader(),
+        _WeekdayHeader(showWeekNumbers: showWeekNumbers),
         const Divider(height: 1),
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {
               final rowCount = month.weeks.length;
-              final cellWidth = constraints.maxWidth / 7;
               final fittedCellHeight = constraints.maxHeight / rowCount;
               final cellHeight = math.max(
                 fittedCellHeight,
@@ -70,29 +70,50 @@ class MonthView extends StatelessWidget {
               );
               final needsScrolling = cellHeight > fittedCellHeight;
 
-              return GridView.builder(
+              return ListView.builder(
                 physics:
                     needsScrolling
                         ? const ClampingScrollPhysics()
                         : const NeverScrollableScrollPhysics(),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 7,
-                  childAspectRatio: cellWidth / cellHeight,
-                ),
-                itemCount: days.length,
-                itemBuilder: (context, index) {
-                  final day = days[index];
-                  return _MonthDayCell(
-                    day: day,
-                    events: eventsForDay(events, day.date),
-                    isInMonth: month.contains(day.date),
-                    isSelected: isSameCalendarDay(day.date, selectedDay),
-                    isToday: isSameCalendarDay(day.date, DateTime.now()),
-                    onTap: () => onDaySelected(day.date),
-                    onEventSelected: (event) {
-                      onDaySelected(day.date);
-                      onEventSelected(event);
-                    },
+                itemCount: rowCount,
+                itemBuilder: (context, weekIndex) {
+                  final week = month.weeks[weekIndex];
+                  return SizedBox(
+                    height: cellHeight,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (showWeekNumbers)
+                          SizedBox(
+                            width: _weekNumberColumnWidth,
+                            child: _WeekNumberCell(
+                              isoYear: week.year,
+                              weekNumber: week.weekNumber,
+                            ),
+                          ),
+                        for (final day in week.days)
+                          Expanded(
+                            child: _MonthDayCell(
+                              day: day,
+                              events: eventsForDay(events, day.date),
+                              isInMonth: month.contains(day.date),
+                              isSelected: isSameCalendarDay(
+                                day.date,
+                                selectedDay,
+                              ),
+                              isToday: isSameCalendarDay(
+                                day.date,
+                                DateTime.now(),
+                              ),
+                              onTap: () => onDaySelected(day.date),
+                              onEventSelected: (event) {
+                                onDaySelected(day.date);
+                                onEventSelected(event);
+                              },
+                            ),
+                          ),
+                      ],
+                    ),
                   );
                 },
               );
@@ -105,7 +126,9 @@ class MonthView extends StatelessWidget {
 }
 
 class _WeekdayHeader extends StatelessWidget {
-  const _WeekdayHeader();
+  const _WeekdayHeader({required this.showWeekNumbers});
+
+  final bool showWeekNumbers;
 
   @override
   Widget build(BuildContext context) {
@@ -114,20 +137,67 @@ class _WeekdayHeader extends StatelessWidget {
     return SizedBox(
       height: 32,
       child: Row(
-        children: List.generate(7, (index) {
-          final date = monday.add(Duration(days: index));
-          final weekend = date.weekday >= DateTime.saturday;
-          return Expanded(
-            child: Center(
-              child: Text(
-                DateFormat.E().format(date),
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: weekend ? palette.secondary : palette.onSurface,
+        children: [
+          if (showWeekNumbers)
+            SizedBox(
+              key: const Key('month-week-number-header'),
+              width: _weekNumberColumnWidth,
+              child: Center(
+                child: Text(
+                  'Wk',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: palette.onSurface.withValues(alpha: 0.65),
+                  ),
                 ),
               ),
             ),
-          );
-        }),
+          for (var index = 0; index < 7; index++)
+            Expanded(
+              child: Center(
+                child: Text(
+                  DateFormat.E().format(monday.add(Duration(days: index))),
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: index >= 5 ? palette.secondary : palette.onSurface,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WeekNumberCell extends StatelessWidget {
+  const _WeekNumberCell({required this.isoYear, required this.weekNumber});
+
+  final int isoYear;
+  final int weekNumber;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.appPalette;
+    return Semantics(
+      label: 'Week $weekNumber of $isoYear',
+      excludeSemantics: true,
+      child: Container(
+        key: ValueKey('month-week-number-$isoYear-$weekNumber'),
+        alignment: Alignment.topCenter,
+        padding: const EdgeInsets.only(top: 9),
+        decoration: BoxDecoration(
+          color: palette.surfaceRaised.withValues(alpha: 0.5),
+          border: Border(
+            right: BorderSide(color: palette.outline.withValues(alpha: 0.6)),
+            bottom: BorderSide(color: palette.outline.withValues(alpha: 0.6)),
+          ),
+        ),
+        child: Text(
+          '$weekNumber',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: palette.onSurface.withValues(alpha: 0.72),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }

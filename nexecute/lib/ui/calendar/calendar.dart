@@ -5,6 +5,7 @@ import 'package:nexecute/domain/calendar/gregorian_month_calculator.dart';
 import 'package:nexecute/domain/calendar/iso_week_calculator.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/event.dart';
+import 'package:nexecute/models/calendar_settings_controller.dart';
 import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/calendar/bottomsheets/event_details.dart';
 import 'package:nexecute/repositories/event_repository.dart';
@@ -87,6 +88,8 @@ class _CalendarPageState extends State<CalendarPage> {
 
   Widget _buildCalendar(BuildContext context, DataState<List<Event>> state) {
     final events = state.valueOrNull ?? const <Event>[];
+    final calendarSettings = context.watch<CalendarSettingsController?>();
+    final showWeekNumbers = calendarSettings?.showWeekNumbers ?? true;
     final week = _weekCalculator.fromDate(_weekDateForPage(_weekPage));
     final month = _monthCalculator.fromDate(_monthDateForPage(_monthPage));
     final selectedEvents = eventsForDay(events, _selectedDay);
@@ -131,6 +134,7 @@ class _CalendarPageState extends State<CalendarPage> {
                               ),
                               child: MonthView(
                                 month: pageMonth,
+                                showWeekNumbers: showWeekNumbers,
                                 selectedDay: _selectedDay,
                                 events: events,
                                 onDaySelected: _selectDay,

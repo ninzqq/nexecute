@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/models/app_theme_controller.dart';
+import 'package:nexecute/models/calendar_settings_controller.dart';
 import 'package:nexecute/repositories/repositories.dart';
 import 'package:nexecute/services/services.dart';
 import 'package:provider/provider.dart';
@@ -19,19 +20,27 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   final themeController = await AppThemeController.load();
+  final calendarSettingsController = await CalendarSettingsController.load();
   final reminderScheduler = await createDefaultEventReminderScheduler();
   runApp(
     Nexecute(
       themeController: themeController,
+      calendarSettingsController: calendarSettingsController,
       reminderScheduler: reminderScheduler,
     ),
   );
 }
 
 class Nexecute extends StatefulWidget {
-  const Nexecute({super.key, this.themeController, this.reminderScheduler});
+  const Nexecute({
+    super.key,
+    this.themeController,
+    this.calendarSettingsController,
+    this.reminderScheduler,
+  });
 
   final AppThemeController? themeController;
+  final CalendarSettingsController? calendarSettingsController;
   final EventReminderScheduler? reminderScheduler;
 
   // Create the initialization Future outside of `build`:
@@ -42,6 +51,8 @@ class Nexecute extends StatefulWidget {
 class NexecuteState extends State<Nexecute> {
   late final AppThemeController _themeController;
   late final bool _ownsThemeController;
+  late final CalendarSettingsController _calendarSettingsController;
+  late final bool _ownsCalendarSettingsController;
   late final EventReminderScheduler _reminderScheduler;
 
   @override
@@ -49,6 +60,9 @@ class NexecuteState extends State<Nexecute> {
     super.initState();
     _ownsThemeController = widget.themeController == null;
     _themeController = widget.themeController ?? AppThemeController();
+    _ownsCalendarSettingsController = widget.calendarSettingsController == null;
+    _calendarSettingsController =
+        widget.calendarSettingsController ?? CalendarSettingsController();
     _reminderScheduler =
         widget.reminderScheduler ?? const NoopEventReminderScheduler();
   }
@@ -56,6 +70,9 @@ class NexecuteState extends State<Nexecute> {
   @override
   void dispose() {
     if (_ownsThemeController) _themeController.dispose();
+    if (_ownsCalendarSettingsController) {
+      _calendarSettingsController.dispose();
+    }
     super.dispose();
   }
 
@@ -121,6 +138,7 @@ class NexecuteState extends State<Nexecute> {
         ChangeNotifierProvider(create: (_) => HomeTabIndex()),
         ChangeNotifierProvider(create: (_) => SelectedDay()),
         ChangeNotifierProvider.value(value: _themeController),
+        ChangeNotifierProvider.value(value: _calendarSettingsController),
       ],
       child: Consumer<AppThemeController>(
         builder:

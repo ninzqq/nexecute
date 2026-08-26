@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/models/app_theme_controller.dart';
+import 'package:nexecute/models/calendar_settings_controller.dart';
 import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
 
@@ -9,6 +10,7 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<AppThemeController>();
+    final calendarSettings = context.watch<CalendarSettingsController>();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -30,6 +32,21 @@ class SettingsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
           ],
+          const SizedBox(height: 12),
+          const Divider(),
+          const SizedBox(height: 12),
+          Text('Calendar', style: Theme.of(context).textTheme.headlineSmall),
+          const SizedBox(height: 8),
+          SwitchListTile.adaptive(
+            key: const Key('show-week-numbers-switch'),
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Show week numbers'),
+            subtitle: const Text(
+              'Display ISO week numbers beside the month view.',
+            ),
+            value: calendarSettings.showWeekNumbers,
+            onChanged: calendarSettings.setShowWeekNumbers,
+          ),
         ],
       ),
     );
