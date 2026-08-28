@@ -89,6 +89,7 @@ class _TagsContentState extends State<_TagsContent> {
                   padding: const EdgeInsets.all(16.0),
                   child: TextField(
                     controller: _newTagController,
+                    textCapitalization: TextCapitalization.sentences,
                     keyboardType: TextInputType.text,
                     maxLines: 1,
                     expands: false,

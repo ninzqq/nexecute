@@ -320,6 +320,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _titleController,
+              textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
                 labelText: 'Title',
                 border: OutlineInputBorder(),
@@ -346,6 +347,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
             else ...[
               TextFormField(
                 controller: _descriptionController,
+                textCapitalization: TextCapitalization.sentences,
                 decoration: const InputDecoration(
                   labelText: 'Description',
                   border: OutlineInputBorder(),

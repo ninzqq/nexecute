@@ -144,6 +144,7 @@ class _ChecklistEditorRow extends StatelessWidget {
             focusNode: focusNode,
             initialValue: item.text,
             maxLines: null,
+            textCapitalization: TextCapitalization.sentences,
             textInputAction: TextInputAction.next,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               decoration: item.isChecked ? TextDecoration.lineThrough : null,

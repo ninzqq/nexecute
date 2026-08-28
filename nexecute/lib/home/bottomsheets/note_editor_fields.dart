@@ -63,6 +63,7 @@ class NoteEditorFields extends StatelessWidget {
         else
           TextFormField(
             controller: descriptionController,
+            textCapitalization: TextCapitalization.sentences,
             decoration: const InputDecoration(
               labelText: 'Description',
               border: OutlineInputBorder(),
