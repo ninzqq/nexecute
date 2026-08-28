@@ -142,6 +142,54 @@ void main() {
     expect(savedNote!.text, 'Milk\nBread');
   });
 
+  testWidgets('selects tags before a new note is saved', (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    Quicxec? savedNote;
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<DataState<models.Tags>>.value(
+            value: DataReady(models.Tags(tags: ['Work', 'Personal'])),
+          ),
+          Provider<DataState<List<NoteFolder>>>.value(
+            value: const DataEmpty([]),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppThemes.forPreset(AppThemePreset.midnight),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: ItemEditorSheet(
+                quicxec: Quicxec(
+                  id: '',
+                  text: '',
+                  created: DateTime(2026, 8, 28),
+                ),
+                onSaveQuicxec: (note, _) async => savedNote = note,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.ensureVisible(find.text('Work'));
+    await tester.tap(find.text('Work'));
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+
+    await tester.ensureVisible(find.text('Save'));
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(savedNote?.tags, ['Work']);
+  });
+
   testWidgets('assigns a note to a folder from the editor', (tester) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1;

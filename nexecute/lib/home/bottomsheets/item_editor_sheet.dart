@@ -68,7 +68,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
       _isAllDay = widget.event!.isAllDay;
       _eventReminder = widget.event!.reminder;
       _type = ItemType.event;
-      _tags = widget.event!.tags;
+      _tags = List.of(widget.event!.tags);
     } else if (widget.quicxec != null) {
       _titleController.text = widget.quicxec!.title;
       _descriptionController.text = widget.quicxec!.text;
@@ -81,7 +81,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
           widget.quicxec!.text.trim().isNotEmpty) {
         _checklistItems = _itemsFromText(widget.quicxec!.text);
       }
-      _tags = widget.quicxec!.tags;
+      _tags = List.of(widget.quicxec!.tags);
       _folderId = widget.quicxec!.folderId;
     }
     _selectedDate = widget.date;
