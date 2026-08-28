@@ -23,27 +23,47 @@
           }
         },
         {
-          "client_id": "810257036214-kgm7b8gjrhcd2njipa288fkj7mcjbuvm.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.example.nexecute",
-            "certificate_hash": "29a1acbfa513794673f4c21b8e65da9f3403873d"
-          }
-        },
+          "client_id": "810257036214-tm9t7f1ol6520cal65u85reuv7qvun7f.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
         {
-          "client_id": "810257036214-rfdb5lh5kip8oh2k59n7dtnukhfbnrh6.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.example.nexecute",
-            "certificate_hash": "07a1accf6450d9035cf9e79869192ca97abb6a0b"
-          }
-        },
+          "current_key": "AIzaSyCMF8b53Dqanld_AG4oJZbbwrLjlYimCfk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "810257036214-tm9t7f1ol6520cal65u85reuv7qvun7f.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "810257036214-rjf0feh8e6evpvb93to4nkfvk0krsfqf.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.nexecute"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:810257036214:android:67a30b5c8095ffcb038717",
+        "android_client_info": {
+          "package_name": "com.jndevworks.nexecute"
+        }
+      },
+      "oauth_client": [
         {
-          "client_id": "810257036214-th3007510bhjg3p9f2lelgi3j6f15i7a.apps.googleusercontent.com",
+          "client_id": "810257036214-j7o3kl1rekd4dvnr76im8bq5m2vf8qii.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.nexecute",
-            "certificate_hash": "2302abdc2e9a856abb8e8d2e1e889a863f23ab6f"
+            "package_name": "com.jndevworks.nexecute",
+            "certificate_hash": "373e3aab67ce7bc57802290daa998eb6a5cc8bee"
           }
         },
         {

@@ -1,4 +1,4 @@
-package com.example.nexecute
+package com.jndevworks.nexecute
 
 import io.flutter.embedding.android.FlutterActivity
 
