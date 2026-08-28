@@ -7,11 +7,15 @@ class NoteActionsSheet extends StatelessWidget {
     super.key,
     required this.note,
     required this.onToggleTrash,
+    this.folderName,
+    this.onMove,
     this.onDelete,
   });
 
   final Quicxec note;
   final VoidCallback onToggleTrash;
+  final String? folderName;
+  final VoidCallback? onMove;
   final VoidCallback? onDelete;
 
   @override
@@ -65,6 +69,16 @@ class NoteActionsSheet extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
+          if (onMove case final onMove?) ...[
+            _NoteActionTile(
+              icon: Icons.drive_file_move_outline,
+              label: 'Move to folder',
+              description: folderName ?? 'Quick Notes',
+              color: palette.primary,
+              onTap: onMove,
+            ),
+            const SizedBox(height: 10),
+          ],
           _NoteActionTile(
             icon:
                 note.trashed

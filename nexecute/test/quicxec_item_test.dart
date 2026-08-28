@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/home/widgets/quicxecitem.dart';
 import 'package:nexecute/models/quicxec.dart';
+import 'package:nexecute/models/data_state.dart';
+import 'package:nexecute/models/note_folder.dart';
 import 'package:nexecute/themes.dart';
+import 'package:provider/provider.dart';
 
 void main() {
   testWidgets('long-pressing a note opens its action sheet', (tester) async {
@@ -14,13 +17,16 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(
-        theme: AppThemes.forPreset(AppThemePreset.midnight),
-        home: Scaffold(
-          body: SizedBox(
-            width: 400,
-            height: 120,
-            child: QuicxecItem(quicxec: note),
+      Provider<DataState<List<NoteFolder>>>.value(
+        value: const DataEmpty([]),
+        child: MaterialApp(
+          theme: AppThemes.forPreset(AppThemePreset.midnight),
+          home: Scaffold(
+            body: SizedBox(
+              width: 400,
+              height: 120,
+              child: QuicxecItem(quicxec: note),
+            ),
           ),
         ),
       ),
@@ -32,6 +38,8 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Meeting notes'), findsWidgets);
     expect(find.text('Note actions'), findsOneWidget);
+    expect(find.text('Move to folder'), findsOneWidget);
+    expect(find.text('Quick Notes'), findsOneWidget);
     expect(find.text('Move note to trash'), findsOneWidget);
     expect(find.text('You can restore it later from Trash'), findsOneWidget);
     expect(find.byIcon(Icons.delete_outline_rounded), findsOneWidget);
@@ -49,13 +57,16 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(
-        theme: AppThemes.forPreset(AppThemePreset.neutral),
-        home: Scaffold(
-          body: SizedBox(
-            width: 400,
-            height: 120,
-            child: QuicxecItem(quicxec: note),
+      Provider<DataState<List<NoteFolder>>>.value(
+        value: const DataEmpty([]),
+        child: MaterialApp(
+          theme: AppThemes.forPreset(AppThemePreset.neutral),
+          home: Scaffold(
+            body: SizedBox(
+              width: 400,
+              height: 120,
+              child: QuicxecItem(quicxec: note),
+            ),
           ),
         ),
       ),

@@ -6,6 +6,7 @@ import 'package:nexecute/calendar/bottomsheets/event_details.dart';
 import 'package:nexecute/home/bottomsheets/item_editor.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/event.dart';
+import 'package:nexecute/models/note_folder.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/tag.dart';
 import 'package:nexecute/models/todo_item.dart';
@@ -46,6 +47,7 @@ class _UnifiedSearchPageState extends State<UnifiedSearchPage> {
     final noteState = context.watch<DataState<List<Quicxec>>>();
     final todoState = context.watch<DataState<List<TodoItem>>>();
     final tagState = context.watch<DataState<Tags>>();
+    final folderState = context.watch<DataState<List<NoteFolder>>>();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Search')),
@@ -81,7 +83,13 @@ class _UnifiedSearchPageState extends State<UnifiedSearchPage> {
             child:
                 _query.isEmpty
                     ? const _SearchPrompt()
-                    : _buildResults(context, noteState, todoState, tagState),
+                    : _buildResults(
+                      context,
+                      noteState,
+                      todoState,
+                      tagState,
+                      folderState,
+                    ),
           ),
         ],
       ),
@@ -93,21 +101,38 @@ class _UnifiedSearchPageState extends State<UnifiedSearchPage> {
     DataState<List<Quicxec>> noteState,
     DataState<List<TodoItem>> todoState,
     DataState<Tags> tagState,
+    DataState<List<NoteFolder>> folderState,
   ) {
     if (noteState is DataUnauthenticated<List<Quicxec>> ||
         todoState is DataUnauthenticated<List<TodoItem>> ||
-        tagState is DataUnauthenticated<Tags>) {
+        tagState is DataUnauthenticated<Tags> ||
+        folderState is DataUnauthenticated<List<NoteFolder>>) {
       return const DataStatePlaceholder(
         presentation: DataStatePresentation.unauthenticated,
         message: 'Sign in to search your data.',
       );
     }
 
+    final folders = folderState.valueOrNull ?? const <NoteFolder>[];
+    String folderNameFor(Quicxec note) {
+      for (final folder in folders) {
+        if (folder.id == note.folderId) return folder.name;
+      }
+      return 'Quick Notes';
+    }
+
     final notes =
         (noteState.valueOrNull ?? const <Quicxec>[])
-            .where((note) => !note.trashed && noteMatchesSearch(note, _query))
+            .where(
+              (note) =>
+                  !note.trashed &&
+                  (noteMatchesSearch(note, _query) ||
+                      matchesSearchQuery([folderNameFor(note)], _query)),
+            )
             .toList()
-          ..sort((first, second) => second.created.compareTo(first.created));
+          ..sort(
+            (first, second) => second.updatedAt.compareTo(first.updatedAt),
+          );
     final todos =
         (todoState.valueOrNull ?? const <TodoItem>[])
             .where((todo) => todoMatchesSearch(todo, _query))
@@ -127,6 +152,7 @@ class _UnifiedSearchPageState extends State<UnifiedSearchPage> {
         noteState is DataLoading<List<Quicxec>> ||
         todoState is DataLoading<List<TodoItem>> ||
         tagState is DataLoading<Tags> ||
+        folderState is DataLoading<List<NoteFolder>> ||
         _eventStatus == _EventSearchStatus.loading;
     final hasResults =
         _events.isNotEmpty ||
@@ -205,7 +231,7 @@ class _UnifiedSearchPageState extends State<UnifiedSearchPage> {
                     note.title.trim().isEmpty ? 'Untitled note' : note.title,
                   ),
                   subtitle: Text(
-                    _singleLine(note.contentAsPlainText),
+                    '${folderNameFor(note)} · ${_singleLine(note.contentAsPlainText)}',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -245,6 +271,8 @@ class _UnifiedSearchPageState extends State<UnifiedSearchPage> {
           _SourceFailure(source: 'tasks', error: todoState.error),
         if (tagState is DataFailure<Tags>)
           _SourceFailure(source: 'tags', error: tagState.error),
+        if (folderState is DataFailure<List<NoteFolder>>)
+          _SourceFailure(source: 'note folders', error: folderState.error),
       ],
     );
   }

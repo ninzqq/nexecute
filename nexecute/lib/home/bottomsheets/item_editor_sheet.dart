@@ -4,11 +4,14 @@ import 'package:nexecute/home/bottomsheets/event_schedule_fields.dart';
 import 'package:nexecute/home/bottomsheets/item_editor_header.dart';
 import 'package:nexecute/home/bottomsheets/item_type.dart';
 import 'package:nexecute/home/bottomsheets/note_editor_fields.dart';
+import 'package:nexecute/home/bottomsheets/note_folder_field.dart';
 import 'package:nexecute/home/bottomsheets/submit_button.dart';
 import 'package:nexecute/home/bottomsheets/utils.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/event_reminder.dart';
 import 'package:nexecute/models/quicxec.dart';
+import 'package:nexecute/models/data_state.dart';
+import 'package:nexecute/models/note_folder.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/repositories/note_repository.dart';
 import 'package:nexecute/services/item_conversion_service.dart';
@@ -51,6 +54,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
   List<NoteChecklistItem> _checklistItems = [];
   int _checklistIdSeed = 0;
   List<String> _tags = [];
+  String? _folderId;
   bool _isSaving = false;
 
   @override
@@ -78,6 +82,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
         _checklistItems = _itemsFromText(widget.quicxec!.text);
       }
       _tags = widget.quicxec!.tags;
+      _folderId = widget.quicxec!.folderId;
     }
     _selectedDate = widget.date;
   }
@@ -193,6 +198,11 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
   }
 
   Future<void> _submitQuicxec() async {
+    final folders = context.read<DataState<List<NoteFolder>>>().valueOrNull;
+    final resolvedFolderId =
+        folders == null || folders.any((folder) => folder.id == _folderId)
+            ? _folderId
+            : null;
     final checklistItems =
         _noteContentType == NoteContentType.checklist
             ? _normalizedChecklistItems
@@ -207,6 +217,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
       text: noteText,
       created: _startTime,
       tags: _tags,
+      folderId: resolvedFolderId,
       trashed: false,
       contentType: _noteContentType,
       checklistItems: checklistItems,
@@ -362,6 +373,14 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
               ),
             ],
             const SizedBox(height: 8),
+            if (_type == ItemType.quicxec) ...[
+              NoteFolderField(
+                folderState: context.watch<DataState<List<NoteFolder>>>(),
+                selectedFolderId: _folderId,
+                onChanged: (folderId) => setState(() => _folderId = folderId),
+              ),
+              const SizedBox(height: 8),
+            ],
             EditorTagSelector(selectedTags: _tags, onTagToggled: _toggleTag),
             const SizedBox(height: 8),
             SubmitButton(

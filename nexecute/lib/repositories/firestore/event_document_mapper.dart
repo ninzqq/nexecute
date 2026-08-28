@@ -5,7 +5,11 @@ import 'package:nexecute/repositories/firestore/schema/firestore_document_schema
 
 abstract final class EventDocumentMapper {
   static final _schema = FirestoreDocumentSchema(
-    migrations: {0: _migrateV0ToV1, 1: _migrateV1ToV2},
+    migrations: {
+      0: _migrateV0ToV1,
+      1: _migrateV1ToV2,
+      2: noOpFirestoreDocumentMigration,
+    },
   );
 
   static Map<String, dynamic> toMap(Event event) => _schema.stamp({

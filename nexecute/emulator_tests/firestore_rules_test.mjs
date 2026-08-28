@@ -32,11 +32,14 @@ test('an owner can read and write their user document and nested data', async ()
   const owner = testEnvironment.authenticatedContext('owner').firestore();
   const user = doc(owner, 'users/owner');
   const note = doc(owner, 'users/owner/quicxecs/note-1');
+  const noteFolder = doc(owner, 'users/owner/noteFolders/folder-1');
 
   await assertSucceeds(setDoc(user, {tags: ['work']}));
   await assertSucceeds(setDoc(note, {title: 'Private note'}));
+  await assertSucceeds(setDoc(noteFolder, {name: 'Projects'}));
   await assertSucceeds(getDoc(user));
   await assertSucceeds(getDoc(note));
+  await assertSucceeds(getDoc(noteFolder));
 });
 
 test('unauthenticated requests cannot access user data', async () => {
@@ -53,11 +56,17 @@ test('a different user cannot access another user or any nested document', async
   await setDoc(doc(owner, 'users/owner/todos/todo-1'), {
     title: 'Private task',
   });
+  await setDoc(doc(owner, 'users/owner/noteFolders/folder-1'), {
+    name: 'Private folder',
+  });
 
   const otherUser = testEnvironment.authenticatedContext('other').firestore();
 
   await assertFails(getDoc(doc(otherUser, 'users/owner')));
   await assertFails(getDoc(doc(otherUser, 'users/owner/todos/todo-1')));
+  await assertFails(
+    getDoc(doc(otherUser, 'users/owner/noteFolders/folder-1')),
+  );
   await assertFails(
     setDoc(doc(otherUser, 'users/owner/todos/todo-2'), {title: 'Intrusion'}),
   );

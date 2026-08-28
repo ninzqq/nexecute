@@ -9,9 +9,11 @@ class NoteCardContent extends StatelessWidget {
     super.key,
     required this.note,
     required this.onChecklistItemChanged,
+    this.folderName,
   });
 
   final Quicxec note;
+  final String? folderName;
   final void Function(NoteChecklistItem item, bool isChecked)
   onChecklistItemChanged;
 
@@ -26,6 +28,23 @@ class NoteCardContent extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (folderName != null) ...[
+          Row(
+            children: [
+              const Icon(Icons.folder_outlined, size: 14),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  folderName!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
         if (hasTitle)
           Text(
             note.title,

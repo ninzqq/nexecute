@@ -73,6 +73,8 @@ class _TrashGrid extends StatelessWidget {
             trashed: quicxec.trashed,
             tags: quicxec.tags,
             created: quicxec.created,
+            updatedAt: quicxec.updatedAt,
+            folderId: quicxec.folderId,
             contentType: quicxec.contentType,
             checklistItems: quicxec.checklistItems,
           ),

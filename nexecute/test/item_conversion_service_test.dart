@@ -100,6 +100,9 @@ class _FakeNoteRepository implements NoteRepository {
   Future<void> updateNote(UpdateNoteCommand command) async {}
 
   @override
+  Future<void> moveNote(String noteId, String? folderId) async {}
+
+  @override
   Future<void> setChecklistItemChecked(
     Quicxec note,
     String itemId,

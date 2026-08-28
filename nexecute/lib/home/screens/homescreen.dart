@@ -3,6 +3,7 @@ import 'package:nexecute/home/bottomsheets/item_editor.dart';
 import 'package:nexecute/home/widgets/quicxecs.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/home_tab_index.dart';
+import 'package:nexecute/models/notes_controller.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/shared/drawer.dart';
@@ -101,6 +102,7 @@ class HomeScreen extends StatelessWidget {
             text: '',
             created: DateTime.now(),
             title: '',
+            folderId: context.read<NotesController>().creationFolderId,
           ),
         );
         break;

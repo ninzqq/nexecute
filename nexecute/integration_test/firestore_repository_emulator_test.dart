@@ -59,6 +59,10 @@ void main() {
       authService: authService,
       firestore: firestore,
     );
+    final noteFolders = FirestoreNoteFolderRepository(
+      authService: authService,
+      firestore: firestore,
+    );
     final events = FirestoreEventRepository(
       authService: authService,
       firestore: firestore,
@@ -87,21 +91,39 @@ void main() {
     expect(completedTodo.data()!['isCompleted'], isTrue);
     expect(completedTodo.data()!['completedAt'], isA<Timestamp>());
 
+    await noteFolders.addFolder('Projects');
+    final addedFolder =
+        (await user.collection('noteFolders').get()).docs.single;
+    expect(addedFolder.data()['name'], 'Projects');
+    expect(
+      addedFolder.data(),
+      containsPair(AppDataSchema.versionField, AppDataSchema.currentVersion),
+    );
+
     await notes.addNote(
       Quicxec(
         id: 'ignored-by-repository',
         text: 'First draft',
         title: 'Release notes',
         created: DateTime.utc(2026, 1, 1),
+        folderId: addedFolder.id,
       ),
     );
     final addedNote = (await user.collection('quicxecs').get()).docs.single;
     final note = NoteDocumentMapper.fromDocument(addedNote);
+    expect(note.folderId, addedFolder.id);
     expect(
       addedNote.data(),
       containsPair(AppDataSchema.versionField, AppDataSchema.currentVersion),
     );
-    await notes.toggleTrashed(note);
+    await noteFolders.deleteFolder(addedFolder.id);
+    expect((await user.collection('noteFolders').get()).docs, isEmpty);
+    final unfiledNote = NoteDocumentMapper.fromDocument(
+      await addedNote.reference.get(),
+    );
+    expect(unfiledNote.folderId, isNull);
+
+    await notes.toggleTrashed(unfiledNote);
     await notes.emptyTrash();
     expect((await user.collection('quicxecs').get()).docs, isEmpty);
 

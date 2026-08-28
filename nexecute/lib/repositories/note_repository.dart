@@ -17,6 +17,8 @@ abstract interface class NoteRepository {
 
   Future<void> updateNote(UpdateNoteCommand command);
 
+  Future<void> moveNote(String noteId, String? folderId);
+
   Future<void> setChecklistItemChecked(
     Quicxec note,
     String itemId,
@@ -65,8 +67,10 @@ class FirestoreNoteRepository implements NoteRepository {
   Future<void> addNote(Quicxec note) async {
     final id = _uuid.v1();
     final data = NoteDocumentMapper.toMap(note);
+    final now = DateTime.now();
     data['id'] = id;
     data['trashed'] = false;
+    data['updatedAt'] = now;
     await _notesCollection().doc(id).set(data);
   }
 
@@ -80,11 +84,26 @@ class FirestoreNoteRepository implements NoteRepository {
           AppDataSchema.stamp({
             'text': command.text,
             'title': command.title,
+            'folderId': command.folderId,
             'tags': command.tags,
+            'updatedAt': DateTime.now(),
             'contentType': command.contentType.name,
             'checklistItems': NoteDocumentMapper.checklistItemsToData(
               command.checklistItems,
             ),
+          }),
+        );
+  }
+
+  @override
+  Future<void> moveNote(String noteId, String? folderId) {
+    if (noteId.isEmpty) throw StateError('Note has no ID');
+    return _notesCollection()
+        .doc(noteId)
+        .update(
+          AppDataSchema.stamp({
+            'folderId': folderId,
+            'updatedAt': DateTime.now(),
           }),
         );
   }
@@ -111,6 +130,7 @@ class FirestoreNoteRepository implements NoteRepository {
           AppDataSchema.stamp({
             'text': items.map((item) => item.text).join('\n'),
             'checklistItems': NoteDocumentMapper.checklistItemsToData(items),
+            'updatedAt': DateTime.now(),
           }),
         );
   }
@@ -119,7 +139,12 @@ class FirestoreNoteRepository implements NoteRepository {
   Future<void> toggleTrashed(Quicxec note) {
     return _notesCollection()
         .doc(note.id)
-        .update(AppDataSchema.stamp({'trashed': !note.trashed}));
+        .update(
+          AppDataSchema.stamp({
+            'trashed': !note.trashed,
+            'updatedAt': DateTime.now(),
+          }),
+        );
   }
 
   @override

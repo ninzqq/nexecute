@@ -405,6 +405,11 @@ removed application-wide live event-history stream.
 
 - [x] ~~Focus a newly added checklist item immediately so typing can continue~~
   ~~without another tap.~~
+- [x] ~~Turn Notes into a lightweight personal knowledge base with a permanent~~
+  ~~Quick Notes inbox, All Notes, and user-created flat folders.~~
+- [x] ~~Allow notes to be assigned or moved to a folder while tags continue to~~
+  ~~work across folders. Deleting a folder safely returns its notes to Quick~~
+  ~~Notes.~~
 
 ### Export and data ownership
 

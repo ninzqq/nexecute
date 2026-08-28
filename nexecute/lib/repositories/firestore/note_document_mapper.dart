@@ -4,7 +4,11 @@ import 'package:nexecute/repositories/firestore/schema/firestore_document_schema
 
 abstract final class NoteDocumentMapper {
   static final _schema = FirestoreDocumentSchema(
-    migrations: {0: _migrateV0ToV1, 1: noOpFirestoreDocumentMigration},
+    migrations: {
+      0: _migrateV0ToV1,
+      1: noOpFirestoreDocumentMigration,
+      2: _migrateV2ToV3,
+    },
   );
 
   static Map<String, dynamic> toMap(Quicxec note) => _schema.stamp({
@@ -14,6 +18,8 @@ abstract final class NoteDocumentMapper {
     'trashed': note.trashed,
     'tags': note.tags,
     'created': note.created,
+    'updatedAt': note.updatedAt,
+    'folderId': note.folderId,
     'contentType': note.contentType.name,
     'checklistItems': checklistItemsToData(note.checklistItems),
   });
@@ -25,13 +31,16 @@ abstract final class NoteDocumentMapper {
   static Quicxec fromMap(String id, Map<String, dynamic> data) {
     final migrated = _schema.migrate(data);
     final rawItems = migrated['checklistItems'];
+    final created = _date(migrated['created']) ?? DateTime.now();
     return Quicxec(
       id: id,
       text: migrated['text']?.toString() ?? '',
       title: migrated['title']?.toString() ?? '',
       trashed: migrated['trashed'] == true,
       tags: _stringList(migrated['tags']),
-      created: _date(migrated['created']) ?? DateTime.now(),
+      created: created,
+      updatedAt: _date(migrated['updatedAt']) ?? created,
+      folderId: _optionalString(migrated['folderId']),
       contentType: NoteContentType.values.firstWhere(
         (type) => type.name == migrated['contentType'],
         orElse: () => NoteContentType.text,
@@ -55,6 +64,11 @@ abstract final class NoteDocumentMapper {
     document.putIfAbsent('tags', () => <String>[]);
     document.putIfAbsent('contentType', () => NoteContentType.text.name);
     document.putIfAbsent('checklistItems', () => <Map<String, dynamic>>[]);
+  }
+
+  static void _migrateV2ToV3(Map<String, dynamic> document) {
+    document.putIfAbsent('updatedAt', () => document['created']);
+    document.putIfAbsent('folderId', () => null);
   }
 
   static List<Map<String, dynamic>> checklistItemsToData(
@@ -85,4 +99,9 @@ abstract final class NoteDocumentMapper {
 
   static List<String> _stringList(Object? value) =>
       value is List ? value.map((item) => item.toString()).toList() : const [];
+
+  static String? _optionalString(Object? value) {
+    final text = value?.toString().trim();
+    return text == null || text.isEmpty ? null : text;
+  }
 }

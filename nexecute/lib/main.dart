@@ -11,7 +11,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'firebase_options.dart';
 import 'package:nexecute/routes.dart';
 import 'package:nexecute/models/home_tab_index.dart';
+import 'package:nexecute/models/notes_controller.dart';
 import 'package:nexecute/models/data_state.dart';
+import 'package:nexecute/models/note_folder.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/tag.dart';
 import 'package:nexecute/models/todo_item.dart';
@@ -93,6 +95,12 @@ class NexecuteState extends State<Nexecute> {
                 authService: context.read<AuthService>(),
               ),
         ),
+        Provider<NoteFolderRepository>(
+          create:
+              (context) => FirestoreNoteFolderRepository(
+                authService: context.read<AuthService>(),
+              ),
+        ),
         Provider<EventRepository>(
           create: (context) {
             final firestoreRepository = FirestoreEventRepository(
@@ -127,6 +135,11 @@ class NexecuteState extends State<Nexecute> {
           create: (context) => context.read<NoteRepository>().watchNotes(),
           initialData: const DataLoading<List<Quicxec>>(),
         ),
+        StreamProvider<DataState<List<NoteFolder>>>(
+          create:
+              (context) => context.read<NoteFolderRepository>().watchFolders(),
+          initialData: const DataLoading<List<NoteFolder>>(),
+        ),
         StreamProvider<DataState<List<TodoItem>>>(
           create: (context) => context.read<TodoRepository>().watchTodos(),
           initialData: const DataLoading<List<TodoItem>>(),
@@ -136,6 +149,7 @@ class NexecuteState extends State<Nexecute> {
           initialData: const DataLoading<Tags>(),
         ),
         ChangeNotifierProvider(create: (_) => HomeTabIndex()),
+        ChangeNotifierProvider(create: (_) => NotesController()),
         ChangeNotifierProvider(create: (_) => SelectedDay()),
         ChangeNotifierProvider.value(value: _themeController),
         ChangeNotifierProvider.value(value: _calendarSettingsController),

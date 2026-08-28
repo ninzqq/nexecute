@@ -15,6 +15,8 @@ void main() {
     expect(note.contentType, NoteContentType.text);
     expect(note.checklistItems, isEmpty);
     expect(note.contentAsPlainText, 'Plain text');
+    expect(note.folderId, isNull);
+    expect(note.updatedAt, note.created);
   });
 
   test('checklist notes round-trip through Firestore-compatible data', () {
@@ -23,6 +25,8 @@ void main() {
       title: 'Shopping',
       text: 'Milk\nBread',
       created: DateTime(2026, 8, 24),
+      updatedAt: DateTime(2026, 8, 25),
+      folderId: 'projects',
       contentType: NoteContentType.checklist,
       checklistItems: const [
         NoteChecklistItem(id: 'milk', text: 'Milk', isChecked: true),
@@ -43,5 +47,7 @@ void main() {
     expect(restored.checklistItems.first.isChecked, isTrue);
     expect(restored.contentAsPlainText, '☑ Milk\n☐ Bread');
     expect(restored.searchableText, contains('Bread'));
+    expect(restored.folderId, 'projects');
+    expect(restored.updatedAt, DateTime(2026, 8, 25));
   });
 }

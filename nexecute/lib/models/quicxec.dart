@@ -27,6 +27,8 @@ class Quicxec {
   bool trashed;
   List<String> tags;
   final DateTime created;
+  final DateTime updatedAt;
+  final String? folderId;
   final NoteContentType contentType;
   final List<NoteChecklistItem> checklistItems;
 
@@ -37,9 +39,11 @@ class Quicxec {
     this.trashed = false,
     this.tags = const [],
     required this.created,
+    DateTime? updatedAt,
+    this.folderId,
     this.contentType = NoteContentType.text,
     this.checklistItems = const [],
-  });
+  }) : updatedAt = updatedAt ?? created;
 
   bool get isChecklist => contentType == NoteContentType.checklist;
 

@@ -47,6 +47,7 @@ void main() {
       tags: tags,
       contentType: NoteContentType.checklist,
       checklistItems: checklistItems,
+      folderId: 'projects',
     );
 
     final command = UpdateNoteCommand.fromNote(note);
@@ -60,6 +61,7 @@ void main() {
     expect(command.contentType, NoteContentType.checklist);
     expect(command.checklistItems, hasLength(1));
     expect(command.checklistItems.single.id, 'item-1');
+    expect(command.folderId, 'projects');
     expect(() => command.checklistItems.clear(), throwsUnsupportedError);
   });
 }

@@ -3,16 +3,27 @@ import 'package:nexecute/home/bottomsheets/item_editor.dart';
 import 'package:nexecute/home/widgets/note_actions_sheet.dart';
 import 'package:nexecute/home/widgets/note_card_content.dart';
 import 'package:nexecute/models/quicxec.dart';
+import 'package:nexecute/models/data_state.dart';
+import 'package:nexecute/models/note_folder.dart';
 import 'package:nexecute/repositories/note_repository.dart';
 import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
 
 class QuicxecItem extends StatelessWidget {
-  const QuicxecItem({super.key, required this.quicxec});
+  const QuicxecItem({super.key, required this.quicxec, this.folderName});
 
   final Quicxec quicxec;
+  final String? folderName;
 
   void _showActions(BuildContext context) {
+    final folderState = context.read<DataState<List<NoteFolder>>>();
+    final folders = folderState.valueOrNull ?? const <NoteFolder>[];
+    final currentFolderName =
+        folders
+            .where((folder) => folder.id == quicxec.folderId)
+            .map((folder) => folder.name)
+            .firstOrNull ??
+        'Quick Notes';
     showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
@@ -20,6 +31,11 @@ class QuicxecItem extends StatelessWidget {
       builder:
           (sheetContext) => NoteActionsSheet(
             note: quicxec,
+            folderName: currentFolderName,
+            onMove:
+                quicxec.trashed
+                    ? null
+                    : () => _showMoveSheet(context, sheetContext),
             onToggleTrash: () => _toggleTrash(context, sheetContext),
             onDelete:
                 quicxec.trashed
@@ -27,6 +43,41 @@ class QuicxecItem extends StatelessWidget {
                     : null,
           ),
     );
+  }
+
+  Future<void> _showMoveSheet(
+    BuildContext context,
+    BuildContext actionsSheetContext,
+  ) async {
+    Navigator.of(actionsSheetContext).pop();
+    final folderState = context.read<DataState<List<NoteFolder>>>();
+    final folders = folderState.valueOrNull ?? const <NoteFolder>[];
+    final destination = await showModalBottomSheet<String>(
+      context: context,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder:
+          (sheetContext) => _FolderDestinationSheet(
+            folders: folders,
+            currentFolderId: quicxec.folderId,
+          ),
+    );
+    if (destination == null || !context.mounted) return;
+
+    final destinationId = destination.isEmpty ? null : destination;
+    if (destinationId == quicxec.folderId) return;
+    try {
+      await context.read<NoteRepository>().moveNote(quicxec.id, destinationId);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Note moved')));
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not move note: $error')));
+    }
   }
 
   Future<void> _toggleTrash(
@@ -120,6 +171,7 @@ class QuicxecItem extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               child: NoteCardContent(
                 note: quicxec,
+                folderName: folderName,
                 onChecklistItemChanged:
                     (item, isChecked) =>
                         _setChecklistItemChecked(context, item, isChecked),
@@ -127,6 +179,58 @@ class QuicxecItem extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _FolderDestinationSheet extends StatelessWidget {
+  const _FolderDestinationSheet({
+    required this.folders,
+    required this.currentFolderId,
+  });
+
+  final List<NoteFolder> folders;
+  final String? currentFolderId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Move note', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          Flexible(
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.bolt_rounded),
+                  title: const Text('Quick Notes'),
+                  trailing:
+                      currentFolderId == null
+                          ? const Icon(Icons.check_rounded)
+                          : null,
+                  onTap: () => Navigator.pop(context, ''),
+                ),
+                for (final folder in folders)
+                  ListTile(
+                    key: ValueKey('move-to-folder-${folder.id}'),
+                    leading: const Icon(Icons.folder_outlined),
+                    title: Text(folder.name),
+                    trailing:
+                        currentFolderId == folder.id
+                            ? const Icon(Icons.check_rounded)
+                            : null,
+                    onTap: () => Navigator.pop(context, folder.id),
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/home/screens/homescreen.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/home_tab_index.dart';
+import 'package:nexecute/models/note_folder.dart';
+import 'package:nexecute/models/notes_controller.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/models/tag.dart' as models;
@@ -22,11 +24,15 @@ void main() {
           providers: [
             ChangeNotifierProvider(create: (_) => HomeTabIndex()),
             ChangeNotifierProvider(create: (_) => SelectedDay()),
+            ChangeNotifierProvider(create: (_) => NotesController()),
             Provider<EventRepository>.value(value: FakeEventRepository()),
             Provider<DataState<List<TodoItem>>>.value(
               value: const DataEmpty([]),
             ),
             Provider<DataState<List<Quicxec>>>.value(
+              value: const DataEmpty([]),
+            ),
+            Provider<DataState<List<NoteFolder>>>.value(
               value: const DataEmpty([]),
             ),
             Provider<DataState<models.Tags>>.value(

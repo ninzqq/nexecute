@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/home/bottomsheets/item_editor_sheet.dart';
 import 'package:nexecute/models/data_state.dart';
+import 'package:nexecute/models/note_folder.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/tag.dart' as models;
 import 'package:nexecute/themes.dart';
@@ -28,6 +29,9 @@ void main() {
         providers: [
           Provider<DataState<models.Tags>>.value(
             value: DataEmpty(models.Tags()),
+          ),
+          Provider<DataState<List<NoteFolder>>>.value(
+            value: const DataEmpty([]),
           ),
         ],
         child: MaterialApp(
@@ -96,6 +100,9 @@ void main() {
           Provider<DataState<models.Tags>>.value(
             value: DataEmpty(models.Tags()),
           ),
+          Provider<DataState<List<NoteFolder>>>.value(
+            value: const DataEmpty([]),
+          ),
         ],
         child: MaterialApp(
           theme: AppThemes.forPreset(AppThemePreset.midnight),
@@ -133,5 +140,58 @@ void main() {
     expect(savedNote!.contentType, NoteContentType.checklist);
     expect(savedNote!.checklistItems, hasLength(2));
     expect(savedNote!.text, 'Milk\nBread');
+  });
+
+  testWidgets('assigns a note to a folder from the editor', (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final folder = NoteFolder(
+      id: 'projects',
+      name: 'Projects',
+      createdAt: DateTime(2026, 8, 28),
+      updatedAt: DateTime(2026, 8, 28),
+    );
+    Quicxec? savedNote;
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<DataState<models.Tags>>.value(
+            value: DataEmpty(models.Tags()),
+          ),
+          Provider<DataState<List<NoteFolder>>>.value(
+            value: DataReady([folder]),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppThemes.forPreset(AppThemePreset.midnight),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: ItemEditorSheet(
+                quicxec: Quicxec(
+                  id: '',
+                  text: 'Reference',
+                  created: DateTime(2026, 8, 28),
+                ),
+                onSaveQuicxec: (note, _) async => savedNote = note,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('note-folder-field')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Projects').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Save'));
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(savedNote?.folderId, folder.id);
   });
 }

@@ -49,9 +49,15 @@ belongs to the device where the event was created or edited.
 
 ## Firestore data schema
 
-Every user, event, note, and task document written by the app includes the
+Every user, event, note, note-folder, and task document written by the app includes the
 integer `schemaVersion` field. The current version is defined once in
 `AppDataSchema`.
+
+Notes use a nullable `folderId`. A missing, null, or no-longer-valid folder ID
+places the note in Quick Notes, which is the knowledge-base inbox. User folders
+are stored under `users/{uid}/noteFolders`; deleting one unfiles its notes
+before removing the folder document. Notes also store `updatedAt` so knowledge-
+base views have stable recent-first ordering.
 
 Documents without a version are version 0. Each Firestore document mapper
 applies its ordered migrations before constructing a domain model. New writes
