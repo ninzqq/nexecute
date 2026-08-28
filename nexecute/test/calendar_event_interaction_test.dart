@@ -22,6 +22,72 @@ void main() {
     expect(selectedDayAgendaHeight(10), 232);
   });
 
+  testWidgets('selected-day agenda expands by tapping or dragging its handle', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final now = DateTime.now();
+    final events = List.generate(
+      8,
+      (index) => Event(
+        id: 'event-$index',
+        title: 'Event ${index + 1}',
+        startTime: DateTime(now.year, now.month, now.day, 8 + index),
+        endTime: DateTime(now.year, now.month, now.day, 9 + index),
+      ),
+    );
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<EventRepository>.value(
+            value: FakeEventRepository(events: events),
+          ),
+          ChangeNotifierProvider(create: (_) => SelectedDay()),
+        ],
+        child: MaterialApp(
+          theme: AppThemes.forPreset(AppThemePreset.midnight),
+          home: const CalendarPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final agenda = find.byKey(const Key('selected-day-agenda-container'));
+    final handle = find.byKey(const Key('agenda-resize-handle'));
+    final compactHeight = tester.getSize(agenda).height;
+
+    expect(compactHeight, 232);
+    expect(find.byTooltip('Expand events · drag to resize'), findsOneWidget);
+
+    await tester.tap(handle);
+    await tester.pumpAndSettle();
+
+    final expandedHeight = tester.getSize(agenda).height;
+    expect(expandedHeight, greaterThan(compactHeight + 100));
+    expect(find.byTooltip('Collapse events · drag to resize'), findsOneWidget);
+
+    await tester.tap(handle);
+    await tester.pumpAndSettle();
+    expect(tester.getSize(agenda).height, compactHeight);
+
+    final drag = await tester.startGesture(tester.getCenter(handle));
+    await drag.moveBy(const Offset(0, -20));
+    await tester.pump();
+    await drag.moveBy(const Offset(0, -250));
+    await tester.pump();
+
+    expect(tester.getSize(agenda).height, greaterThan(compactHeight));
+
+    await drag.up();
+    await tester.pumpAndSettle();
+    expect(tester.getSize(agenda).height, expandedHeight);
+  });
+
   testWidgets('opens a selected-day event for viewing and editing', (
     tester,
   ) async {
