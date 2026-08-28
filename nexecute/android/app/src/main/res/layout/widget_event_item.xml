@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/event_chip"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:background="@drawable/widget_chip_dark"
+    android:layout_marginBottom="4dp">
+
+    <!-- Kalenterin väriraita (piilossa jos väriä ei ole).
+         Huom: RemoteViews sallii vain tietyt luokat — pelkkä View kaataa
+         widgetin inflaation, siksi FrameLayout. -->
+    <FrameLayout
+        android:id="@+id/event_color_stripe"
+        android:layout_width="3dp"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/event_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#F8FAFC"
+        android:textSize="10sp"
+        android:paddingHorizontal="6dp"
+        android:paddingVertical="4dp" />
+</LinearLayout>
