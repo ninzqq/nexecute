@@ -443,9 +443,10 @@ workflow.
 
 ##### Step 7C: proposal review
 
-- [ ] Present valid proposed tasks with Edit, selection, Create, and Discard
-  controls.
-- [ ] Treat malformed, incomplete, and adversarial model output as recoverable
+- [x] Present valid proposed tasks with Edit, selection, Create, and Discard
+  controls. Keep the creation handoff disabled until Step 7D wires the
+  confirmed selection to `TodoRepository`.
+- [x] Treat malformed, incomplete, and adversarial model output as recoverable
   untrusted input with retry or cancel guidance.
 
 ##### Step 7D: confirmed, idempotent creation

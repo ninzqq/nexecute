@@ -22,6 +22,20 @@ enum AiNoteTaskExtractionStatus {
   failed,
 }
 
+class AiTaskProposalReviewItem {
+  const AiTaskProposalReviewItem({required this.title, this.selected = true});
+
+  final String title;
+  final bool selected;
+
+  AiTaskProposalReviewItem copyWith({String? title, bool? selected}) {
+    return AiTaskProposalReviewItem(
+      title: title ?? this.title,
+      selected: selected ?? this.selected,
+    );
+  }
+}
+
 class AiNoteTaskExtractionController extends ChangeNotifier {
   AiNoteTaskExtractionController({
     required AiAssistantRepository assistantRepository,
@@ -43,7 +57,17 @@ class AiNoteTaskExtractionController extends ChangeNotifier {
   AiNoteTaskExtractionStatus status = AiNoteTaskExtractionStatus.loading;
   AiConnectionProfile? activeProfile;
   AiTaskProposal? proposal;
+  List<AiTaskProposalReviewItem> reviewItems = const [];
   String? errorMessage;
+
+  int get selectedTaskCount =>
+      reviewItems.where((item) => item.selected).length;
+
+  List<AiProposedTask> get selectedTasks => List.unmodifiable(
+    reviewItems
+        .where((item) => item.selected)
+        .map((item) => AiProposedTask(title: item.title)),
+  );
 
   Future<void> initialize() async {
     try {
@@ -83,6 +107,7 @@ class AiNoteTaskExtractionController extends ChangeNotifier {
 
     status = AiNoteTaskExtractionStatus.generating;
     proposal = null;
+    reviewItems = const [];
     errorMessage = null;
     _finalized = false;
     _notify();
@@ -167,9 +192,70 @@ class AiNoteTaskExtractionController extends ChangeNotifier {
     _notify();
   }
 
+  void setTaskSelected(int index, bool selected) {
+    if (!_isReviewIndex(index)) return;
+    reviewItems = [
+      for (var itemIndex = 0; itemIndex < reviewItems.length; itemIndex++)
+        itemIndex == index
+            ? reviewItems[itemIndex].copyWith(selected: selected)
+            : reviewItems[itemIndex],
+    ];
+    _notify();
+  }
+
+  void setAllTasksSelected(bool selected) {
+    reviewItems = [
+      for (final item in reviewItems) item.copyWith(selected: selected),
+    ];
+    _notify();
+  }
+
+  String? validateTaskTitle(String value, {int? editingIndex}) {
+    final title = value.trim();
+    if (title.isEmpty) return 'Enter a task title.';
+    if (title.contains('\n') || title.contains('\r')) {
+      return 'Use a single-line task title.';
+    }
+    if (title.length > aiMaxProposedTaskTitleCharacters) {
+      return 'Use at most $aiMaxProposedTaskTitleCharacters characters.';
+    }
+    final normalized = title.toLowerCase();
+    for (var index = 0; index < reviewItems.length; index++) {
+      if (index != editingIndex &&
+          reviewItems[index].title.toLowerCase() == normalized) {
+        return 'This task is already in the proposal.';
+      }
+    }
+    return null;
+  }
+
+  bool updateTaskTitle(int index, String value) {
+    if (!_isReviewIndex(index) ||
+        validateTaskTitle(value, editingIndex: index) != null) {
+      return false;
+    }
+    reviewItems = [
+      for (var itemIndex = 0; itemIndex < reviewItems.length; itemIndex++)
+        itemIndex == index
+            ? reviewItems[itemIndex].copyWith(title: value.trim())
+            : reviewItems[itemIndex],
+    ];
+    _notify();
+    return true;
+  }
+
+  bool _isReviewIndex(int index) =>
+      status == AiNoteTaskExtractionStatus.completed &&
+      index >= 0 &&
+      index < reviewItems.length;
+
   void _complete(String output) {
     try {
       proposal = AiTaskProposalParser.parse(output);
+      reviewItems = [
+        for (final task in proposal!.tasks)
+          AiTaskProposalReviewItem(title: task.title),
+      ];
       _finish(AiNoteTaskExtractionStatus.completed, null);
     } on AiTaskProposalFormatException catch (error) {
       _finish(AiNoteTaskExtractionStatus.failed, error.message);

@@ -87,6 +87,45 @@ void main() {
     expect(controller.status, AiNoteTaskExtractionStatus.cancelled);
     expect(controller.proposal, isNull);
   });
+
+  test('supports editing and selecting parsed task proposals locally', () async {
+    final repository = FakeAiAssistantRepository(
+      responseEvents: const [
+        AiTextDelta(
+          '{"schemaVersion":1,"tasks":[{"title":"Buy coffee"},{"title":"Call Sam"}]}',
+        ),
+        AiResponseCompleted(),
+      ],
+    );
+    final controller = AiNoteTaskExtractionController(
+      assistantRepository: repository,
+      connectionProfileStore: profileStore,
+    );
+    addTearDown(controller.dispose);
+
+    await controller.initialize();
+    await controller.start(
+      noteId: 'note-1',
+      noteTitle: 'Plan',
+      noteContent: 'Buy coffee and call Sam.',
+    );
+    await _flushEvents();
+
+    expect(controller.reviewItems, hasLength(2));
+    expect(controller.selectedTaskCount, 2);
+    controller.setTaskSelected(0, false);
+    expect(controller.selectedTaskCount, 1);
+    expect(controller.updateTaskTitle(1, '  Call Alex  '), isTrue);
+    expect(controller.reviewItems[1].title, 'Call Alex');
+    expect(controller.selectedTasks.single.title, 'Call Alex');
+    expect(controller.updateTaskTitle(1, 'Buy coffee'), isFalse);
+    expect(
+      controller.validateTaskTitle('Buy coffee', editingIndex: 1),
+      'This task is already in the proposal.',
+    );
+    controller.setAllTasksSelected(false);
+    expect(controller.selectedTaskCount, 0);
+  });
 }
 
 Future<void> _flushEvents() async {
