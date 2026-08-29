@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nexecute/ai/presentation/ai_settings_section.dart';
 import 'package:nexecute/models/app_theme_controller.dart';
 import 'package:nexecute/models/calendar_settings_controller.dart';
 import 'package:nexecute/themes.dart';
@@ -47,6 +48,10 @@ class SettingsScreen extends StatelessWidget {
             value: calendarSettings.showWeekNumbers,
             onChanged: calendarSettings.setShowWeekNumbers,
           ),
+          const SizedBox(height: 12),
+          const Divider(),
+          const SizedBox(height: 12),
+          const AiSettingsSection(),
         ],
       ),
     );

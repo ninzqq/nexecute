@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nexecute/ai/ai.dart';
 import 'package:nexecute/domain/calendar/gregorian_month_calculator.dart';
 import 'package:nexecute/home/screens/settingsscreen.dart';
 import 'package:nexecute/models/app_theme_controller.dart';
@@ -85,12 +86,18 @@ void main() {
     tester,
   ) async {
     final calendarSettings = CalendarSettingsController();
+    final profileStore = InMemoryAiConnectionProfileStore();
+    addTearDown(profileStore.dispose);
 
     await tester.pumpWidget(
       MultiProvider(
         providers: [
           ChangeNotifierProvider(create: (_) => AppThemeController()),
           ChangeNotifierProvider.value(value: calendarSettings),
+          Provider<AiConnectionProfileStore>.value(value: profileStore),
+          Provider<AiAssistantRepository>.value(
+            value: const UnconfiguredAiAssistantRepository(),
+          ),
         ],
         child: MaterialApp(
           theme: AppThemes.forPreset(AppThemePreset.midnight),

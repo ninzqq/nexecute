@@ -18,6 +18,10 @@ void main() {
     expect(profile.credentialReference, 'secure-storage:home');
     expect(profile.capabilityOverrides[AiCapability.tools], isFalse);
     expect(profile.copyWith(clearCredentialReference: true).isValid, isFalse);
+    expect(
+      profile.copyWith(baseUrl: Uri.parse('ftp://ai.example.test')).isValid,
+      isFalse,
+    );
   });
 
   test('conversation and request expose immutable message snapshots', () {

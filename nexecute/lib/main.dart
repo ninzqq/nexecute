@@ -159,7 +159,7 @@ class NexecuteState extends State<Nexecute> {
           create: (_) => const UnconfiguredAiAssistantRepository(),
         ),
         Provider<AiConnectionProfileStore>(
-          create: (_) => InMemoryAiConnectionProfileStore(),
+          create: (_) => SharedPreferencesAiConnectionProfileStore(),
           dispose: (_, store) => store.dispose(),
         ),
         Provider<AiConversationStore>(

@@ -297,15 +297,17 @@ nexecuteGateway
 
 #### Step 3: AI settings and connection profiles
 
-- [ ] Add an AI section to Settings.
-- [ ] Let users add, edit, duplicate, delete, and select connection profiles.
-- [ ] Support protocol, base URL, model ID, and authentication-mode fields.
-- [ ] Load available models when the selected protocol supports discovery while
-  still allowing a model ID to be entered manually.
-- [ ] Add a connection test with connecting, connected, authentication failure,
-  model missing, timeout, and unreachable results.
-- [ ] Validate URLs and warn when a plain-HTTP endpoint is unsuitable for the
-  current platform or network context.
+- [x] ~~Add an AI section to Settings.~~
+- [x] ~~Let users add, edit, duplicate, delete, and select connection~~
+  ~~profiles.~~
+- [x] ~~Persist non-secret profile metadata and the active selection locally.~~
+- [x] ~~Support protocol, base URL, model ID, and authentication-mode fields.~~
+- [x] ~~Expose model discovery through the assistant repository while still~~
+  ~~allowing a model ID to be entered manually.~~
+- [x] ~~Add connection-test presentation for connecting, connected,~~
+  ~~authentication failure, model missing, timeout, and unreachable results.~~
+- [x] ~~Validate URLs and warn when a plain-HTTP endpoint is unsuitable for the~~
+  ~~current platform or network context.~~
 
 #### Step 4: first chat vertical slice
 

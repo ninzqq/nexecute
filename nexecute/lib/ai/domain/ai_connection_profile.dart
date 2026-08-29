@@ -29,9 +29,14 @@ class AiConnectionProfile {
       id.trim().isNotEmpty &&
       name.trim().isNotEmpty &&
       baseUrl.hasScheme &&
+      (baseUrl.scheme == 'http' || baseUrl.scheme == 'https') &&
       baseUrl.host.isNotEmpty &&
       modelId.trim().isNotEmpty &&
       hasRequiredCredential;
+
+  bool supports(AiCapability capability) =>
+      capabilityOverrides[capability] ??
+      protocol.defaultCapabilities.contains(capability);
 
   AiConnectionProfile copyWith({
     String? id,
