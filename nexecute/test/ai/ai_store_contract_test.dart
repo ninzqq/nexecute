@@ -85,6 +85,28 @@ void _conversationStoreContract(AiConversationStore Function() createStore) {
     expect(await store.getConversation(older.id), same(updatedOlder));
     expect(emissions.last.first, same(updatedOlder));
 
+    final conversationEmissions = <AiConversation?>[];
+    final conversationSubscription = store
+        .watchConversation(older.id)
+        .listen(conversationEmissions.add);
+    addTearDown(conversationSubscription.cancel);
+    final message = AiChatMessage(
+      id: 'message-1',
+      role: AiMessageRole.user,
+      content: 'Hello',
+      createdAt: DateTime(2026, 8, 30, 12),
+    );
+    await store.saveMessage(older.id, message);
+    await Future<void>.delayed(Duration.zero);
+    expect(
+      (await store.getConversation(older.id))!.messages.single.content,
+      'Hello',
+    );
+    expect(conversationEmissions.last!.messages.single, same(message));
+
+    await store.deleteMessage(older.id, message.id);
+    expect((await store.getConversation(older.id))!.messages, isEmpty);
+
     await store.deleteConversation(older.id);
     expect(await store.getConversation(older.id), isNull);
     expect((await store.getConversations()).single.id, newer.id);

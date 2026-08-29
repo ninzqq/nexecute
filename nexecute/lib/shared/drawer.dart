@@ -27,6 +27,16 @@ class MainDrawer extends StatelessWidget {
         "selected": false,
       },
       {
+        "title": const Text("Assistant"),
+        "icon": const Icon(Icons.auto_awesome_outlined),
+        "function":
+            () => {
+              Navigator.pop(context),
+              Navigator.pushNamed(context, "/assistant"),
+            },
+        "selected": false,
+      },
+      {
         "title": const Text('Tags'),
         'icon': const Icon(Icons.label_outlined),
         'function':

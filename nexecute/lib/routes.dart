@@ -5,6 +5,7 @@ import 'package:nexecute/home/screens/trashscreen.dart';
 import 'package:nexecute/userloginstatuscheck/userloginstatuscheck.dart';
 import 'package:nexecute/profile/profilescreen.dart';
 import 'package:nexecute/search/unified_search_page.dart';
+import 'package:nexecute/ai/presentation/assistant_page.dart';
 
 var appRoutes = {
   "/": (context) => const UserLogInStatusCheck(),
@@ -14,4 +15,5 @@ var appRoutes = {
   "/trash": (context) => const TrashScreen(),
   "/tags": (context) => const TagsScreen(),
   "/search": (context) => const UnifiedSearchPage(),
+  "/assistant": (context) => const AssistantPage(),
 };

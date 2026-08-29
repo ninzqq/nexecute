@@ -5,11 +5,13 @@ class FakeAiAssistantRepository implements AiAssistantRepository {
     this.connectionResult = const AiConnectionResult.connected(),
     this.models = const [],
     this.responseEvents = const [AiResponseCompleted()],
+    this.responseStreamBuilder,
   });
 
   AiConnectionResult connectionResult;
   List<AiModelInfo> models;
   List<AiStreamEvent> responseEvents;
+  Stream<AiStreamEvent> Function(AiChatRequest request)? responseStreamBuilder;
   final testedProfiles = <AiConnectionProfile>[];
   final listedProfiles = <AiConnectionProfile>[];
   final startedRequests = <AiChatRequest>[];
@@ -31,7 +33,9 @@ class FakeAiAssistantRepository implements AiAssistantRepository {
   Future<AiResponseHandle> startResponse(AiChatRequest request) async {
     startedRequests.add(request);
     return StreamAiResponseHandle(
-      events: Stream.fromIterable(responseEvents),
+      events:
+          responseStreamBuilder?.call(request) ??
+          Stream.fromIterable(responseEvents),
       onCancel: () async => cancellationCount += 1,
     );
   }

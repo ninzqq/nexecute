@@ -246,9 +246,12 @@ Example requests:
   reusable credentials in server-side secret storage.
 - [x] Permit direct connections to local or private endpoints that do not
   require a hosted-provider secret, including endpoints reached over Tailscale.
-- [x] Store endpoint profiles and conversations locally by default. Keep any
-  supported native endpoint credential in platform secure storage rather than
-  Firestore or plain shared preferences.
+- [x] Store endpoint profiles locally, but synchronize conversation metadata
+  and completed/interrupted messages through the signed-in user's Firestore
+  data. Rely on Firestore's local cache for offline reads and queued writes.
+  Keep streaming drafts in memory until they reach a persistable state.
+- [x] Keep any supported native endpoint credential in platform secure storage
+  rather than Firestore or plain shared preferences.
 - [x] Expose the assistant through the drawer as a full-screen route instead of
   adding a fourth bottom-navigation destination.
 
@@ -309,18 +312,29 @@ nexecuteGateway
 - [x] ~~Validate URLs and warn when a plain-HTTP endpoint is unsuitable for the~~
   ~~current platform or network context.~~
 
-#### Step 4: first chat vertical slice
+#### Step 4: first chat vertical slice ✅
 
-- [ ] Implement streaming OpenAI-compatible Chat Completions over HTTP.
-- [ ] Add an `/assistant` route and Assistant drawer entry.
-- [ ] Build conversation-list, empty, conversation, and composer states.
-- [ ] Stream assistant text into the active message.
-- [ ] Allow an in-progress response to be stopped and a failed or interrupted
-  response to be retried.
-- [ ] Preserve partial responses when generation is cancelled or fails.
-- [ ] Persist conversation history locally and restore it after restart.
-- [ ] Show the active connection and model in the conversation view.
-- [ ] Verify offline behavior and all application themes.
+- [x] ~~Implement connection testing and model discovery for OpenAI-compatible~~
+  ~~endpoints.~~
+- [x] ~~Implement streaming OpenAI-compatible Chat Completions over HTTP.~~
+- [x] ~~Add an `/assistant` route and Assistant drawer entry.~~
+- [x] ~~Build conversation-list, empty, conversation, and composer states.~~
+- [x] ~~Stream assistant text into the active message.~~
+- [x] ~~Allow an in-progress response to be stopped and a failed or interrupted~~
+  ~~response to be retried.~~
+- [x] ~~Preserve partial responses when generation is cancelled or fails.~~
+- [x] ~~Synchronize conversation history through Firestore and restore it across~~
+  ~~signed-in devices, while retaining Firestore's offline cache behavior.~~
+- [x] ~~Show the active connection and model in the conversation view.~~
+- [x] ~~Verify offline/error behavior and all application themes.~~
+
+Conversation metadata is stored at
+`users/{userId}/aiConversations/{conversationId}` and each message at
+`users/{userId}/aiConversations/{conversationId}/messages/{messageId}`. API
+credentials and provider-internal reasoning are never written to these
+documents. User messages are stored before generation; assistant messages are
+stored once they complete, fail, or are stopped so partial output can sync
+without writing every streamed token.
 
 #### Step 5: hosted-provider gateway and adapters
 
@@ -406,8 +420,7 @@ must never be enabled for Flutter Web or treated as secure secret storage.
 - Add note-to-task extraction and other conversion workflows.
 - Consider local embeddings and semantic search after ordinary search and chat
   are stable.
-- Consider optional conversation export and multi-device history
-  synchronization.
+- Consider optional conversation export.
 
 #### Connectivity and security
 

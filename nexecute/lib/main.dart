@@ -156,14 +156,20 @@ class NexecuteState extends State<Nexecute> {
               ),
         ),
         Provider<AiAssistantRepository>(
-          create: (_) => const UnconfiguredAiAssistantRepository(),
+          create: (_) => OpenAiCompatibleAssistantRepository(),
+          dispose:
+              (_, repository) =>
+                  (repository as OpenAiCompatibleAssistantRepository).dispose(),
         ),
         Provider<AiConnectionProfileStore>(
           create: (_) => SharedPreferencesAiConnectionProfileStore(),
           dispose: (_, store) => store.dispose(),
         ),
         Provider<AiConversationStore>(
-          create: (_) => InMemoryAiConversationStore(),
+          create:
+              (context) => FirestoreAiConversationStore(
+                authService: context.read<AuthService>(),
+              ),
           dispose: (_, store) => store.dispose(),
         ),
         StreamProvider<DataState<List<Quicxec>>>(

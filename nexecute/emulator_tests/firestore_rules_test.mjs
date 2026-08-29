@@ -33,13 +33,25 @@ test('an owner can read and write their user document and nested data', async ()
   const user = doc(owner, 'users/owner');
   const note = doc(owner, 'users/owner/quicxecs/note-1');
   const noteFolder = doc(owner, 'users/owner/noteFolders/folder-1');
+  const aiConversation = doc(
+    owner,
+    'users/owner/aiConversations/conversation-1',
+  );
+  const aiMessage = doc(
+    owner,
+    'users/owner/aiConversations/conversation-1/messages/message-1',
+  );
 
   await assertSucceeds(setDoc(user, {tags: ['work']}));
   await assertSucceeds(setDoc(note, {title: 'Private note'}));
   await assertSucceeds(setDoc(noteFolder, {name: 'Projects'}));
+  await assertSucceeds(setDoc(aiConversation, {title: 'Private chat'}));
+  await assertSucceeds(setDoc(aiMessage, {content: 'Private message'}));
   await assertSucceeds(getDoc(user));
   await assertSucceeds(getDoc(note));
   await assertSucceeds(getDoc(noteFolder));
+  await assertSucceeds(getDoc(aiConversation));
+  await assertSucceeds(getDoc(aiMessage));
 });
 
 test('unauthenticated requests cannot access user data', async () => {
@@ -59,6 +71,16 @@ test('a different user cannot access another user or any nested document', async
   await setDoc(doc(owner, 'users/owner/noteFolders/folder-1'), {
     name: 'Private folder',
   });
+  await setDoc(doc(owner, 'users/owner/aiConversations/conversation-1'), {
+    title: 'Private chat',
+  });
+  await setDoc(
+    doc(
+      owner,
+      'users/owner/aiConversations/conversation-1/messages/message-1',
+    ),
+    {content: 'Private message'},
+  );
 
   const otherUser = testEnvironment.authenticatedContext('other').firestore();
 
@@ -69,5 +91,19 @@ test('a different user cannot access another user or any nested document', async
   );
   await assertFails(
     setDoc(doc(otherUser, 'users/owner/todos/todo-2'), {title: 'Intrusion'}),
+  );
+  await assertFails(
+    getDoc(
+      doc(
+        otherUser,
+        'users/owner/aiConversations/conversation-1/messages/message-1',
+      ),
+    ),
+  );
+  await assertFails(
+    setDoc(
+      doc(otherUser, 'users/owner/aiConversations/conversation-2'),
+      {title: 'Intrusion'},
+    ),
   );
 });

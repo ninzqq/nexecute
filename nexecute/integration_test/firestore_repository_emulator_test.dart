@@ -15,6 +15,7 @@ import 'package:nexecute/repositories/firestore/note_document_mapper.dart';
 import 'package:nexecute/repositories/firestore/schema/app_data_schema.dart';
 import 'package:nexecute/repositories/firestore/todo_document_mapper.dart';
 import 'package:nexecute/services/auth.dart';
+import 'package:nexecute/ai/ai.dart';
 
 const emulatorHost = String.fromEnvironment(
   'FIREBASE_EMULATOR_HOST',
@@ -64,6 +65,10 @@ void main() {
       firestore: firestore,
     );
     final events = FirestoreEventRepository(
+      authService: authService,
+      firestore: firestore,
+    );
+    final aiConversations = FirestoreAiConversationStore(
       authService: authService,
       firestore: firestore,
     );
@@ -177,5 +182,41 @@ void main() {
     expect(await events.searchEvents('not present'), isEmpty);
     await events.deleteEvent(event);
     expect((await user.collection('events').get()).docs, isEmpty);
+
+    final conversation = AiConversation(
+      id: 'ai-conversation',
+      title: 'Synced chat',
+      connectionProfileId: 'home',
+      modelId: 'local-model',
+      createdAt: DateTime.utc(2026, 1, 10, 12),
+      updatedAt: DateTime.utc(2026, 1, 10, 12),
+    );
+    await aiConversations.saveConversation(conversation);
+    await aiConversations.saveMessage(
+      conversation.id,
+      AiChatMessage(
+        id: 'message-1',
+        role: AiMessageRole.user,
+        content: 'Hello from another device',
+        createdAt: DateTime.utc(2026, 1, 10, 12, 1),
+      ),
+    );
+    final restored = await aiConversations.getConversation(conversation.id);
+    expect(restored!.messages.single.content, 'Hello from another device');
+    expect(
+      (await user
+              .collection('aiConversations')
+              .doc(conversation.id)
+              .collection('messages')
+              .get())
+          .docs,
+      hasLength(1),
+    );
+    await aiConversations.deleteConversation(conversation.id);
+    expect(
+      (await user.collection('aiConversations').doc(conversation.id).get())
+          .exists,
+      isFalse,
+    );
   });
 }
