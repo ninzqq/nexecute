@@ -178,12 +178,158 @@ void main() {
     expect(saved.messages.last.content, 'The final answer');
     expect(saved.messages.last.content, isNot(contains('Considering')));
   });
+
+  testWidgets(
+    'previews exact task context, sends it once, and excludes it from history',
+    (tester) async {
+      final profile = AiConnectionProfile(
+        id: 'home',
+        name: 'Home AI',
+        protocol: AiProtocol.openAiCompatibleChat,
+        baseUrl: Uri.parse('https://ai.example.test/v1'),
+        modelId: 'local-model',
+      );
+      final profileStore = FakeAiConnectionProfileStore(
+        profiles: [profile],
+        activeProfileId: profile.id,
+      );
+      final conversationStore = FakeAiConversationStore();
+      final assistantRepository = FakeAiAssistantRepository();
+      final contextService = FakeAiApplicationContextReadService();
+      contextService.tasksContext = AiApplicationContextEnvelope(
+        generatedAt: DateTime.utc(2026, 8, 29),
+        attachments: [
+          AiActiveTasksContextAttachment(
+            tasks: const [
+              AiTaskContextItem(title: 'Finish roadmap', isCompleted: false),
+            ],
+            omittedCount: 2,
+          ),
+        ],
+      );
+      addTearDown(profileStore.dispose);
+      addTearDown(conversationStore.dispose);
+
+      await tester.pumpWidget(
+        _app(
+          assistantRepository: assistantRepository,
+          profileStore: profileStore,
+          conversationStore: conversationStore,
+          contextReadService: contextService,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('assistant-attach-context')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Unfinished tasks'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('assistant-task-context')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('assistant-preview-context')));
+      await tester.pumpAndSettle();
+      final preview =
+          tester
+              .widget<SelectableText>(
+                find.byKey(const Key('assistant-context-preview-json')),
+              )
+              .data!;
+      expect(preview, contains('Finish roadmap'));
+      expect(preview, contains('"omittedCount":2'));
+      await tester.tap(find.text('Close'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('assistant-composer')),
+        'Summarize my work',
+      );
+      await tester.tap(find.byKey(const Key('assistant-send')));
+      await tester.pumpAndSettle();
+
+      expect(assistantRepository.startedRequests, hasLength(1));
+      expect(
+        assistantRepository.startedRequests.single.applicationContext!.encode(),
+        preview,
+      );
+      expect(find.byKey(const Key('assistant-task-context')), findsNothing);
+      final saved = (await conversationStore.getConversations()).single;
+      expect(
+        saved.messages.any(
+          (message) => message.content.contains('Finish roadmap'),
+        ),
+        isFalse,
+      );
+    },
+  );
+
+  testWidgets('retains attached context when the request cannot start', (
+    tester,
+  ) async {
+    final profile = AiConnectionProfile(
+      id: 'home',
+      name: 'Home AI',
+      protocol: AiProtocol.openAiCompatibleChat,
+      baseUrl: Uri.parse('https://ai.example.test/v1'),
+      modelId: 'local-model',
+    );
+    final profileStore = FakeAiConnectionProfileStore(
+      profiles: [profile],
+      activeProfileId: profile.id,
+    );
+    final conversationStore = FakeAiConversationStore();
+    final contextService = FakeAiApplicationContextReadService();
+    contextService.tasksContext = AiApplicationContextEnvelope(
+      generatedAt: DateTime.utc(2026, 8, 29),
+      attachments: [
+        AiActiveTasksContextAttachment(
+          tasks: const [
+            AiTaskContextItem(title: 'Keep me', isCompleted: false),
+          ],
+          omittedCount: 0,
+        ),
+      ],
+    );
+    addTearDown(profileStore.dispose);
+    addTearDown(conversationStore.dispose);
+
+    await tester.pumpWidget(
+      _app(
+        assistantRepository: FakeAiAssistantRepository(
+          startResponseError: StateError('offline'),
+        ),
+        profileStore: profileStore,
+        conversationStore: conversationStore,
+        contextReadService: contextService,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('assistant-attach-context')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Unfinished tasks'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('assistant-composer')),
+      'Try to send',
+    );
+    await tester.tap(find.byKey(const Key('assistant-send')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('assistant-task-context')), findsOneWidget);
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('assistant-composer')))
+          .controller!
+          .text,
+      isEmpty,
+    );
+  });
 }
 
 Widget _app({
   required AiAssistantRepository assistantRepository,
   required AiConnectionProfileStore profileStore,
   required AiConversationStore conversationStore,
+  AiApplicationContextReadService? contextReadService,
   ThemeData? theme,
 }) {
   return MultiProvider(
@@ -191,6 +337,10 @@ Widget _app({
       Provider<AiAssistantRepository>.value(value: assistantRepository),
       Provider<AiConnectionProfileStore>.value(value: profileStore),
       Provider<AiConversationStore>.value(value: conversationStore),
+      Provider<AiApplicationContextReadService>(
+        create:
+            (_) => contextReadService ?? FakeAiApplicationContextReadService(),
+      ),
     ],
     child: MaterialApp(
       theme: theme,

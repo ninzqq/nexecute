@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:nexecute/ai/domain/ai_chat_message.dart';
 import 'package:nexecute/ai/domain/ai_chat_request.dart';
+import 'package:nexecute/ai/domain/ai_application_context.dart';
 import 'package:nexecute/ai/domain/ai_connection_profile.dart';
 import 'package:nexecute/ai/domain/ai_conversation.dart';
 import 'package:nexecute/ai/domain/ai_stream_event.dart';
@@ -141,14 +142,17 @@ class AiChatController extends ChangeNotifier {
     _notify();
   }
 
-  Future<void> send(String rawText) async {
+  Future<bool> send(
+    String rawText, {
+    AiApplicationContextEnvelope? applicationContext,
+  }) async {
     final text = rawText.trim();
-    if (text.isEmpty || isGenerating) return;
+    if (text.isEmpty || isGenerating) return false;
     final profile = activeProfile;
     if (profile == null) {
       errorMessage = 'Choose an AI connection in Settings first.';
       _notify();
-      return;
+      return false;
     }
 
     try {
@@ -191,10 +195,15 @@ class AiChatController extends ChangeNotifier {
       errorMessage = null;
       _notify();
       await _conversationStore.saveMessage(current.id, userMessage);
-      await _beginResponse(profile, requestMessages);
+      return await _beginResponse(
+        profile,
+        requestMessages,
+        applicationContext: applicationContext,
+      );
     } catch (error) {
       errorMessage = 'Could not send the message: $error';
       _notify();
+      return false;
     }
   }
 
@@ -246,12 +255,13 @@ class AiChatController extends ChangeNotifier {
     _notify();
   }
 
-  Future<void> _beginResponse(
+  Future<bool> _beginResponse(
     AiConnectionProfile profile,
-    List<AiChatMessage> requestMessages,
-  ) async {
+    List<AiChatMessage> requestMessages, {
+    AiApplicationContextEnvelope? applicationContext,
+  }) async {
     final current = conversation;
-    if (current == null) return;
+    if (current == null) return false;
     final generation = ++_generation;
     _generationFinalized = false;
     _draftAssistant = AiChatMessage(
@@ -279,11 +289,12 @@ class AiChatController extends ChangeNotifier {
                     (message) => message.status == AiMessageStatus.complete,
                   )
                   .toList(),
+          applicationContext: applicationContext,
         ),
       );
       if (generation != _generation || _generationFinalized) {
         await handle.cancel();
-        return;
+        return false;
       }
       _responseHandle = handle;
       _responseSubscription = handle.events.listen(
@@ -308,12 +319,14 @@ class AiChatController extends ChangeNotifier {
           }
         },
       );
+      return true;
     } catch (error) {
       await _finalizeGeneration(
         generation,
         AiMessageStatus.failed,
         'Could not start the AI response: $error',
       );
+      return false;
     }
   }
 

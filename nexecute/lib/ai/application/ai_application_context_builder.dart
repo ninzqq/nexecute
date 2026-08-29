@@ -7,6 +7,110 @@ import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/todo_item.dart';
 
 abstract final class AiApplicationContextBuilder {
+  /// Combines already-bounded read results into the single envelope shown in
+  /// the composer and sent with one request.
+  static AiApplicationContextEnvelope compose({
+    required DateTime generatedAt,
+    required List<AiApplicationContextEnvelope> sources,
+  }) {
+    final notes = <AiNoteContextItem>[];
+    final tasks = <AiTaskContextItem>[];
+    final events = <AiEventContextItem>[];
+    AiEventContextRange? eventRange;
+    var omittedNotes = 0;
+    var omittedTasks = 0;
+    var omittedEvents = 0;
+    for (final source in sources) {
+      for (final attachment in source.attachments) {
+        switch (attachment) {
+          case AiSelectedNotesContextAttachment():
+            notes.addAll(attachment.notes);
+            omittedNotes += attachment.omittedCount;
+          case AiActiveTasksContextAttachment():
+            if (tasks.isNotEmpty) {
+              throw ArgumentError(
+                'Only one active-task attachment is allowed.',
+              );
+            }
+            tasks.addAll(attachment.tasks);
+            omittedTasks += attachment.omittedCount;
+          case AiEventsContextAttachment():
+            if (eventRange != null) {
+              throw ArgumentError('Only one event attachment is allowed.');
+            }
+            eventRange = attachment.range;
+            events.addAll(attachment.events);
+            omittedEvents += attachment.omittedCount;
+        }
+      }
+    }
+    if (notes.length > AiApplicationContextLimits.maxSelectedNotes) {
+      omittedNotes +=
+          notes.length - AiApplicationContextLimits.maxSelectedNotes;
+      notes.removeRange(
+        AiApplicationContextLimits.maxSelectedNotes,
+        notes.length,
+      );
+    }
+    if (tasks.length > AiApplicationContextLimits.maxActiveTasks) {
+      omittedTasks += tasks.length - AiApplicationContextLimits.maxActiveTasks;
+      tasks.removeRange(
+        AiApplicationContextLimits.maxActiveTasks,
+        tasks.length,
+      );
+    }
+    if (events.length > AiApplicationContextLimits.maxEvents) {
+      omittedEvents += events.length - AiApplicationContextLimits.maxEvents;
+      events.removeRange(AiApplicationContextLimits.maxEvents, events.length);
+    }
+
+    var payloadTruncated = sources.any((source) => source.payloadTruncated);
+    AiApplicationContextEnvelope envelope() => AiApplicationContextEnvelope(
+      generatedAt: generatedAt,
+      payloadTruncated: payloadTruncated,
+      attachments: [
+        if (notes.isNotEmpty || omittedNotes > 0)
+          AiSelectedNotesContextAttachment(
+            notes: notes,
+            omittedCount: omittedNotes,
+          ),
+        if (tasks.isNotEmpty || omittedTasks > 0)
+          AiActiveTasksContextAttachment(
+            tasks: tasks,
+            omittedCount: omittedTasks,
+          ),
+        if (eventRange != null)
+          AiEventsContextAttachment(
+            range: eventRange,
+            events: events,
+            omittedCount: omittedEvents,
+          ),
+      ],
+    );
+
+    var result = envelope();
+    while (result.serializedCharacterCount >
+        AiApplicationContextLimits.maxPayloadCharacters) {
+      payloadTruncated = true;
+      if (tasks.isNotEmpty || events.isNotEmpty) {
+        if (_serializedItemsLength(tasks) >= _serializedItemsLength(events)) {
+          tasks.removeLast();
+          omittedTasks++;
+        } else {
+          events.removeLast();
+          omittedEvents++;
+        }
+      } else if (notes.isNotEmpty) {
+        notes.removeLast();
+        omittedNotes++;
+      } else {
+        throw StateError('The empty context envelope exceeds its size limit.');
+      }
+      result = envelope();
+    }
+    return result;
+  }
+
   static AiApplicationContextEnvelope build({
     required DateTime generatedAt,
     bool includeActiveTasks = false,

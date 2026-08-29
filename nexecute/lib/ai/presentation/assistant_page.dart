@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:nexecute/ai/ai.dart';
+import 'package:nexecute/domain/calendar/calendar_query_range.dart';
 import 'package:provider/provider.dart';
 
 class AssistantPage extends StatefulWidget {
@@ -13,12 +14,19 @@ class AssistantPage extends StatefulWidget {
 
 class _AssistantPageState extends State<AssistantPage> {
   late final AiChatController _controller;
+  late final AiApplicationContextReadService _contextReadService;
   final _composerController = TextEditingController();
   final _scrollController = ScrollController();
+  final Map<String, AiApplicationContextEnvelope> _noteContexts = {};
+  AiApplicationContextEnvelope? _taskContext;
+  AiApplicationContextEnvelope? _eventContext;
+  DateTime? _contextGeneratedAt;
+  bool _isLoadingContext = false;
 
   @override
   void initState() {
     super.initState();
+    _contextReadService = context.read<AiApplicationContextReadService>();
     _controller = AiChatController(
       assistantRepository: context.read<AiAssistantRepository>(),
       connectionProfileStore: context.read<AiConnectionProfileStore>(),
@@ -75,12 +83,32 @@ class _AssistantPageState extends State<AssistantPage> {
             if (_controller.errorMessage case final error?)
               _ErrorBanner(message: error, onDismiss: _controller.clearError),
             Expanded(child: _buildConversation()),
+            if (_applicationContext case final applicationContext?)
+              _ApplicationContextBar(
+                contextEnvelope: applicationContext,
+                noteTitles: [
+                  for (final envelope in _noteContexts.values)
+                    (envelope.attachments.single
+                            as AiSelectedNotesContextAttachment)
+                        .notes
+                        .single
+                        .title,
+                ],
+                hasTasks: _taskContext != null,
+                hasEvents: _eventContext != null,
+                onRemoveNote: _removeNoteAt,
+                onRemoveTasks: _removeTasks,
+                onRemoveEvents: _removeEvents,
+                onPreview: () => _showContextPreview(applicationContext),
+              ),
             _Composer(
               controller: _composerController,
               enabled: !_controller.isLoading && profile != null,
               isGenerating: _controller.isGenerating,
               onSend: _send,
               onStop: () => unawaited(_controller.stopResponse()),
+              onAttach: _isLoadingContext ? null : _showAttachmentMenu,
+              isLoadingContext: _isLoadingContext,
             ),
           ],
         ),
@@ -131,10 +159,199 @@ class _AssistantPageState extends State<AssistantPage> {
     );
   }
 
-  void _send(String text) {
+  AiApplicationContextEnvelope? get _applicationContext {
+    final sources = <AiApplicationContextEnvelope>[
+      ..._noteContexts.values,
+      if (_taskContext case final context?) context,
+      if (_eventContext case final context?) context,
+    ];
+    if (sources.isEmpty) return null;
+    return AiApplicationContextBuilder.compose(
+      generatedAt: _contextGeneratedAt ?? DateTime.now(),
+      sources: sources,
+    );
+  }
+
+  Future<void> _send(String text) async {
     if (text.trim().isEmpty) return;
     _composerController.clear();
-    unawaited(_controller.send(text));
+    final sent = await _controller.send(
+      text,
+      applicationContext: _applicationContext,
+    );
+    if (!mounted || !sent) return;
+    setState(_clearApplicationContext);
+  }
+
+  Future<void> _showAttachmentMenu() async {
+    final choice = await showModalBottomSheet<_AttachmentChoice>(
+      context: context,
+      builder: (context) => const _AttachmentMenu(),
+    );
+    if (!mounted || choice == null) return;
+    switch (choice) {
+      case _AttachmentChoice.note:
+        await _selectNote();
+      case _AttachmentChoice.tasks:
+        await _loadContext(
+          () => _contextReadService.listTasks(
+            scope: AiApplicationReadScope(allowActiveTasks: true),
+          ),
+          (value) => _taskContext = value,
+        );
+      case _AttachmentChoice.todayEvents:
+        final now = DateTime.now();
+        final start = DateTime(now.year, now.month, now.day);
+        await _attachEvents(
+          CalendarQueryRange(
+            startInclusive: start,
+            endExclusive: DateTime(now.year, now.month, now.day + 1),
+          ),
+        );
+      case _AttachmentChoice.customEvents:
+        await _selectCustomEventRange();
+    }
+  }
+
+  Future<void> _selectNote() async {
+    if (_noteContexts.length >= AiApplicationContextLimits.maxSelectedNotes) {
+      _showContextError('Remove a note before attaching another one.');
+      return;
+    }
+    final selected = await showDialog<_SelectedNoteContext>(
+      context: context,
+      builder: (_) => _NoteContextPicker(service: _contextReadService),
+    );
+    if (!mounted || selected == null) return;
+    setState(() {
+      _ensureContextTimestamp();
+      _noteContexts[selected.id] = selected.context;
+    });
+  }
+
+  Future<void> _selectCustomEventRange() async {
+    final now = DateTime.now();
+    final selected = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(now.year - 5),
+      lastDate: DateTime(now.year + 5),
+      currentDate: now,
+      helpText: 'Select up to 31 days',
+    );
+    if (!mounted || selected == null) return;
+    final days = selected.end.difference(selected.start).inDays + 1;
+    if (days > AiApplicationContextLimits.maxEventRangeDays) {
+      _showContextError('Choose an event range of 31 days or less.');
+      return;
+    }
+    await _attachEvents(
+      CalendarQueryRange(
+        startInclusive: selected.start,
+        endExclusive: DateTime(
+          selected.end.year,
+          selected.end.month,
+          selected.end.day + 1,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _attachEvents(CalendarQueryRange range) => _loadContext(
+    () => _contextReadService.eventsForDateRange(
+      scope: AiApplicationReadScope(eventRange: range),
+      range: range,
+    ),
+    (value) => _eventContext = value,
+  );
+
+  Future<void> _loadContext(
+    Future<AiApplicationContextEnvelope> Function() load,
+    void Function(AiApplicationContextEnvelope) attach,
+  ) async {
+    setState(() => _isLoadingContext = true);
+    try {
+      final value = await load();
+      if (!mounted) return;
+      setState(() {
+        _ensureContextTimestamp();
+        attach(value);
+      });
+    } catch (error) {
+      if (mounted) _showContextError(error.toString());
+    } finally {
+      if (mounted) setState(() => _isLoadingContext = false);
+    }
+  }
+
+  void _removeNoteAt(int index) {
+    setState(() {
+      _noteContexts.remove(_noteContexts.keys.elementAt(index));
+      _resetContextTimestampIfEmpty();
+    });
+  }
+
+  void _removeTasks() {
+    setState(() {
+      _taskContext = null;
+      _resetContextTimestampIfEmpty();
+    });
+  }
+
+  void _removeEvents() {
+    setState(() {
+      _eventContext = null;
+      _resetContextTimestampIfEmpty();
+    });
+  }
+
+  void _ensureContextTimestamp() {
+    _contextGeneratedAt ??= DateTime.now();
+  }
+
+  void _resetContextTimestampIfEmpty() {
+    if (_noteContexts.isEmpty &&
+        _taskContext == null &&
+        _eventContext == null) {
+      _contextGeneratedAt = null;
+    }
+  }
+
+  void _clearApplicationContext() {
+    _noteContexts.clear();
+    _taskContext = null;
+    _eventContext = null;
+    _contextGeneratedAt = null;
+  }
+
+  Future<void> _showContextPreview(
+    AiApplicationContextEnvelope applicationContext,
+  ) => showDialog<void>(
+    context: context,
+    builder:
+        (context) => AlertDialog(
+          title: const Text('Context for next message'),
+          content: SizedBox(
+            width: 640,
+            child: SingleChildScrollView(
+              child: SelectableText(
+                applicationContext.encode(),
+                key: const Key('assistant-context-preview-json'),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+  );
+
+  void _showContextError(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _showConversations() async {
@@ -176,6 +393,8 @@ class _Composer extends StatelessWidget {
     required this.isGenerating,
     required this.onSend,
     required this.onStop,
+    required this.onAttach,
+    required this.isLoadingContext,
   });
 
   final TextEditingController controller;
@@ -183,6 +402,8 @@ class _Composer extends StatelessWidget {
   final bool isGenerating;
   final ValueChanged<String> onSend;
   final VoidCallback onStop;
+  final VoidCallback? onAttach;
+  final bool isLoadingContext;
 
   @override
   Widget build(BuildContext context) {
@@ -198,6 +419,19 @@ class _Composer extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
+            IconButton(
+              key: const Key('assistant-attach-context'),
+              tooltip: 'Attach application context',
+              onPressed: enabled && !isGenerating ? onAttach : null,
+              icon:
+                  isLoadingContext
+                      ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                      : const Icon(Icons.attach_file_rounded),
+            ),
+            const SizedBox(width: 4),
             Expanded(
               child: TextField(
                 key: const Key('assistant-composer'),
@@ -231,6 +465,264 @@ class _Composer extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+enum _AttachmentChoice { note, tasks, todayEvents, customEvents }
+
+class _AttachmentMenu extends StatelessWidget {
+  const _AttachmentMenu();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Wrap(
+        children: [
+          const ListTile(
+            title: Text('Attach application context'),
+            subtitle: Text('Shared with the next message only'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.note_outlined),
+            title: const Text('Select a note'),
+            onTap: () => Navigator.pop(context, _AttachmentChoice.note),
+          ),
+          ListTile(
+            leading: const Icon(Icons.task_alt_outlined),
+            title: const Text('Unfinished tasks'),
+            onTap: () => Navigator.pop(context, _AttachmentChoice.tasks),
+          ),
+          ListTile(
+            leading: const Icon(Icons.today_outlined),
+            title: const Text("Today's events"),
+            onTap: () => Navigator.pop(context, _AttachmentChoice.todayEvents),
+          ),
+          ListTile(
+            leading: const Icon(Icons.date_range_outlined),
+            title: const Text('Custom event range'),
+            subtitle: const Text('Up to 31 days'),
+            onTap: () => Navigator.pop(context, _AttachmentChoice.customEvents),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ApplicationContextBar extends StatelessWidget {
+  const _ApplicationContextBar({
+    required this.contextEnvelope,
+    required this.noteTitles,
+    required this.hasTasks,
+    required this.hasEvents,
+    required this.onRemoveNote,
+    required this.onRemoveTasks,
+    required this.onRemoveEvents,
+    required this.onPreview,
+  });
+
+  final AiApplicationContextEnvelope contextEnvelope;
+  final List<String> noteTitles;
+  final bool hasTasks;
+  final bool hasEvents;
+  final ValueChanged<int> onRemoveNote;
+  final VoidCallback onRemoveTasks;
+  final VoidCallback onRemoveEvents;
+  final VoidCallback onPreview;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Context for next message · '
+                    '${contextEnvelope.serializedCharacterCount} characters',
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                ),
+                TextButton(
+                  key: const Key('assistant-preview-context'),
+                  onPressed: onPreview,
+                  child: const Text('Preview exact data'),
+                ),
+              ],
+            ),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: [
+                for (var index = 0; index < noteTitles.length; index++)
+                  InputChip(
+                    key: ValueKey('assistant-note-context-$index'),
+                    avatar: const Icon(Icons.note_outlined, size: 18),
+                    label: Text(noteTitles[index]),
+                    onDeleted: () => onRemoveNote(index),
+                  ),
+                if (hasTasks)
+                  InputChip(
+                    key: const Key('assistant-task-context'),
+                    avatar: const Icon(Icons.task_alt_outlined, size: 18),
+                    label: const Text('Unfinished tasks'),
+                    onDeleted: onRemoveTasks,
+                  ),
+                if (hasEvents)
+                  InputChip(
+                    key: const Key('assistant-event-context'),
+                    avatar: const Icon(Icons.event_outlined, size: 18),
+                    label: const Text('Events'),
+                    onDeleted: onRemoveEvents,
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SelectedNoteContext {
+  const _SelectedNoteContext({required this.id, required this.context});
+
+  final String id;
+  final AiApplicationContextEnvelope context;
+}
+
+class _NoteContextPicker extends StatefulWidget {
+  const _NoteContextPicker({required this.service});
+
+  final AiApplicationContextReadService service;
+
+  @override
+  State<_NoteContextPicker> createState() => _NoteContextPickerState();
+}
+
+class _NoteContextPickerState extends State<_NoteContextPicker> {
+  final _queryController = TextEditingController();
+  List<_SelectedNoteContext> _results = const [];
+  bool _loading = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _queryController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Select a note'),
+      content: SizedBox(
+        width: 520,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              key: const Key('assistant-note-search'),
+              controller: _queryController,
+              autofocus: true,
+              textInputAction: TextInputAction.search,
+              onSubmitted: (_) => unawaited(_search()),
+              decoration: InputDecoration(
+                hintText: 'Search notes',
+                suffixIcon: IconButton(
+                  tooltip: 'Search',
+                  onPressed: _loading ? null : () => unawaited(_search()),
+                  icon:
+                      _loading
+                          ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                          : const Icon(Icons.search),
+                ),
+              ),
+            ),
+            if (_error case final error?) ...[
+              const SizedBox(height: 8),
+              Text(
+                error,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ],
+            if (_results.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    for (final result in _results)
+                      ListTile(
+                        leading: const Icon(Icons.note_outlined),
+                        title: Text(
+                          ((result.context.attachments.single
+                                      as AiSelectedNotesContextAttachment)
+                                  .notes
+                                  .single)
+                              .title,
+                        ),
+                        onTap: () => Navigator.pop(context, result),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _search() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final result = await widget.service.searchNotes(
+        scope: AiApplicationReadScope(allowNoteSearch: true),
+        query: _queryController.text,
+      );
+      final attachment =
+          result.context.attachments.single as AiSelectedNotesContextAttachment;
+      final values = <_SelectedNoteContext>[];
+      for (var index = 0; index < attachment.notes.length; index++) {
+        values.add(
+          _SelectedNoteContext(
+            id: result.sourceNoteIds[index],
+            context: AiApplicationContextEnvelope(
+              generatedAt: result.context.generatedAt,
+              attachments: [
+                AiSelectedNotesContextAttachment(
+                  notes: [attachment.notes[index]],
+                  omittedCount: 0,
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+      if (mounted) setState(() => _results = values);
+    } catch (error) {
+      if (mounted) setState(() => _error = error.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 }
 

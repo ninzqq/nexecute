@@ -553,16 +553,25 @@ and returns at most three matches. Trusted application-local note IDs are kept
 outside the serialized context so a later tool coordinator can replace them
 with request-scoped opaque references.
 
-##### Step 9C: explicit one-message attachments
+##### Step 9C: explicit one-message attachments ✅
 
-- [ ] Let users select notes, active tasks, today's events, or a bounded custom
+- [x] Let users select notes, active tasks, today's events, or a bounded custom
   event range beside the assistant composer.
-- [ ] Preview the exact fields and text that will be sent, including truncation
+- [x] Preview the exact fields and text that will be sent, including truncation
   and omitted-record counts, and allow each attachment to be removed.
-- [ ] Send attached context as untrusted JSON for one user request, clear it
+- [x] Send attached context as untrusted JSON for one user request, clear it
   after a successful send, and never attach application data automatically.
-- [ ] Support requests such as planning a day, summarizing a selected note, and
+- [x] Support requests such as planning a day, summarizing a selected note, and
   summarizing unfinished tasks without requiring tool-capable models.
+
+The assistant composer now offers explicit note search, unfinished-task,
+today-event, and custom event-range attachments. The visible preview is the
+canonical bounded envelope passed to the current chat request; attachments are
+removable, remain available if a request cannot start, and clear once the
+request starts. The OpenAI-compatible adapter places the envelope immediately
+before the current user message with a warning that it is untrusted data, while
+the conversation store continues to receive only ordinary user and assistant
+messages.
 
 ##### Step 9D: provider-neutral read-tool protocol
 

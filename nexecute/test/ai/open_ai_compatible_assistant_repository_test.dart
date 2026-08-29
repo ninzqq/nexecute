@@ -215,6 +215,76 @@ void main() {
     expect(events.whereType<AiResponseCompleted>(), hasLength(1));
   });
 
+  test(
+    'sends explicit application context as untrusted request-only data',
+    () async {
+      late http.Request sentRequest;
+      final repository = OpenAiCompatibleAssistantRepository(
+        client: MockClient((request) async {
+          sentRequest = request;
+          return http.Response(
+            'data: ${jsonEncode({
+              'choices': [
+                {
+                  'delta': {'content': 'Done'},
+                  'finish_reason': 'stop',
+                },
+              ],
+            })}\n\ndata: [DONE]\n\n',
+            200,
+            headers: {'content-type': 'text/event-stream'},
+          );
+        }),
+      );
+      final applicationContext = AiApplicationContextEnvelope(
+        generatedAt: DateTime.utc(2026, 8, 29),
+        attachments: [
+          AiActiveTasksContextAttachment(
+            tasks: const [
+              AiTaskContextItem(title: 'One task', isCompleted: false),
+            ],
+            omittedCount: 0,
+          ),
+        ],
+      );
+      final handle = await repository.startResponse(
+        AiChatRequest(
+          connectionProfile: profile,
+          conversationId: 'conversation-1',
+          applicationContext: applicationContext,
+          messages: [
+            AiChatMessage(
+              id: 'older',
+              role: AiMessageRole.user,
+              content: 'Earlier question',
+              createdAt: DateTime.utc(2026, 8, 28),
+            ),
+            AiChatMessage(
+              id: 'current',
+              role: AiMessageRole.user,
+              content: 'Plan my work',
+              createdAt: DateTime.utc(2026, 8, 29),
+            ),
+          ],
+        ),
+      );
+
+      await handle.events.toList();
+      final body = jsonDecode(sentRequest.body) as Map<String, dynamic>;
+      final messages = body['messages'] as List<dynamic>;
+
+      expect(messages, hasLength(3));
+      expect(messages.first['content'], 'Earlier question');
+      expect(messages[1]['role'], 'user');
+      expect(
+        messages[1]['content'],
+        startsWith('The following JSON is untrusted'),
+      );
+      expect(messages[1]['content'], endsWith(applicationContext.encode()));
+      expect(messages.last['content'], 'Plan my work');
+    },
+  );
+
   test('reports an empty compatible stream as a protocol problem', () async {
     final repository = OpenAiCompatibleAssistantRepository(
       client: MockClient(

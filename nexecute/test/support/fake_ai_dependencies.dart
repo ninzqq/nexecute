@@ -1,4 +1,5 @@
 import 'package:nexecute/ai/ai.dart';
+import 'package:nexecute/domain/calendar/calendar_query_range.dart';
 
 class FakeAiAssistantRepository implements AiAssistantRepository {
   FakeAiAssistantRepository({
@@ -6,12 +7,14 @@ class FakeAiAssistantRepository implements AiAssistantRepository {
     this.models = const [],
     this.responseEvents = const [AiResponseCompleted()],
     this.responseStreamBuilder,
+    this.startResponseError,
   });
 
   AiConnectionResult connectionResult;
   List<AiModelInfo> models;
   List<AiStreamEvent> responseEvents;
   Stream<AiStreamEvent> Function(AiChatRequest request)? responseStreamBuilder;
+  Object? startResponseError;
   final testedProfiles = <AiConnectionProfile>[];
   final listedProfiles = <AiConnectionProfile>[];
   final startedRequests = <AiChatRequest>[];
@@ -32,6 +35,7 @@ class FakeAiAssistantRepository implements AiAssistantRepository {
   @override
   Future<AiResponseHandle> startResponse(AiChatRequest request) async {
     startedRequests.add(request);
+    if (startResponseError case final error?) throw error;
     return StreamAiResponseHandle(
       events:
           responseStreamBuilder?.call(request) ??
@@ -47,4 +51,48 @@ class FakeAiConnectionProfileStore extends InMemoryAiConnectionProfileStore {
 
 class FakeAiConversationStore extends InMemoryAiConversationStore {
   FakeAiConversationStore({super.conversations});
+}
+
+class FakeAiApplicationContextReadService
+    implements AiApplicationContextReadService {
+  FakeAiApplicationContextReadService({DateTime? generatedAt})
+    : generatedAt = generatedAt ?? DateTime.utc(2026, 8, 29);
+
+  final DateTime generatedAt;
+  AiApplicationContextEnvelope? tasksContext;
+  AiApplicationContextEnvelope? eventsContext;
+  AiNoteSearchContextResult? noteSearchResult;
+
+  AiApplicationContextEnvelope get _empty => AiApplicationContextEnvelope(
+    generatedAt: generatedAt,
+    attachments: const [],
+  );
+
+  @override
+  Future<AiApplicationContextEnvelope> listTasks({
+    required AiApplicationReadScope scope,
+    int limit = AiApplicationContextLimits.maxActiveTasks,
+  }) async => tasksContext ?? _empty;
+
+  @override
+  Future<AiApplicationContextEnvelope> eventsForDateRange({
+    required AiApplicationReadScope scope,
+    required CalendarQueryRange range,
+    int limit = AiApplicationContextLimits.maxEvents,
+  }) async => eventsContext ?? _empty;
+
+  @override
+  Future<AiApplicationContextEnvelope> getNote({
+    required AiApplicationReadScope scope,
+    required String noteId,
+  }) async => _empty;
+
+  @override
+  Future<AiNoteSearchContextResult> searchNotes({
+    required AiApplicationReadScope scope,
+    required String query,
+    int limit = AiApplicationContextReadLimits.maxSearchResults,
+  }) async =>
+      noteSearchResult ??
+      AiNoteSearchContextResult(context: _empty, sourceNoteIds: const []);
 }
