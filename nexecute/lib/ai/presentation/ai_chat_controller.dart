@@ -37,6 +37,7 @@ class AiChatController extends ChangeNotifier {
   StreamSubscription<AiStreamEvent>? _responseSubscription;
   AiResponseHandle? _responseHandle;
   AiChatMessage? _draftAssistant;
+  final Map<String, String> _reasoningByMessageId = {};
   bool _generationFinalized = true;
   int _generation = 0;
   bool _disposed = false;
@@ -52,6 +53,11 @@ class AiChatController extends ChangeNotifier {
     ...?conversation?.messages,
     if (_draftAssistant case final draft?) draft,
   ]);
+
+  String? reasoningForMessage(String messageId) {
+    final reasoning = _reasoningByMessageId[messageId];
+    return reasoning == null || reasoning.isEmpty ? null : reasoning;
+  }
 
   bool get canRetry =>
       !isGenerating &&
@@ -207,6 +213,7 @@ class AiChatController extends ChangeNotifier {
 
     final failed = current.messages[failedIndex];
     final retained = [...current.messages]..removeAt(failedIndex);
+    _reasoningByMessageId.remove(failed.id);
     conversation = current.copyWith(messages: retained);
     _notify();
     try {
@@ -309,6 +316,15 @@ class AiChatController extends ChangeNotifier {
   void _onStreamEvent(int generation, AiStreamEvent event) {
     if (generation != _generation || _generationFinalized) return;
     switch (event) {
+      case AiReasoningDelta(:final text):
+        final draft = _draftAssistant;
+        if (draft == null) return;
+        _reasoningByMessageId.update(
+          draft.id,
+          (reasoning) => '$reasoning$text',
+          ifAbsent: () => text,
+        );
+        _notify();
       case AiTextDelta(:final text):
         final draft = _draftAssistant;
         if (draft == null) return;

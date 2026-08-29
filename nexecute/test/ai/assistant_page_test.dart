@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/ai/ai.dart';
@@ -122,6 +124,59 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Conversations'), findsOneWidget);
     expect(find.text('Hello assistant'), findsNWidgets(2));
+  });
+
+  testWidgets('shows streamed reasoning without persisting it', (tester) async {
+    final profile = AiConnectionProfile(
+      id: 'home',
+      name: 'Home AI',
+      protocol: AiProtocol.openAiCompatibleChat,
+      baseUrl: Uri.parse('https://ai.example.test/v1'),
+      modelId: 'local-model',
+    );
+    final profileStore = FakeAiConnectionProfileStore(
+      profiles: [profile],
+      activeProfileId: profile.id,
+    );
+    final conversationStore = FakeAiConversationStore();
+    final responseStream = StreamController<AiStreamEvent>();
+    addTearDown(profileStore.dispose);
+    addTearDown(conversationStore.dispose);
+    addTearDown(responseStream.close);
+
+    await tester.pumpWidget(
+      _app(
+        assistantRepository: FakeAiAssistantRepository(
+          responseStreamBuilder: (_) => responseStream.stream,
+        ),
+        profileStore: profileStore,
+        conversationStore: conversationStore,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('assistant-composer')),
+      'Think about this',
+    );
+    await tester.tap(find.byKey(const Key('assistant-send')));
+    await tester.pump();
+
+    responseStream.add(const AiReasoningDelta('Considering the options'));
+    await tester.pump();
+
+    expect(find.text('Reasoning'), findsOneWidget);
+    expect(find.text('Session only · not synchronized'), findsOneWidget);
+    expect(find.text('Considering the options'), findsOneWidget);
+
+    responseStream.add(const AiTextDelta('The final answer'));
+    responseStream.add(const AiResponseCompleted());
+    await tester.pumpAndSettle();
+
+    expect(find.text('The final answer'), findsOneWidget);
+    expect(find.text('Considering the options'), findsOneWidget);
+    final saved = (await conversationStore.getConversations()).single;
+    expect(saved.messages.last.content, 'The final answer');
+    expect(saved.messages.last.content, isNot(contains('Considering')));
   });
 }
 

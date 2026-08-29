@@ -211,6 +211,10 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
         final choice = choices.first as Map;
         final delta = choice['delta'];
         if (delta is Map) {
+          final reasoning = delta['reasoning'];
+          if (reasoning is String && reasoning.isNotEmpty) {
+            yield AiReasoningDelta(reasoning);
+          }
           final content = delta['content'];
           if (content is String && content.isNotEmpty) {
             yield AiTextDelta(content);

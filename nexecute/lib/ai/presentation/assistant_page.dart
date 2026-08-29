@@ -119,6 +119,7 @@ class _AssistantPageState extends State<AssistantPage> {
         final message = _controller.messages[index];
         return _MessageBubble(
           message: message,
+          reasoning: _controller.reasoningForMessage(message.id),
           onRetry:
               message.role == AiMessageRole.assistant &&
                       (message.status == AiMessageStatus.failed ||
@@ -234,14 +235,17 @@ class _Composer extends StatelessWidget {
 }
 
 class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({required this.message, this.onRetry});
+  const _MessageBubble({required this.message, this.reasoning, this.onRetry});
 
   final AiChatMessage message;
+  final String? reasoning;
   final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
     final isUser = message.role == AiMessageRole.user;
+    final visibleReasoning = reasoning?.trim() ?? '';
+    final hasReasoning = !isUser && visibleReasoning.isNotEmpty;
     final colors = Theme.of(context).colorScheme;
     final statusText = switch (message.status) {
       AiMessageStatus.streaming => 'Thinking…',
@@ -266,9 +270,21 @@ class _MessageBubble extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (hasReasoning) ...[
+              _ReasoningPanel(
+                key: ValueKey('assistant-reasoning-${message.id}'),
+                text: visibleReasoning,
+                initiallyExpanded:
+                    message.status == AiMessageStatus.streaming &&
+                    message.content.isEmpty,
+                streaming: message.status == AiMessageStatus.streaming,
+              ),
+              if (message.content.isNotEmpty) const SizedBox(height: 10),
+            ],
             if (message.content.isNotEmpty)
               SelectableText(message.content)
-            else if (message.status == AiMessageStatus.streaming)
+            else if (message.status == AiMessageStatus.streaming &&
+                !hasReasoning)
               const SizedBox(
                 width: 18,
                 height: 18,
@@ -295,6 +311,61 @@ class _MessageBubble extends StatelessWidget {
                 label: const Text('Retry'),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReasoningPanel extends StatelessWidget {
+  const _ReasoningPanel({
+    super.key,
+    required this.text,
+    required this.initiallyExpanded,
+    required this.streaming,
+  });
+
+  final String text;
+  final bool initiallyExpanded;
+  final bool streaming;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surfaceContainer,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: initiallyExpanded,
+          maintainState: true,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 10),
+          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          leading:
+              streaming
+                  ? const SizedBox.square(
+                    dimension: 17,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                  : const Icon(Icons.psychology_outlined, size: 20),
+          title: const Text('Reasoning'),
+          subtitle: const Text('Session only · not synchronized'),
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: SelectableText(
+                text,
+                key: const Key('assistant-reasoning-text'),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+              ),
+            ),
           ],
         ),
       ),

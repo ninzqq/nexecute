@@ -74,7 +74,12 @@ void main() {
     var nextId = 0;
     var nextMicros = 0;
     final repository = FakeAiAssistantRepository(
-      responseEvents: const [AiTextDelta('Hello'), AiResponseCompleted()],
+      responseEvents: const [
+        AiReasoningDelta('First'),
+        AiReasoningDelta(' thought'),
+        AiTextDelta('Hello'),
+        AiResponseCompleted(),
+      ],
     );
     final controller = AiChatController(
       assistantRepository: repository,
@@ -100,6 +105,11 @@ void main() {
     expect(saved.messages.first.role, AiMessageRole.user);
     expect(saved.messages.last.content, 'Hello');
     expect(saved.messages.last.status, AiMessageStatus.complete);
+    expect(
+      controller.reasoningForMessage(saved.messages.last.id),
+      'First thought',
+    );
+    expect(saved.messages.last.content, isNot(contains('First thought')));
     expect(
       repository.startedRequests.single.messages.single.content,
       'Plan tomorrow',

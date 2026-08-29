@@ -8,6 +8,12 @@ final class AiTextDelta extends AiStreamEvent {
   final String text;
 }
 
+final class AiReasoningDelta extends AiStreamEvent {
+  const AiReasoningDelta(this.text);
+
+  final String text;
+}
+
 final class AiToolCallRequested extends AiStreamEvent {
   AiToolCallRequested({
     required this.id,

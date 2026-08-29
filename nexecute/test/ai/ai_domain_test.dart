@@ -82,6 +82,7 @@ void main() {
 
   test('protocol-neutral events carry text, tools, usage, and failures', () {
     const delta = AiTextDelta('Hello');
+    const reasoning = AiReasoningDelta('Consider the request');
     final toolCall = AiToolCallRequested(
       id: 'call-1',
       name: 'listTasks',
@@ -100,6 +101,7 @@ void main() {
     );
 
     expect(delta.text, 'Hello');
+    expect(reasoning.text, 'Consider the request');
     expect(toolCall.arguments['limit'], 5);
     expect(() => toolCall.arguments.clear(), throwsUnsupportedError);
     expect(completed.usage?.totalTokens, 14);

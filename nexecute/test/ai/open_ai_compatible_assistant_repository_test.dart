@@ -88,6 +88,15 @@ void main() {
             'data: ${jsonEncode({
               'choices': [
                 {
+                  'delta': {'reasoning': 'Checking context'},
+                  'finish_reason': null,
+                },
+              ],
+            })}',
+            '',
+            'data: ${jsonEncode({
+              'choices': [
+                {
                   'delta': {'content': 'Hello '},
                   'finish_reason': null,
                 },
@@ -149,6 +158,10 @@ void main() {
     expect(requestBody['max_tokens'], 512);
     expect(requestBody['reasoning_effort'], 'none');
     expect((requestBody['messages'] as List).single['content'], 'Hi');
+    expect(
+      events.whereType<AiReasoningDelta>().map((event) => event.text).join(),
+      'Checking context',
+    );
     expect(
       events.whereType<AiTextDelta>().map((event) => event.text).join(),
       'Hello world',
