@@ -207,18 +207,20 @@ Firestore data.
 - The web client remains useful when the home AI server is unreachable.
 - Authentication and Firestore rules protect data on every target.
 
-### Local AI assistant / intelligent quick capture
+### Configurable AI assistant / intelligent quick capture
 
-**Status:** Proposed
+**Status:** 🚧 In progress
 
-Connect the app to the self-hosted AI services on the dedicated home PC and
-provide an assistant that can work across Calendar, Tasks, and Notes. The PC
-runs Ollama and the ready-made Odysseus AI workspace created by PewDiePie;
-Nexecute does not own or control Odysseus's FastAPI implementation. Odysseus is
-not part of the initial integration: the existing installation primarily
-confirms that secure remote access to the AI PC already works through
-Tailscale. The goal is an action-oriented assistant rather than a standalone
-generic chatbot.
+Provide a provider-neutral assistant that can use a local model server, a
+private AI gateway, or hosted model providers without coupling Nexecute's
+domain or interface to one vendor. The first usable release is a full-screen
+chat backed by a configurable OpenAI-compatible endpoint. Later releases add
+explicit application context, narrow read tools, and confirmed structured
+actions across Calendar, Tasks, and Notes.
+
+AI must remain an optional capability. Calendar, Tasks, Notes, authentication,
+and Firestore synchronization must continue to work when every configured AI
+endpoint is offline.
 
 Example requests:
 
@@ -228,39 +230,131 @@ Example requests:
 - "Summarize my unfinished checklist."
 - "What do I have planned tomorrow?"
 
-#### Phase 1: basic AI chat
+#### Architecture decisions
 
-- Integrate directly with Ollama through the existing private Tailscale route.
-- Keep Odysseus independent unless a future feature specifically benefits from
-  its agents, memory, documents, or research workflow.
-- Do not depend on Odysseus's internal routes or patch its FastAPI application
-  as part of Nexecute.
-- Add the Ollama service URL and available model selection to Settings.
-- Add a connection test and clear online, connecting, and unavailable states.
-- Provide a full-screen conversation view with streaming responses.
-- Allow an in-progress response to be stopped and a failed response retried.
-- Store conversation history locally by default.
-- Keep the rest of the app fully usable when the Ollama server is unavailable.
-- Initially expose the assistant through the app bar or drawer rather than
+- [x] Use connection profiles rather than a hard-coded AI provider.
+- [x] Define an independent assistant repository whose public interface uses
+  only Nexecute domain types.
+- [x] Normalize provider streams into text deltas, completion metadata, tool
+  calls, and failures before they reach presentation code.
+- [x] Start with the OpenAI-compatible Chat Completions protocol so one adapter
+  can support Ollama and other compatible local or private endpoints.
+- [x] Add the OpenAI Responses, Anthropic Messages, and Nexecute gateway
+  protocols behind the same repository as later adapters.
+- [x] Keep hosted-provider API keys out of Flutter clients. Route hosted OpenAI,
+  Anthropic, and similar services through a Nexecute-owned gateway that keeps
+  reusable credentials in server-side secret storage.
+- [x] Permit direct connections to local or private endpoints that do not
+  require a hosted-provider secret, including endpoints reached over Tailscale.
+- [x] Store endpoint profiles and conversations locally by default. Keep any
+  supported native endpoint credential in platform secure storage rather than
+  Firestore or plain shared preferences.
+- [x] Expose the assistant through the drawer as a full-screen route instead of
   adding a fourth bottom-navigation destination.
 
-#### Phase 2: optional application context
+Minimum connection-profile fields:
 
-- Let the user explicitly attach selected notes, active tasks, today's events,
-  or another clearly defined date range to a conversation.
-- Clearly show which application data will be sent to the model.
-- Support useful read-only actions such as planning a day, summarizing a note,
-  or finding unfinished checklist items.
-- Avoid automatically sending the user's complete Firestore data to the model.
+```text
+id
+name
+protocol
+baseUrl
+modelId
+authenticationMode
+credentialReference (nullable)
+capabilityOverrides (optional)
+```
+
+Initial protocols:
+
+```text
+openAiCompatibleChat
+openAiResponses
+anthropicMessages
+nexecuteGateway
+```
+
+#### Step 1: roadmap rescope ✅
+
+- [x] Replace the local-server-specific proposal with a provider-neutral
+  architecture.
+- [x] Define the direct-local-endpoint and hosted-provider-gateway security
+  boundary.
+- [x] Record the implementation sequence and acceptance criteria.
+
+#### Step 2: provider-neutral foundation
+
+- [ ] Add the connection profile, protocol, message, conversation, stream-event,
+  model-info, and connection-result domain types.
+- [ ] Add `AiAssistantRepository`, `AiConnectionProfileStore`, and
+  `AiConversationStore` interfaces.
+- [ ] Return a response handle that exposes normalized stream events and an
+  explicit cancellation operation.
+- [ ] Add fake implementations and contract tests before wiring a real server.
+- [ ] Register the assistant dependencies with Provider without making startup
+  depend on endpoint availability.
+
+#### Step 3: AI settings and connection profiles
+
+- [ ] Add an AI section to Settings.
+- [ ] Let users add, edit, duplicate, delete, and select connection profiles.
+- [ ] Support protocol, base URL, model ID, and authentication-mode fields.
+- [ ] Load available models when the selected protocol supports discovery while
+  still allowing a model ID to be entered manually.
+- [ ] Add a connection test with connecting, connected, authentication failure,
+  model missing, timeout, and unreachable results.
+- [ ] Validate URLs and warn when a plain-HTTP endpoint is unsuitable for the
+  current platform or network context.
+
+#### Step 4: first chat vertical slice
+
+- [ ] Implement streaming OpenAI-compatible Chat Completions over HTTP.
+- [ ] Add an `/assistant` route and Assistant drawer entry.
+- [ ] Build conversation-list, empty, conversation, and composer states.
+- [ ] Stream assistant text into the active message.
+- [ ] Allow an in-progress response to be stopped and a failed or interrupted
+  response to be retried.
+- [ ] Preserve partial responses when generation is cancelled or fails.
+- [ ] Persist conversation history locally and restore it after restart.
+- [ ] Show the active connection and model in the conversation view.
+- [ ] Verify offline behavior and all application themes.
+
+#### Step 5: hosted-provider gateway and adapters
+
+- [ ] Add a small authenticated Nexecute AI gateway.
+- [ ] Verify Firebase ID tokens at the gateway boundary without granting the AI
+  provider unrestricted Firestore access.
+- [ ] Keep hosted-provider credentials in server-side secret storage.
+- [ ] Add OpenAI Responses and Anthropic Messages adapters.
+- [ ] Stream normalized events from the gateway to the existing Flutter
+  repository interface.
+- [ ] Apply request-size limits, timeouts, cancellation, basic rate limits, and
+  request diagnostics.
+
+Direct native use of a hosted-provider key is not part of the initial release.
+It may be considered later as an explicitly enabled personal-use mode, but it
+must never be enabled for Flutter Web or treated as secure secret storage.
+
+#### Step 6: optional application context
+
+- [ ] Let the user explicitly attach selected notes, active tasks, today's
+  events, or another clearly defined date range to a conversation.
+- [ ] Preview exactly which application data will be sent to the model.
+- [ ] Represent attached context as small, typed objects and omit unnecessary
+  fields.
+- [ ] Cap records, date ranges, search results, and field lengths.
+- [ ] Support useful read-only requests such as planning a day, summarizing a
+  note, or finding unfinished checklist items.
+- [ ] Never automatically send the user's complete Firestore data.
 
 #### Firebase data and AI tool boundary
 
-- Do not give Ollama Firebase credentials, Firebase user tokens, a service
-  account, or unrestricted Firestore access.
+- Do not give any model provider Firebase credentials, Firebase user tokens, a
+  service account, or unrestricted Firestore access.
 - Let the authenticated Nexecute client continue reading and writing Firestore
   through its repositories and the existing user-specific security rules.
 - Convert only the relevant records into small, explicit JSON context objects
-  before sending them to Ollama. Exclude fields that are unnecessary for the
+  before sending them to a model. Exclude fields that are unnecessary for the
   current request.
 - Support narrow read tools such as `listTasks`, `eventsForDateRange`,
   `searchNotes`, and `getNote`, executed by the Nexecute client rather than by
@@ -274,47 +368,65 @@ Example requests:
   lengths, allowed action types, and required values inside Nexecute.
 - Represent writes as proposed actions and require confirmation before the app
   calls its normal repositories to create or modify Firestore documents.
-- Keep a possible server-side AI adapter as a later scalability option, not an
-  MVP requirement. Do not place a Firebase Admin service account on the AI PC
-  for the initial implementation.
+- A hosted-provider gateway may verify the signed-in user's Firebase identity,
+  but it must not use that identity to provide the model with general Firestore
+  access.
 
-#### Phase 3: structured, confirmed actions
+#### Step 7: narrow read tools
 
-- Let the model propose a new task, note, or calendar event.
-- Present proposed actions as preview cards with Create, Edit, and Discard
+- [ ] Support `listTasks`, `eventsForDateRange`, `searchNotes`, and `getNote`.
+- [ ] Execute tools through Nexecute repositories rather than in the model or AI
+  server.
+- [ ] Return bounded tool results to the model without exposing Firebase
+  configuration.
+- [ ] Enforce limits by date range, search query, result count, and user-selected
+  context.
+
+#### Step 8: structured, confirmed actions
+
+- [ ] Let the model propose a new task, note, or calendar event.
+- [ ] Present proposed actions as preview cards with Create, Edit, and Discard
   options.
-- Support note-to-task, task-to-event, and event-to-follow-up-task proposals.
-- Require explicit user confirmation before creating, editing, completing,
+- [ ] Support note-to-task, task-to-event, and event-to-follow-up-task proposals.
+- [ ] Treat all model output as untrusted and validate identifiers, dates, field
+  lengths, allowed action types, and required values inside Nexecute.
+- [ ] Require explicit user confirmation before creating, editing, completing,
   moving, or deleting application data.
-- Keep model output separate from trusted application operations and validate
-  every structured action before executing it.
+- [ ] Keep model output separate from trusted application operations and execute
+  confirmed writes through the existing repositories.
+
+#### Later AI capabilities
+
+- Answer planning questions such as "What do I have tomorrow?"
+- Produce day plans and unfinished-checklist summaries.
+- Add intelligent quick capture after structured-action validation is reliable.
+- Add note-to-task extraction and other conversion workflows.
+- Consider local embeddings and semantic search after ordinary search and chat
+  are stable.
+- Consider optional conversation export and multi-device history
+  synchronization.
 
 #### Connectivity and security
 
-- Use the existing dedicated home AI PC, which runs Ollama and the ready-made
-  Odysseus workspace and is reachable through the home network and Tailscale.
-- Treat Ollama and Odysseus as externally maintained services with their own
-  configuration, authentication, API contracts, and update lifecycle.
-- Keep the Flutter web client independently hosted while exposing Ollama
-  privately through Tailscale.
+- Treat every local model server and remote provider as an external service with
+  its own configuration, authentication, API contract, capabilities, and update
+  lifecycle.
+- Keep the Flutter web client independently hosted while allowing private model
+  endpoints to remain restricted to the home network or Tailscale.
 - Prefer a valid Tailscale HTTPS/MagicDNS address so an HTTPS-hosted browser
   client never needs to call a plain HTTP service.
-- Configure only the minimum Ollama network origins required by Nexecute and
+- Configure only the minimum endpoint network origins required by Nexecute and
   verify browser CORS behavior during the web prototype.
 - If a stable and secure direct web integration is not available, choose
-  between a separate Nexecute-owned adapter or a tailnet-hosted same-origin web
+  between the Nexecute gateway or a tailnet-hosted same-origin web
   client as an explicit architecture decision.
 - Restrict tailnet access to only the required service ports and devices/users.
-- Do not expose an unauthenticated Ollama port directly to the public internet.
-- Store native-client endpoint credentials in platform secure storage, not
-  Firestore or plain shared preferences. Do not embed a reusable API secret in
-  the web client. Rely on tailnet access for direct Ollama requests; if a
-  Nexecute-owned adapter is introduced later, authenticate it with the
-  signed-in user's verified Firebase identity.
+- Do not expose an unauthenticated local model-server port directly to the
+  public internet.
+- Do not embed a reusable hosted-provider API key in a Flutter mobile, desktop,
+  or web client.
 - Provide sensible connection timeouts, cancellation, and model warm-up
   feedback.
-- Treat all AI services as optional: Calendar, Tasks, Notes, authentication,
-  and Firestore synchronization must not depend on the home PC being online.
 
 #### AI assistant acceptance criteria
 
@@ -324,8 +436,10 @@ Example requests:
 - Offline or unreachable-server states are understandable and recoverable.
 - Application context is opt-in and visible to the user.
 - No model-generated action changes user data without confirmation.
-- Ollama never receives Firebase credentials or unrestricted database access.
-- The app's Calendar, Tasks, and Notes remain usable without Ollama.
+- No model provider receives Firebase credentials or unrestricted database
+  access.
+- Hosted-provider API keys are never embedded in a Flutter client.
+- The app's Calendar, Tasks, and Notes remain usable without an AI endpoint.
 
 ### Today dashboard and universal quick capture
 
@@ -336,7 +450,7 @@ Universal quick capture can be reconsidered independently later.
 
 - Consider a focused Today view containing today's events, active or due
   tasks, and pinned or recent notes.
-- Optionally add an AI-generated daily summary after the Ollama integration is
+- Optionally add an AI-generated daily summary after the assistant integration is
   reliable.
 - Add a universal quick-capture input that can create an Event, Task, or Note.
 - Let the user choose the item type manually; AI classification must remain an
@@ -369,7 +483,7 @@ Event search performs a debounced, one-shot read only while the Search screen
 is in use, filters locally, and caps returned matches. It does not restore the
 removed application-wide live event-history stream.
 
-- Consider local Ollama embeddings and semantic search as a later enhancement.
+- Consider local embeddings and semantic search as a later enhancement.
 
 ### Linked items
 
@@ -431,7 +545,7 @@ These improvements should be considered before or alongside larger features.
   ~~with Provider and migrate callers away from constructing Firestore services~~
   ~~directly.~~
 - Add an independent assistant repository when AI work begins. Its interface
-  must not depend on Odysseus or Ollama-specific response types.
+  must not depend on provider-specific response types.
 - [x] ~~Query calendar events by a bounded visible range instead of maintaining~~
   ~~one live stream containing the user's complete event history. Month and week~~
   ~~views now include one adjacent `PageView` page in each direction as a swipe~~
