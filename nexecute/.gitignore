@@ -36,6 +36,9 @@ google-services.json
 /build/
 node_modules/
 
+# Local AI evaluation output (keep the format/readme in version control).
+/evaluation/results/*.json
+
 # Symbolication related
 app.*.symbols
 

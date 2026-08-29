@@ -486,16 +486,25 @@ workflow.
 - [x] Preserve the source note, report the creation result, and cover the
   complete workflow with widget and Firestore emulator tests.
 
-#### Step 8: local phase 4 — repeatable quality evaluation
+#### Step 8: local phase 4 — repeatable quality evaluation ✅
 
-- [ ] Create a small, non-personal Finnish and English evaluation set for chat
+- [x] Create a small, non-personal Finnish and English evaluation set for chat
   and note-to-task extraction.
-- [ ] Cover simple and multiple tasks, dates, ambiguity, missing information,
+- [x] Cover simple and multiple tasks, dates, ambiguity, missing information,
   prompt injection inside notes, hallucinations, and malformed structured data.
-- [ ] Separate transport/application failures from prompt and model-quality
+- [x] Separate transport/application failures from prompt and model-quality
   failures.
-- [ ] Record results by model and model version so hosted providers can later be
+- [x] Record results by model and model version so hosted providers can later be
   compared against the same cases.
+
+The version 1 suite contains 24 synthetic bilingual cases. The command-line
+runner uses the production chat prompt, note-task prompt builder, endpoint
+adapter, and strict proposal parser. Reports record the suite, exact model and
+model version/tag/digest, generation settings, prompts, output, usage, and one
+of four outcomes: passed, transport failure, application failure, or quality
+failure. Generated reports remain local and ignored until reviewed and
+deliberately selected as safe comparison baselines. The suite can be validated
+without endpoint access, and real model runs remain opt-in.
 
 #### Step 9: optional application context and narrow reads
 
