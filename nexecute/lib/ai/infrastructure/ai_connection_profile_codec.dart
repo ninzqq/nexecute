@@ -17,6 +17,7 @@ class AiConnectionProfileCodec {
       'maxOutputTokens': profile.maxOutputTokens,
       'connectionTimeoutSeconds': profile.connectionTimeout.inSeconds,
       'responseIdleTimeoutSeconds': profile.responseIdleTimeout.inSeconds,
+      'systemPrompt': profile.systemPrompt,
       'capabilityOverrides': {
         for (final entry in profile.capabilityOverrides.entries)
           entry.key.name: entry.value,
@@ -90,6 +91,12 @@ class AiConnectionProfileCodec {
           maximum: aiMaxTimeoutSeconds,
         ),
       ),
+      systemPrompt: _optionalString(
+        map,
+        'systemPrompt',
+        aiDefaultSystemPrompt,
+        maximumLength: aiMaxSystemPromptCharacters,
+      ),
       capabilityOverrides: _capabilityOverrides(map['capabilityOverrides']),
     );
   }
@@ -119,6 +126,20 @@ class AiConnectionProfileCodec {
     final value = map[key];
     if (value == null) return fallback;
     if (value is! int || value < minimum || value > maximum) {
+      throw FormatException('Invalid AI connection profile $key');
+    }
+    return value;
+  }
+
+  static String _optionalString(
+    Map<String, Object?> map,
+    String key,
+    String fallback, {
+    required int maximumLength,
+  }) {
+    final value = map[key];
+    if (value == null) return fallback;
+    if (value is! String || value.length > maximumLength) {
       throw FormatException('Invalid AI connection profile $key');
     }
     return value;

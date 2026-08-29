@@ -16,8 +16,10 @@ void main() {
       maxOutputTokens: 2048,
       connectionTimeout: const Duration(seconds: 75),
       responseIdleTimeout: const Duration(seconds: 45),
+      systemPrompt: 'Keep answers compact.',
       capabilityOverrides: const {
         AiCapability.modelDiscovery: false,
+        AiCapability.reasoning: true,
         AiCapability.tools: true,
       },
     );
@@ -37,6 +39,7 @@ void main() {
     expect(restored.maxOutputTokens, profile.maxOutputTokens);
     expect(restored.connectionTimeout, profile.connectionTimeout);
     expect(restored.responseIdleTimeout, profile.responseIdleTimeout);
+    expect(restored.systemPrompt, profile.systemPrompt);
     expect(restored.capabilityOverrides, profile.capabilityOverrides);
   });
 
@@ -54,6 +57,7 @@ void main() {
     expect(restored.maxOutputTokens, aiDefaultMaxOutputTokens);
     expect(restored.connectionTimeout, aiDefaultConnectionTimeout);
     expect(restored.responseIdleTimeout, aiDefaultResponseIdleTimeout);
+    expect(restored.systemPrompt, aiDefaultSystemPrompt);
   });
 
   test('rejects unknown enum values instead of guessing', () {

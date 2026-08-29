@@ -319,6 +319,8 @@ class _ProfileCard extends StatelessWidget {
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(color: colorScheme.onSurfaceVariant),
                         ),
+                        const SizedBox(height: 5),
+                        _CapabilitySummary(profile: profile),
                       ],
                     ),
                   ),
@@ -411,6 +413,44 @@ class _ActiveBadge extends StatelessWidget {
   }
 }
 
+class _CapabilitySummary extends StatelessWidget {
+  const _CapabilitySummary({required this.profile});
+
+  final AiConnectionProfile profile;
+
+  @override
+  Widget build(BuildContext context) {
+    final groups = <AiCapabilityState, List<AiCapability>>{
+      for (final state in AiCapabilityState.values) state: [],
+    };
+    for (final capability in AiCapability.values) {
+      groups[profile.capabilityState(capability)]!.add(capability);
+    }
+
+    final lines = <String>[
+      if (groups[AiCapabilityState.protocolDefault]!.isNotEmpty)
+        'Protocol: ${_labels(groups[AiCapabilityState.protocolDefault]!)}',
+      if (groups[AiCapabilityState.confirmedSupported]!.isNotEmpty)
+        'Confirmed: ${_labels(groups[AiCapabilityState.confirmedSupported]!)}',
+      if (groups[AiCapabilityState.confirmedUnsupported]!.isNotEmpty)
+        'Disabled: ${_labels(groups[AiCapabilityState.confirmedUnsupported]!)}',
+      if (groups[AiCapabilityState.unconfirmed]!.isNotEmpty)
+        'Unconfirmed: ${_labels(groups[AiCapabilityState.unconfirmed]!)}',
+    ];
+
+    return Text(
+      lines.join('\n'),
+      key: Key('ai-profile-capabilities-${profile.id}'),
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+    );
+  }
+
+  static String _labels(Iterable<AiCapability> capabilities) =>
+      capabilities.map((capability) => capability.label).join(', ');
+}
+
 class _ConnectionResultLine extends StatelessWidget {
   const _ConnectionResultLine({required this.result});
 
@@ -471,10 +511,12 @@ class _AiConnectionProfileEditorState
   late final TextEditingController _maxOutputTokensController;
   late final TextEditingController _connectionTimeoutController;
   late final TextEditingController _responseIdleTimeoutController;
+  late final TextEditingController _systemPromptController;
   late final String _profileId;
   late AiProtocol _protocol;
   late AiAuthenticationMode _authenticationMode;
   late AiReasoningEffort _reasoningEffort;
+  late final Map<AiCapability, bool> _capabilityOverrides;
   List<AiModelInfo> _models = const [];
   bool _discoveringModels = false;
   String? _discoveryMessage;
@@ -504,10 +546,14 @@ class _AiConnectionProfileEditorState
               .inSeconds
               .toString(),
     );
+    _systemPromptController = TextEditingController(
+      text: profile?.systemPrompt ?? aiDefaultSystemPrompt,
+    );
     _protocol = profile?.protocol ?? AiProtocol.openAiCompatibleChat;
     _authenticationMode =
         profile?.authenticationMode ?? AiAuthenticationMode.none;
     _reasoningEffort = profile?.reasoningEffort ?? AiReasoningEffort.automatic;
+    _capabilityOverrides = Map.of(profile?.capabilityOverrides ?? const {});
     _updateUrlWarning();
   }
 
@@ -519,6 +565,7 @@ class _AiConnectionProfileEditorState
     _maxOutputTokensController.dispose();
     _connectionTimeoutController.dispose();
     _responseIdleTimeoutController.dispose();
+    _systemPromptController.dispose();
     super.dispose();
   }
 
@@ -622,7 +669,7 @@ class _AiConnectionProfileEditorState
                       key: const Key('ai-discover-models'),
                       onPressed:
                           _discoveringModels ||
-                                  !_protocol.defaultCapabilities.contains(
+                                  !_supportsCapability(
                                     AiCapability.modelDiscovery,
                                   )
                               ? null
@@ -757,6 +804,119 @@ class _AiConnectionProfileEditorState
                   ],
                 ),
                 const SizedBox(height: 6),
+                ExpansionTile(
+                  key: const Key('ai-system-prompt-controls'),
+                  initiallyExpanded: false,
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: const EdgeInsets.only(top: 12, bottom: 8),
+                  shape: const Border(),
+                  collapsedShape: const Border(),
+                  title: const Text('System prompt'),
+                  subtitle: const Text('Sent with every chat request'),
+                  children: [
+                    TextFormField(
+                      key: const Key('ai-profile-system-prompt-field'),
+                      controller: _systemPromptController,
+                      minLines: 7,
+                      maxLines: 14,
+                      maxLength: aiMaxSystemPromptCharacters,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: const InputDecoration(
+                        labelText: 'Assistant instructions',
+                        alignLabelWithHint: true,
+                        helperMaxLines: 3,
+                        helperText:
+                            'Stored locally with this profile and sent on every request. Keep it concise and do not include secrets. Leave empty to send no system prompt.',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        OutlinedButton.icon(
+                          key: const Key('ai-system-prompt-restore-default'),
+                          onPressed:
+                              () => setState(
+                                () =>
+                                    _systemPromptController.text =
+                                        aiDefaultSystemPrompt,
+                              ),
+                          icon: const Icon(Icons.restore_rounded),
+                          label: const Text('Restore default'),
+                        ),
+                        TextButton(
+                          key: const Key('ai-system-prompt-clear'),
+                          onPressed:
+                              () => setState(_systemPromptController.clear),
+                          child: const Text('Clear'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                ExpansionTile(
+                  key: const Key('ai-capability-controls'),
+                  initiallyExpanded: false,
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: const EdgeInsets.only(top: 12, bottom: 8),
+                  shape: const Border(),
+                  collapsedShape: const Border(),
+                  title: const Text('Model capabilities'),
+                  subtitle: const Text(
+                    'Confirm features reported by this model and server',
+                  ),
+                  children: [
+                    for (final capability in AiCapability.values) ...[
+                      DropdownButtonFormField<_CapabilityChoice>(
+                        key: Key(
+                          'ai-profile-capability-${capability.name}-field',
+                        ),
+                        initialValue: _choiceFor(capability),
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                          labelText: capability.label,
+                          helperText: _capabilityHelper(capability),
+                        ),
+                        items: [
+                          DropdownMenuItem(
+                            value: _CapabilityChoice.automatic,
+                            child: Text(
+                              _protocol.defaultCapabilities.contains(capability)
+                                  ? 'Automatic (protocol-supported)'
+                                  : 'Automatic (unconfirmed)',
+                            ),
+                          ),
+                          const DropdownMenuItem(
+                            value: _CapabilityChoice.supported,
+                            child: Text('Supported'),
+                          ),
+                          const DropdownMenuItem(
+                            value: _CapabilityChoice.unsupported,
+                            child: Text('Not supported'),
+                          ),
+                        ],
+                        onChanged: (choice) {
+                          if (choice == null) return;
+                          setState(() {
+                            switch (choice) {
+                              case _CapabilityChoice.automatic:
+                                _capabilityOverrides.remove(capability);
+                              case _CapabilityChoice.supported:
+                                _capabilityOverrides[capability] = true;
+                              case _CapabilityChoice.unsupported:
+                                _capabilityOverrides[capability] = false;
+                            }
+                          });
+                        },
+                      ),
+                      if (capability != AiCapability.values.last)
+                        const SizedBox(height: 14),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 6),
                 DropdownButtonFormField<AiAuthenticationMode>(
                   key: const Key('ai-profile-auth-field'),
                   initialValue: _authenticationMode,
@@ -881,8 +1041,28 @@ class _AiConnectionProfileEditorState
       responseIdleTimeout: Duration(
         seconds: int.parse(_responseIdleTimeoutController.text.trim()),
       ),
-      capabilityOverrides: widget.profile?.capabilityOverrides ?? const {},
+      systemPrompt: _systemPromptController.text.trim(),
+      capabilityOverrides: _capabilityOverrides,
     );
+  }
+
+  _CapabilityChoice _choiceFor(AiCapability capability) {
+    return switch (_capabilityOverrides[capability]) {
+      true => _CapabilityChoice.supported,
+      false => _CapabilityChoice.unsupported,
+      null => _CapabilityChoice.automatic,
+    };
+  }
+
+  String _capabilityHelper(AiCapability capability) {
+    return _protocol.defaultCapabilities.contains(capability)
+        ? 'Enabled by the selected protocol unless overridden.'
+        : 'Unconfirmed until you verify support or Nexecute detects it.';
+  }
+
+  bool _supportsCapability(AiCapability capability) {
+    return _capabilityOverrides[capability] ??
+        _protocol.defaultCapabilities.contains(capability);
   }
 
   static String? _boundedIntegerError(
@@ -951,5 +1131,17 @@ extension on AiReasoningEffort {
     AiReasoningEffort.low => 'Low',
     AiReasoningEffort.medium => 'Medium',
     AiReasoningEffort.high => 'High',
+  };
+}
+
+enum _CapabilityChoice { automatic, supported, unsupported }
+
+extension on AiCapability {
+  String get label => switch (this) {
+    AiCapability.streaming => 'Streaming',
+    AiCapability.modelDiscovery => 'Model discovery',
+    AiCapability.reasoning => 'Reasoning',
+    AiCapability.tools => 'Tools',
+    AiCapability.structuredOutput => 'Structured output',
   };
 }

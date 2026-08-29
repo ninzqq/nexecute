@@ -88,7 +88,16 @@ void main() {
             'data: ${jsonEncode({
               'choices': [
                 {
-                  'delta': {'reasoning': 'Checking context'},
+                  'delta': {'reasoning_content': 'Checking '},
+                  'finish_reason': null,
+                },
+              ],
+            })}',
+            '',
+            'data: ${jsonEncode({
+              'choices': [
+                {
+                  'delta': {'thinking': 'context'},
                   'finish_reason': null,
                 },
               ],
@@ -134,6 +143,7 @@ void main() {
       AiChatRequest(
         connectionProfile: configuredProfile,
         conversationId: 'conversation-1',
+        systemInstruction: 'Keep answers short.',
         messages: [
           AiChatMessage(
             id: 'message-1',
@@ -157,7 +167,14 @@ void main() {
     expect(requestBody['stream'], isTrue);
     expect(requestBody['max_tokens'], 512);
     expect(requestBody['reasoning_effort'], 'none');
-    expect((requestBody['messages'] as List).single['content'], 'Hi');
+    final messages = requestBody['messages'] as List;
+    expect(messages, hasLength(2));
+    expect(messages.first, {
+      'role': 'system',
+      'content': 'Keep answers short.',
+    });
+    expect(messages.last['role'], 'user');
+    expect(messages.last['content'], 'Hi');
     expect(
       events.whereType<AiReasoningDelta>().map((event) => event.text).join(),
       'Checking context',
@@ -167,6 +184,68 @@ void main() {
       'Hello world',
     );
     expect(events.whereType<AiResponseCompleted>(), hasLength(1));
+  });
+
+  test('accepts a non-streaming message from a compatible endpoint', () async {
+    final repository = OpenAiCompatibleAssistantRepository(
+      client: MockClient(
+        (_) async => http.Response(
+          'data: ${jsonEncode({
+            'choices': [
+              {
+                'message': {'reasoning': 'Checked the request', 'content': 'A complete answer'},
+                'finish_reason': 'stop',
+              },
+            ],
+          })}\n\n',
+          200,
+          headers: {'content-type': 'text/event-stream'},
+        ),
+      ),
+    );
+    final handle = await repository.startResponse(_request(profile));
+
+    final events = await handle.events.toList();
+
+    expect(
+      events.whereType<AiReasoningDelta>().single.text,
+      'Checked the request',
+    );
+    expect(events.whereType<AiTextDelta>().single.text, 'A complete answer');
+    expect(events.whereType<AiResponseCompleted>(), hasLength(1));
+  });
+
+  test('reports an empty compatible stream as a protocol problem', () async {
+    final repository = OpenAiCompatibleAssistantRepository(
+      client: MockClient(
+        (_) async => http.Response(
+          'data: [DONE]\n\n',
+          200,
+          headers: {'content-type': 'text/event-stream'},
+        ),
+      ),
+    );
+    final handle = await repository.startResponse(_request(profile));
+
+    final event = (await handle.events.toList()).single as AiResponseFailed;
+
+    expect(event.code, 'empty_response');
+    expect(event.message, contains('OpenAI-compatible API format'));
+    expect(event.retryable, isFalse);
+  });
+
+  test('turns a client connection failure into actionable guidance', () async {
+    final repository = OpenAiCompatibleAssistantRepository(
+      client: MockClient((_) async => throw http.ClientException('offline')),
+    );
+    final handle = await repository.startResponse(_request(profile));
+
+    final event = (await handle.events.toList()).single as AiResponseFailed;
+
+    expect(event.code, 'unreachable');
+    expect(event.message, contains('server is running'));
+    expect(event.retryable, isTrue);
+    expect(event.message, isNot(contains('offline')));
   });
 
   test('normalizes an HTTP failure into a retryable stream failure', () async {
@@ -200,7 +279,17 @@ void main() {
     final repository = OpenAiCompatibleAssistantRepository(
       client: MockClient((request) async {
         sentRequest = request;
-        return http.Response('data: [DONE]\n\n', 200);
+        return http.Response(
+          'data: ${jsonEncode({
+            'choices': [
+              {
+                'delta': {'content': 'Ready'},
+                'finish_reason': 'stop',
+              },
+            ],
+          })}\n\n',
+          200,
+        );
       }),
     );
     final handle = await repository.startResponse(_request(profile));

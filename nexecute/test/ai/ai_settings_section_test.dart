@@ -88,6 +88,30 @@ void main() {
       find.byKey(const Key('ai-profile-stream-timeout-field')),
       '60',
     );
+    await tester.ensureVisible(
+      find.byKey(const Key('ai-system-prompt-controls')),
+    );
+    await tester.tap(find.byKey(const Key('ai-system-prompt-controls')));
+    await tester.pumpAndSettle();
+    final systemPromptField = find.byKey(
+      const Key('ai-profile-system-prompt-field'),
+    );
+    await tester.ensureVisible(systemPromptField);
+    final systemPromptWidget = tester.widget<TextFormField>(systemPromptField);
+    expect(systemPromptWidget.controller?.text, aiDefaultSystemPrompt);
+    await tester.enterText(systemPromptField, 'Answer in concise Finnish.');
+    await tester.ensureVisible(find.byKey(const Key('ai-capability-controls')));
+    await tester.tap(find.byKey(const Key('ai-capability-controls')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const Key('ai-profile-capability-reasoning-field')),
+    );
+    await tester.tap(
+      find.byKey(const Key('ai-profile-capability-reasoning-field')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Supported').last);
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('ai-profile-save')));
     await tester.pumpAndSettle();
 
@@ -100,6 +124,9 @@ void main() {
     expect(profile.maxOutputTokens, 2048);
     expect(profile.connectionTimeout, const Duration(seconds: 180));
     expect(profile.responseIdleTimeout, const Duration(seconds: 60));
+    expect(profile.systemPrompt, 'Answer in concise Finnish.');
+    expect(profile.capabilityOverrides[AiCapability.reasoning], isTrue);
+    expect(find.textContaining('Confirmed: Reasoning'), findsOneWidget);
     await tester.tap(find.byKey(Key('ai-profile-test-${profile.id}')));
     await tester.pumpAndSettle();
 

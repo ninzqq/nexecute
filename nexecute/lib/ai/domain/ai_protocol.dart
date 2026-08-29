@@ -15,15 +15,19 @@ extension AiAuthenticationModeRequirements on AiAuthenticationMode {
   };
 }
 
-enum AiCapability { streaming, modelDiscovery, tools, structuredOutput }
+enum AiCapability {
+  streaming,
+  modelDiscovery,
+  reasoning,
+  tools,
+  structuredOutput,
+}
 
 extension AiProtocolCapabilities on AiProtocol {
   Set<AiCapability> get defaultCapabilities => switch (this) {
     AiProtocol.openAiCompatibleChat => const {
       AiCapability.streaming,
       AiCapability.modelDiscovery,
-      AiCapability.tools,
-      AiCapability.structuredOutput,
     },
     AiProtocol.openAiResponses => const {
       AiCapability.streaming,

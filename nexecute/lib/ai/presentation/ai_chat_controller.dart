@@ -269,6 +269,10 @@ class AiChatController extends ChangeNotifier {
         AiChatRequest(
           connectionProfile: profile,
           conversationId: current.id,
+          systemInstruction:
+              profile.systemPrompt.trim().isEmpty
+                  ? null
+                  : profile.systemPrompt.trim(),
           messages:
               requestMessages
                   .where(

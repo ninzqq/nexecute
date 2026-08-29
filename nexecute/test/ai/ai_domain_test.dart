@@ -15,16 +15,32 @@ void main() {
       maxOutputTokens: 2048,
       connectionTimeout: const Duration(seconds: 60),
       responseIdleTimeout: const Duration(seconds: 30),
+      systemPrompt: 'Use short answers.',
       capabilityOverrides: const {AiCapability.tools: false},
     );
 
     expect(profile.isValid, isTrue);
     expect(profile.credentialReference, 'secure-storage:home');
     expect(profile.capabilityOverrides[AiCapability.tools], isFalse);
+    expect(
+      profile.capabilityState(AiCapability.streaming),
+      AiCapabilityState.protocolDefault,
+    );
+    expect(
+      profile.capabilityState(AiCapability.reasoning),
+      AiCapabilityState.unconfirmed,
+    );
+    expect(
+      profile.capabilityState(AiCapability.tools),
+      AiCapabilityState.confirmedUnsupported,
+    );
+    expect(profile.supports(AiCapability.streaming), isTrue);
+    expect(profile.supports(AiCapability.reasoning), isFalse);
     expect(profile.reasoningEffort, AiReasoningEffort.low);
     expect(profile.maxOutputTokens, 2048);
     expect(profile.connectionTimeout, const Duration(seconds: 60));
     expect(profile.responseIdleTimeout, const Duration(seconds: 30));
+    expect(profile.systemPrompt, 'Use short answers.');
     expect(profile.copyWith(clearCredentialReference: true).isValid, isFalse);
     expect(
       profile.copyWith(baseUrl: Uri.parse('ftp://ai.example.test')).isValid,
@@ -32,6 +48,15 @@ void main() {
     );
     expect(profile.copyWith(maxOutputTokens: 0).isValid, isFalse);
     expect(profile.copyWith(connectionTimeout: Duration.zero).isValid, isFalse);
+    expect(
+      profile
+          .copyWith(
+            systemPrompt:
+                List.filled(aiMaxSystemPromptCharacters + 1, 'x').join(),
+          )
+          .isValid,
+      isFalse,
+    );
   });
 
   test('conversation and request expose immutable message snapshots', () {

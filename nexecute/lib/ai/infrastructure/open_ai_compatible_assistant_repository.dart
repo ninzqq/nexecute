@@ -174,6 +174,7 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
       }
 
       var completed = false;
+      var receivedOutput = false;
       AiTokenUsage? usage;
       await for (final line in response.stream
           .timeout(responseIdleTimeout ?? profile.responseIdleTimeout)
@@ -184,7 +185,13 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
         final payload = trimmed.substring(5).trim();
         if (payload.isEmpty) continue;
         if (payload == '[DONE]') {
-          if (!completed) yield AiResponseCompleted(usage: usage);
+          if (!completed) {
+            if (receivedOutput) {
+              yield AiResponseCompleted(usage: usage);
+            } else {
+              yield _emptyResponseFailure();
+            }
+          }
           return;
         }
         final decoded = jsonDecode(payload);
@@ -211,22 +218,47 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
         final choice = choices.first as Map;
         final delta = choice['delta'];
         if (delta is Map) {
-          final reasoning = delta['reasoning'];
-          if (reasoning is String && reasoning.isNotEmpty) {
+          final reasoning = _reasoningText(delta);
+          if (reasoning != null) {
+            receivedOutput = true;
             yield AiReasoningDelta(reasoning);
           }
           final content = delta['content'];
           if (content is String && content.isNotEmpty) {
+            receivedOutput = true;
+            yield AiTextDelta(content);
+          }
+        }
+        final message = choice['message'];
+        if (delta is! Map && message is Map) {
+          final reasoning = _reasoningText(message);
+          if (reasoning != null) {
+            receivedOutput = true;
+            yield AiReasoningDelta(reasoning);
+          }
+          final content = message['content'];
+          if (content is String && content.isNotEmpty) {
+            receivedOutput = true;
             yield AiTextDelta(content);
           }
         }
         final finishReason = choice['finish_reason']?.toString();
         if (finishReason != null && finishReason != 'null') {
           completed = true;
-          yield AiResponseCompleted(finishReason: finishReason, usage: usage);
+          if (receivedOutput) {
+            yield AiResponseCompleted(finishReason: finishReason, usage: usage);
+          } else {
+            yield _emptyResponseFailure();
+          }
         }
       }
-      if (!completed) yield AiResponseCompleted(usage: usage);
+      if (!completed) {
+        if (receivedOutput) {
+          yield AiResponseCompleted(usage: usage);
+        } else {
+          yield _emptyResponseFailure();
+        }
+      }
     } on http.RequestAbortedException catch (error) {
       yield AiResponseFailed(
         error: error,
@@ -249,6 +281,14 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
         error: error,
         message: 'The AI endpoint returned a malformed streaming response.',
         code: 'invalid_response',
+      );
+    } on http.ClientException catch (error) {
+      yield AiResponseFailed(
+        error: error,
+        message:
+            'Could not reach the AI endpoint. Check that the server is running and that this device can access the configured address.',
+        code: 'unreachable',
+        retryable: true,
       );
     } catch (error) {
       yield AiResponseFailed(
@@ -302,6 +342,24 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
     );
   }
 
+  static String? _reasoningText(Map value) {
+    for (final key in const ['reasoning', 'reasoning_content', 'thinking']) {
+      final text = value[key];
+      if (text is String && text.isNotEmpty) return text;
+    }
+    return null;
+  }
+
+  static AiResponseFailed _emptyResponseFailure() {
+    const message =
+        'The endpoint completed without returning text or a supported reasoning stream. Check the selected model and OpenAI-compatible API format.';
+    return AiResponseFailed(
+      error: const FormatException(message),
+      message: message,
+      code: 'empty_response',
+    );
+  }
+
   static Map<String, String> _headers(AiConnectionProfile _) => const {
     'accept': 'application/json, text/event-stream',
     'content-type': 'application/json',
@@ -324,7 +382,17 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
         if (decoded['message'] != null) return decoded['message'].toString();
       }
     } catch (_) {}
-    return 'The AI endpoint returned HTTP $statusCode.';
+    return switch (statusCode) {
+      401 || 403 =>
+        'The AI endpoint rejected authentication. Check the connection credentials.',
+      404 =>
+        'The chat endpoint was not found. Check the base URL and its /v1 path.',
+      408 => 'The AI endpoint timed out before completing the request.',
+      429 => 'The AI endpoint is rate-limiting requests. Try again later.',
+      500 || 502 || 503 || 504 =>
+        'The AI server is unavailable or still starting the model (HTTP $statusCode).',
+      _ => 'The AI endpoint returned HTTP $statusCode.',
+    };
   }
 
   void dispose() {

@@ -380,18 +380,35 @@ before adding hosted providers or advanced application actions.
   without persisting it to Firestore or sending it back to the model.
 - [x] Provide bounded editor validation and backward-compatible defaults for
   existing saved profiles.
+- [x] Add a bounded, locally stored system prompt per connection profile with
+  a concise Nexecute default plus Restore default and Clear controls.
+- [x] Send the configured system prompt once before conversation messages on
+  every request without persisting it into Firestore conversation history.
 
 Current defaults are automatic reasoning, 1,024 maximum output tokens, a
-120-second connection/start timeout, and a 90-second stream-idle timeout.
+120-second connection/start timeout, a 90-second stream-idle timeout, and the
+concise Nexecute assistant system prompt. A blank profile prompt sends no
+system message.
 
-##### Step 6B: remaining reliability and secure access
+##### Step 6B: remaining reliability and secure access 🚧
+
+- [x] Show protocol-default, confirmed-supported, confirmed-unsupported, and
+  unconfirmed capabilities for each profile, with editable per-model
+  overrides stored in the local connection profile.
+- [x] Stop assuming that every OpenAI-compatible model supports tools or
+  structured output; treat reasoning, tools, and structured output as
+  unconfirmed until explicitly recorded or detected.
+- [x] Normalize the common `reasoning`, `reasoning_content`, and `thinking`
+  fields without persisting provider reasoning.
+- [x] Accept a complete OpenAI-compatible message when a server ignores the
+  requested streaming delta format.
+- [x] Report empty, malformed, unreachable, timed-out, and HTTP-failed
+  responses as actionable normalized failures instead of silently completing.
 
 - [ ] Add platform secure credential storage for optional local/private
   endpoint tokens.
 - [ ] Add explicit context-window and warm-up settings where the server and
   protocol support them reliably.
-- [ ] Detect or record relevant model capabilities instead of assuming that
-  every OpenAI-compatible model supports tools or structured output.
 - [ ] Keep automatic retries away from ambiguous generation requests that may
   already have completed or incurred provider work.
 - [ ] Add actionable diagnostics for DNS, TLS, CORS, mixed-content, local

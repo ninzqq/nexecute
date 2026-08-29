@@ -106,6 +106,12 @@ void main() {
     expect(saved.messages.last.content, 'Hello');
     expect(saved.messages.last.status, AiMessageStatus.complete);
     expect(
+      saved.messages.any(
+        (message) => message.content.contains(aiDefaultSystemPrompt),
+      ),
+      isFalse,
+    );
+    expect(
       controller.reasoningForMessage(saved.messages.last.id),
       'First thought',
     );
@@ -113,6 +119,10 @@ void main() {
     expect(
       repository.startedRequests.single.messages.single.content,
       'Plan tomorrow',
+    );
+    expect(
+      repository.startedRequests.single.systemInstruction,
+      aiDefaultSystemPrompt.trim(),
     );
     expect(controller.isGenerating, isFalse);
   });
