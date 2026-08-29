@@ -37,6 +37,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Start a conversation'), findsOneWidget);
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('assistant-composer')))
+            .textCapitalization,
+        TextCapitalization.sentences,
+      );
       expect(tester.takeException(), isNull);
     });
   }

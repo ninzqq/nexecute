@@ -204,6 +204,7 @@ class _Composer extends StatelessWidget {
                 enabled: enabled && !isGenerating,
                 minLines: 1,
                 maxLines: 6,
+                textCapitalization: TextCapitalization.sentences,
                 textInputAction: TextInputAction.newline,
                 decoration: const InputDecoration(
                   hintText: 'Message the assistant',

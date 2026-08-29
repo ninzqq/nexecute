@@ -67,6 +67,15 @@ class AiChatController extends ChangeNotifier {
     try {
       activeProfile = await _connectionProfileStore.getActiveProfile();
       conversations = await _conversationStore.getConversations();
+      if (conversations.isNotEmpty) {
+        final latestConversationId = conversations.first.id;
+        conversation = await _conversationStore.getConversation(
+          latestConversationId,
+        );
+        if (conversation != null) {
+          await _watchCurrentConversation(latestConversationId);
+        }
+      }
     } catch (error) {
       errorMessage = 'Could not load AI conversations: $error';
     } finally {

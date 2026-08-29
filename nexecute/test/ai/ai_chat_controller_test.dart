@@ -30,6 +30,46 @@ void main() {
     conversationStore.dispose();
   });
 
+  test('opens the most recently updated conversation on initialize', () async {
+    final older = AiConversation(
+      id: 'older',
+      title: 'Older conversation',
+      connectionProfileId: profile.id,
+      modelId: profile.modelId,
+      createdAt: DateTime.utc(2026, 8, 27),
+      updatedAt: DateTime.utc(2026, 8, 28),
+    );
+    final latest = AiConversation(
+      id: 'latest',
+      title: 'Latest conversation',
+      connectionProfileId: profile.id,
+      modelId: profile.modelId,
+      createdAt: DateTime.utc(2026, 8, 28),
+      updatedAt: DateTime.utc(2026, 8, 29),
+      messages: [
+        AiChatMessage(
+          id: 'latest-message',
+          role: AiMessageRole.assistant,
+          content: 'Most recent answer',
+          createdAt: DateTime.utc(2026, 8, 29),
+        ),
+      ],
+    );
+    await conversationStore.saveConversation(older);
+    await conversationStore.saveConversation(latest);
+    final controller = AiChatController(
+      assistantRepository: FakeAiAssistantRepository(),
+      connectionProfileStore: profileStore,
+      conversationStore: conversationStore,
+    );
+    addTearDown(controller.dispose);
+
+    await controller.initialize();
+
+    expect(controller.conversation?.id, latest.id);
+    expect(controller.messages.single.content, 'Most recent answer');
+  });
+
   test('sends, streams, and persists a completed conversation', () async {
     var nextId = 0;
     var nextMicros = 0;
