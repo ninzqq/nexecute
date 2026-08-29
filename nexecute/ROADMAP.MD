@@ -350,6 +350,14 @@ without writing every streamed token.
 Validate the existing vertical slice against the owner's real Ollama server
 before adding hosted providers or advanced application actions.
 
+> **Why this remains unfinished:** The local chat implementation and its fake
+> server tests exist, and the owner has exercised parts of the flow manually,
+> but the complete checklist below has not been run and recorded systematically
+> against the real Ollama server, multiple signed-in devices, home-network and
+> Tailscale access, and the listed failure conditions. Automated development
+> work must not contact the owner's real model endpoint unless the owner
+> explicitly requests that specific test.
+
 - [ ] Verify connection testing and model discovery against Ollama's
   OpenAI-compatible API.
 - [ ] Verify streaming chat, Stop, Retry, and partial-response preservation
@@ -391,6 +399,14 @@ concise Nexecute assistant system prompt. A blank profile prompt sends no
 system message.
 
 ##### Step 6B: remaining reliability and secure access 🚧
+
+> **Why this remains unfinished:** Basic protocol diagnostics, capability
+> overrides, response normalization, and timeout handling are implemented. The
+> remaining work either needs platform secure-storage integration, evidence
+> from real servers before exposing model-specific context/warm-up controls, or
+> broader platform and network failure testing. Retry behavior also needs a
+> deliberate policy because automatically repeating an ambiguous generation
+> could duplicate work or incur provider usage later.
 
 - [x] Show protocol-default, confirmed-supported, confirmed-unsupported, and
   unconfirmed capabilities for each profile, with editable per-model
