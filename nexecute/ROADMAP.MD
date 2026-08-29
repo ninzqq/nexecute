@@ -241,9 +241,15 @@ Example requests:
   can support Ollama and other compatible local or private endpoints.
 - [x] Add the OpenAI Responses, Anthropic Messages, and Nexecute gateway
   protocols behind the same repository as later adapters.
-- [x] Keep hosted-provider API keys out of Flutter clients. Route hosted OpenAI,
-  Anthropic, and similar services through a Nexecute-owned gateway that keeps
-  reusable credentials in server-side secret storage.
+- [x] Use a BYOK model: every user supplies and pays for their own hosted-model
+  account, API key, endpoint, and model. Nexecute never provides a shared
+  provider key or pays for another user's inference.
+- [x] Allow direct hosted-provider credentials only in native applications as
+  an explicit personal-use trade-off. Store them in platform secure storage,
+  never Firestore, shared preferences, logs, analytics, or exports.
+- [x] Do not support direct hosted-provider keys in Flutter Web. A future web
+  client must use a user-owned gateway or another server-side credential
+  boundary.
 - [x] Permit direct connections to local or private endpoints that do not
   require a hosted-provider secret, including endpoints reached over Tailscale.
 - [x] Store endpoint profiles locally, but synchronize conversation metadata
@@ -252,6 +258,9 @@ Example requests:
   Keep streaming drafts in memory until they reach a persistable state.
 - [x] Keep any supported native endpoint credential in platform secure storage
   rather than Firestore or plain shared preferences.
+- [x] Keep hosted inference disabled by default. Require explicit paid-use
+  activation and conservative request/token limits in addition to the
+  provider's own prepaid balance or hard spending controls.
 - [x] Expose the assistant through the drawer as a full-screen route instead of
   adding a fourth bottom-navigation destination.
 
@@ -281,11 +290,11 @@ nexecuteGateway
 
 - [x] Replace the local-server-specific proposal with a provider-neutral
   architecture.
-- [x] Define the direct-local-endpoint and hosted-provider-gateway security
-  boundary.
+- [x] Define the local endpoint, native BYOK, and optional user-owned gateway
+  security boundaries.
 - [x] Record the implementation sequence and acceptance criteria.
 
-#### Step 2: provider-neutral foundation
+#### Step 2: provider-neutral foundation ✅
 
 - [x] ~~Add the connection profile, protocol, message, conversation,~~
   ~~stream-event, model-info, and connection-result domain types.~~
@@ -298,7 +307,7 @@ nexecuteGateway
 - [x] ~~Register the assistant dependencies with Provider without making~~
   ~~startup depend on endpoint availability.~~
 
-#### Step 3: AI settings and connection profiles
+#### Step 3: AI settings and connection profiles ✅
 
 - [x] ~~Add an AI section to Settings.~~
 - [x] ~~Let users add, edit, duplicate, delete, and select connection~~
@@ -336,23 +345,70 @@ documents. User messages are stored before generation; assistant messages are
 stored once they complete, fail, or are stopped so partial output can sync
 without writing every streamed token.
 
-#### Step 5: hosted-provider gateway and adapters
+#### Step 5: local phase 1 — validate real chat 🚧
 
-- [ ] Add a small authenticated Nexecute AI gateway.
-- [ ] Verify Firebase ID tokens at the gateway boundary without granting the AI
-  provider unrestricted Firestore access.
-- [ ] Keep hosted-provider credentials in server-side secret storage.
-- [ ] Add OpenAI Responses and Anthropic Messages adapters.
-- [ ] Stream normalized events from the gateway to the existing Flutter
-  repository interface.
-- [ ] Apply request-size limits, timeouts, cancellation, basic rate limits, and
-  request diagnostics.
+Validate the existing vertical slice against the owner's real Ollama server
+before adding hosted providers or advanced application actions.
 
-Direct native use of a hosted-provider key is not part of the initial release.
-It may be considered later as an explicitly enabled personal-use mode, but it
-must never be enabled for Flutter Web or treated as secure secret storage.
+- [ ] Verify connection testing and model discovery against Ollama's
+  OpenAI-compatible API.
+- [ ] Verify streaming chat, Stop, Retry, and partial-response preservation
+  against a real local model.
+- [ ] Verify conversation restoration and Firestore synchronization between
+  signed-in devices without storing endpoint credentials in Firestore.
+- [ ] Verify access over the home network and over Tailscale.
+- [ ] Exercise model cold start, warm-up delay, endpoint-offline, timeout,
+  interrupted-stream, and malformed-response behavior.
+- [ ] Improve diagnostics and recovery guidance for any failures discovered by
+  real-server testing.
+- [ ] Verify Android plain-HTTP behavior for trusted local endpoints and prefer
+  Tailscale HTTPS/MagicDNS for remote access.
+- [ ] Record the tested Ollama/API versions and model capabilities without
+  committing personal URLs, credentials, or conversation content.
 
-#### Step 6: optional application context
+#### Step 6: local phase 2 — configuration and reliability hardening
+
+- [ ] Add platform secure credential storage for optional local/private
+  endpoint tokens.
+- [ ] Add explicit context-window, maximum-output-token, connection-timeout,
+  and warm-up settings where the server supports them.
+- [ ] Detect or record relevant model capabilities instead of assuming that
+  every OpenAI-compatible model supports tools or structured output.
+- [ ] Keep automatic retries away from ambiguous generation requests that may
+  already have completed or incurred provider work.
+- [ ] Add actionable diagnostics for DNS, TLS, CORS, mixed-content, local
+  network, authentication, model-missing, and protocol-compatibility failures.
+
+#### Step 7: local phase 3 — first confirmed structured action
+
+Start with **Note → proposed tasks** as the first end-to-end application AI
+workflow.
+
+- [ ] Let the user explicitly select one note and preview exactly what will be
+  sent to the model.
+- [ ] Request a small, versioned structured proposal rather than allowing the
+  model to call Firestore or application repositories.
+- [ ] Parse and validate proposal type, field lengths, required values, and
+  item counts inside Nexecute.
+- [ ] Present proposed tasks with Edit, Create, and Discard controls.
+- [ ] Require explicit confirmation before writing through `TodoRepository`.
+- [ ] Preserve the source note and prevent retries or duplicate responses from
+  creating duplicate tasks.
+- [ ] Treat malformed, incomplete, and adversarial model output as recoverable
+  untrusted input.
+
+#### Step 8: local phase 4 — repeatable quality evaluation
+
+- [ ] Create a small, non-personal Finnish and English evaluation set for chat
+  and note-to-task extraction.
+- [ ] Cover simple and multiple tasks, dates, ambiguity, missing information,
+  prompt injection inside notes, hallucinations, and malformed structured data.
+- [ ] Separate transport/application failures from prompt and model-quality
+  failures.
+- [ ] Record results by model and model version so hosted providers can later be
+  compared against the same cases.
+
+#### Step 9: optional application context and narrow reads
 
 - [ ] Let the user explicitly attach selected notes, active tasks, today's
   events, or another clearly defined date range to a conversation.
@@ -363,6 +419,13 @@ must never be enabled for Flutter Web or treated as secure secret storage.
 - [ ] Support useful read-only requests such as planning a day, summarizing a
   note, or finding unfinished checklist items.
 - [ ] Never automatically send the user's complete Firestore data.
+
+- [ ] Support bounded `listTasks`, `eventsForDateRange`, `searchNotes`, and
+  `getNote` operations through Nexecute repositories.
+- [ ] Return only bounded tool results to the model without exposing Firebase
+  configuration or credentials.
+- [ ] Enforce limits by date range, search query, result count, and
+  user-selected context.
 
 #### Firebase data and AI tool boundary
 
@@ -389,17 +452,7 @@ must never be enabled for Flutter Web or treated as secure secret storage.
   but it must not use that identity to provide the model with general Firestore
   access.
 
-#### Step 7: narrow read tools
-
-- [ ] Support `listTasks`, `eventsForDateRange`, `searchNotes`, and `getNote`.
-- [ ] Execute tools through Nexecute repositories rather than in the model or AI
-  server.
-- [ ] Return bounded tool results to the model without exposing Firebase
-  configuration.
-- [ ] Enforce limits by date range, search query, result count, and user-selected
-  context.
-
-#### Step 8: structured, confirmed actions
+#### Step 10: additional structured, confirmed actions
 
 - [ ] Let the model propose a new task, note, or calendar event.
 - [ ] Present proposed actions as preview cards with Create, Edit, and Discard
@@ -412,14 +465,51 @@ must never be enabled for Flutter Web or treated as secure secret storage.
 - [ ] Keep model output separate from trusted application operations and execute
   confirmed writes through the existing repositories.
 
+#### Step 11: semantic-search design and prototype
+
+- [ ] Decide whether every device builds its own local embedding index or
+  whether versioned embeddings synchronize across devices.
+- [ ] Define chunking, model-version, re-indexing, deletion, battery, storage,
+  and privacy behavior before selecting a vector database.
+- [ ] Support a local embedding model first and keep the embedding provider
+  replaceable.
+- [ ] Prototype semantic note search only after ordinary search, chat, and
+  confirmed structured actions are reliable.
+
+#### Step 12: native hosted-provider BYOK
+
+- [ ] Add platform secure storage for native OpenAI and Anthropic credentials;
+  keep only opaque credential references in connection profiles.
+- [ ] Add an OpenAI Responses adapter and an Anthropic Messages adapter behind
+  the existing normalized repository.
+- [ ] Support multiple saved Local, OpenAI, and Anthropic profiles and let the
+  user select the active profile without exposing its credential.
+- [ ] Use trusted provider endpoint defaults and warn before sending a provider
+  key to a customized hostname.
+- [ ] Keep paid inference disabled until the user explicitly enables it and
+  configures request/token limits and provider-side spending controls.
+- [ ] Never request or store provider organization/admin keys merely to inspect
+  authoritative billing information.
+- [ ] Disable direct hosted-provider credentials on Flutter Web.
+
+#### Step 13: optional user-owned gateway for web
+
+- [ ] Provide a separately deployable personal gateway template rather than a
+  central Nexecute provider key.
+- [ ] Verify Firebase ID tokens and restrict the gateway to its configured user
+  without granting general Firestore access.
+- [ ] Store each user's provider keys in their own gateway's server-side secret
+  storage.
+- [ ] Stream OpenAI and Anthropic through the existing normalized protocol.
+- [ ] Document a low-maintenance free-tier deployment path while clearly noting
+  that third-party free tiers and availability are not guaranteed.
+
 #### Later AI capabilities
 
 - Answer planning questions such as "What do I have tomorrow?"
 - Produce day plans and unfinished-checklist summaries.
 - Add intelligent quick capture after structured-action validation is reliable.
 - Add note-to-task extraction and other conversion workflows.
-- Consider local embeddings and semantic search after ordinary search and chat
-  are stable.
 - Consider optional conversation export.
 
 #### Connectivity and security
@@ -433,14 +523,14 @@ must never be enabled for Flutter Web or treated as secure secret storage.
   client never needs to call a plain HTTP service.
 - Configure only the minimum endpoint network origins required by Nexecute and
   verify browser CORS behavior during the web prototype.
-- If a stable and secure direct web integration is not available, choose
-  between the Nexecute gateway or a tailnet-hosted same-origin web
-  client as an explicit architecture decision.
+- Require a user-owned gateway or a tailnet-hosted same-origin client for hosted
+  BYOK use on the web; never place reusable provider keys in browser storage.
 - Restrict tailnet access to only the required service ports and devices/users.
 - Do not expose an unauthenticated local model-server port directly to the
   public internet.
-- Do not embed a reusable hosted-provider API key in a Flutter mobile, desktop,
-  or web client.
+- Keep native BYOK credentials in platform secure storage with clear extraction
+  and device-compromise caveats. Never store them in Firestore or enable them
+  in Flutter Web.
 - Provide sensible connection timeouts, cancellation, and model warm-up
   feedback.
 
@@ -454,7 +544,10 @@ must never be enabled for Flutter Web or treated as secure secret storage.
 - No model-generated action changes user data without confirmation.
 - No model provider receives Firebase credentials or unrestricted database
   access.
-- Hosted-provider API keys are never embedded in a Flutter client.
+- Nexecute never supplies a shared provider key or pays for another user's AI
+  usage.
+- Hosted-provider keys are never stored in Firestore or Flutter Web and paid
+  inference remains disabled until explicitly enabled.
 - The app's Calendar, Tasks, and Notes remain usable without an AI endpoint.
 
 ### Today dashboard and universal quick capture

@@ -16,12 +16,14 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
   OpenAiCompatibleAssistantRepository({
     http.Client? client,
     this.connectionTimeout = const Duration(seconds: 20),
+    this.responseIdleTimeout = const Duration(seconds: 90),
   }) : _client = client ?? http.Client(),
        _ownsClient = client == null;
 
   final http.Client _client;
   final bool _ownsClient;
   final Duration connectionTimeout;
+  final Duration responseIdleTimeout;
 
   @override
   Future<AiConnectionResult> testConnection(AiConnectionProfile profile) async {
@@ -49,10 +51,15 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
     } on OpenAiCompatibleHttpException catch (error) {
       final status = switch (error.statusCode) {
         401 || 403 => AiConnectionStatus.authenticationFailed,
-        404 => AiConnectionStatus.unreachable,
+        404 => AiConnectionStatus.invalidConfiguration,
         _ => AiConnectionStatus.failed,
       };
-      return AiConnectionResult(status: status, message: error.message);
+      final message =
+          error.statusCode == 404
+              ? 'The model-list endpoint was not found. For Ollama, use a '
+                  'base URL ending in /v1.'
+              : error.message;
+      return AiConnectionResult(status: status, message: message);
     } on http.ClientException catch (error) {
       return AiConnectionResult(
         status: AiConnectionStatus.unreachable,
@@ -143,10 +150,12 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
       'stream': true,
     });
 
+    var responseStarted = false;
     try {
       final response = await _client
           .send(httpRequest)
           .timeout(connectionTimeout);
+      responseStarted = true;
       if (response.statusCode < 200 || response.statusCode >= 300) {
         final body = await response.stream.bytesToString();
         final message = _errorMessage(body, response.statusCode);
@@ -162,6 +171,7 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
       var completed = false;
       AiTokenUsage? usage;
       await for (final line in response.stream
+          .timeout(responseIdleTimeout)
           .transform(utf8.decoder)
           .transform(const LineSplitter())) {
         final trimmed = line.trim();
@@ -175,12 +185,15 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
         final decoded = jsonDecode(payload);
         if (decoded is! Map) continue;
         final error = decoded['error'];
-        if (error is Map) {
-          final message = error['message']?.toString() ?? 'AI request failed.';
+        if (error is Map || error is String) {
+          final message =
+              error is Map
+                  ? error['message']?.toString() ?? 'AI request failed.'
+                  : error.toString();
           yield AiResponseFailed(
             error: error,
             message: message,
-            code: error['code']?.toString(),
+            code: error is Map ? error['code']?.toString() : null,
             retryable: true,
           );
           return;
@@ -215,9 +228,18 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
     } on TimeoutException catch (error) {
       yield AiResponseFailed(
         error: error,
-        message: 'The AI endpoint did not start responding in time.',
-        code: 'timeout',
+        message:
+            responseStarted
+                ? 'The AI endpoint stopped sending response data.'
+                : 'The AI endpoint did not start responding in time.',
+        code: responseStarted ? 'stream_timeout' : 'connection_timeout',
         retryable: true,
+      );
+    } on FormatException catch (error) {
+      yield AiResponseFailed(
+        error: error,
+        message: 'The AI endpoint returned a malformed streaming response.',
+        code: 'invalid_response',
       );
     } catch (error) {
       yield AiResponseFailed(

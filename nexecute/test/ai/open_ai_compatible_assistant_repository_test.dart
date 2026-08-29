@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -62,6 +63,19 @@ void main() {
     final result = await repository.testConnection(profile);
 
     expect(result.status, AiConnectionStatus.modelNotFound);
+  });
+
+  test('explains that Ollama base URLs need the v1 path', () async {
+    final repository = OpenAiCompatibleAssistantRepository(
+      client: MockClient((_) async => http.Response('Not Found', 404)),
+    );
+
+    final result = await repository.testConnection(
+      profile.copyWith(baseUrl: Uri.parse('http://localhost:11434')),
+    );
+
+    expect(result.status, AiConnectionStatus.invalidConfiguration);
+    expect(result.message, contains('ending in /v1'));
   });
 
   test('normalizes streamed chat completion deltas', () async {
@@ -162,6 +176,64 @@ void main() {
     expect(event.retryable, isTrue);
   });
 
+  test('normalizes a plain-string streamed Ollama error', () async {
+    final repository = OpenAiCompatibleAssistantRepository(
+      client: MockClient(
+        (_) async => http.Response(
+          'data: ${jsonEncode({'error': 'model runner stopped'})}\n\n',
+          200,
+          headers: {'content-type': 'text/event-stream'},
+        ),
+      ),
+    );
+    final handle = await repository.startResponse(_request(profile));
+
+    final event = (await handle.events.toList()).single as AiResponseFailed;
+
+    expect(event.message, 'model runner stopped');
+    expect(event.retryable, isTrue);
+  });
+
+  test('fails a response that stops producing stream data', () async {
+    final streamController = StreamController<List<int>>();
+    addTearDown(streamController.close);
+    final repository = OpenAiCompatibleAssistantRepository(
+      client: _StreamedResponseClient(
+        (_) async => http.StreamedResponse(streamController.stream, 200),
+      ),
+      responseIdleTimeout: const Duration(milliseconds: 10),
+    );
+    final handle = await repository.startResponse(_request(profile));
+
+    final event = (await handle.events.toList()).single as AiResponseFailed;
+
+    expect(event.code, 'stream_timeout');
+    expect(event.message, contains('stopped sending'));
+    expect(event.retryable, isTrue);
+  });
+
+  test(
+    'reports malformed streamed JSON without exposing parser details',
+    () async {
+      final repository = OpenAiCompatibleAssistantRepository(
+        client: MockClient(
+          (_) async => http.Response(
+            'data: {not-json}\n\n',
+            200,
+            headers: {'content-type': 'text/event-stream'},
+          ),
+        ),
+      );
+      final handle = await repository.startResponse(_request(profile));
+
+      final event = (await handle.events.toList()).single as AiResponseFailed;
+
+      expect(event.code, 'invalid_response');
+      expect(event.message, contains('malformed'));
+      expect(event.retryable, isFalse);
+    },
+  );
+
   test(
     'rejects protocols that do not use compatible chat completions',
     () async {
@@ -177,4 +249,21 @@ void main() {
       expect(result.status, AiConnectionStatus.unsupported);
     },
   );
+}
+
+AiChatRequest _request(AiConnectionProfile profile) => AiChatRequest(
+  connectionProfile: profile,
+  conversationId: 'conversation-1',
+  messages: const [],
+);
+
+class _StreamedResponseClient extends http.BaseClient {
+  _StreamedResponseClient(this._handler);
+
+  final Future<http.StreamedResponse> Function(http.BaseRequest request)
+  _handler;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) =>
+      _handler(request);
 }
