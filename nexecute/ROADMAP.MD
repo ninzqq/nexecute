@@ -419,18 +419,40 @@ system message.
 Start with **Note → proposed tasks** as the first end-to-end application AI
 workflow.
 
-- [ ] Let the user explicitly select one note and preview exactly what will be
+##### Step 7A: structured proposal foundation ✅
+
+- [x] Define version 1 as an exact JSON object containing zero to ten one-line
+  task titles of at most 200 characters each.
+- [x] Build a short extraction prompt that JSON-encodes bounded note title and
+  content as untrusted data rather than interpolating them into instructions.
+- [x] Parse exact JSON or one JSON code fence and reject extra fields,
+  unsupported versions, oversized responses, invalid titles, and duplicate
+  tasks with typed, user-safe failures.
+- [x] Keep the contract independent from Firestore, `TodoRepository`, and UI
+  state so parsing model output can never create tasks by itself.
+
+##### Step 7B: note selection, preview, and model request ✅
+
+- [x] Let the user explicitly select one note and preview exactly what will be
   sent to the model.
-- [ ] Request a small, versioned structured proposal rather than allowing the
-  model to call Firestore or application repositories.
-- [ ] Parse and validate proposal type, field lengths, required values, and
-  item counts inside Nexecute.
-- [ ] Present proposed tasks with Edit, Create, and Discard controls.
+- [x] Show the selected connection and model before sending anything.
+- [x] Send the dedicated extraction prompt through the active AI connection
+  and allow the request to be cancelled.
+- [x] Keep extraction outside chat history and Firestore, parse the response
+  locally, and stop at a proposal-count confirmation until review UI exists.
+
+##### Step 7C: proposal review
+
+- [ ] Present valid proposed tasks with Edit, selection, Create, and Discard
+  controls.
+- [ ] Treat malformed, incomplete, and adversarial model output as recoverable
+  untrusted input with retry or cancel guidance.
+
+##### Step 7D: confirmed, idempotent creation
+
 - [ ] Require explicit confirmation before writing through `TodoRepository`.
 - [ ] Preserve the source note and prevent retries or duplicate responses from
   creating duplicate tasks.
-- [ ] Treat malformed, incomplete, and adversarial model output as recoverable
-  untrusted input.
 
 #### Step 8: local phase 4 — repeatable quality evaluation
 

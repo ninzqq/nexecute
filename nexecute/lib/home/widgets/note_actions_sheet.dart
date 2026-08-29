@@ -8,6 +8,7 @@ class NoteActionsSheet extends StatelessWidget {
     required this.note,
     required this.onToggleTrash,
     this.folderName,
+    this.onExtractTasks,
     this.onMove,
     this.onDelete,
   });
@@ -15,6 +16,7 @@ class NoteActionsSheet extends StatelessWidget {
   final Quicxec note;
   final VoidCallback onToggleTrash;
   final String? folderName;
+  final VoidCallback? onExtractTasks;
   final VoidCallback? onMove;
   final VoidCallback? onDelete;
 
@@ -25,7 +27,7 @@ class NoteActionsSheet extends StatelessWidget {
     final title =
         note.title.trim().isEmpty ? 'Untitled note' : note.title.trim();
 
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -69,6 +71,16 @@ class NoteActionsSheet extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
+          if (onExtractTasks case final onExtractTasks?) ...[
+            _NoteActionTile(
+              icon: Icons.auto_awesome_outlined,
+              label: 'Propose tasks with AI',
+              description: 'Preview this note before sending it',
+              color: palette.primary,
+              onTap: onExtractTasks,
+            ),
+            const SizedBox(height: 10),
+          ],
           if (onMove case final onMove?) ...[
             _NoteActionTile(
               icon: Icons.drive_file_move_outline,

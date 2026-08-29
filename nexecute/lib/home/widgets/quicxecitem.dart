@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:nexecute/ai/presentation/ai_note_task_extraction_sheet.dart';
 import 'package:nexecute/home/bottomsheets/item_editor.dart';
 import 'package:nexecute/home/widgets/note_actions_sheet.dart';
 import 'package:nexecute/home/widgets/note_card_content.dart';
@@ -32,6 +35,15 @@ class QuicxecItem extends StatelessWidget {
           (sheetContext) => NoteActionsSheet(
             note: quicxec,
             folderName: currentFolderName,
+            onExtractTasks:
+                quicxec.trashed
+                    ? null
+                    : () {
+                      Navigator.of(sheetContext).pop();
+                      unawaited(
+                        showAiNoteTaskExtractionPreview(context, note: quicxec),
+                      );
+                    },
             onMove:
                 quicxec.trashed
                     ? null
