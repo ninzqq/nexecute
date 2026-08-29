@@ -117,9 +117,13 @@ void main() {
         );
       }),
     );
+    final configuredProfile = profile.copyWith(
+      reasoningEffort: AiReasoningEffort.none,
+      maxOutputTokens: 512,
+    );
     final handle = await repository.startResponse(
       AiChatRequest(
-        connectionProfile: profile,
+        connectionProfile: configuredProfile,
         conversationId: 'conversation-1',
         messages: [
           AiChatMessage(
@@ -142,6 +146,8 @@ void main() {
     );
     expect(requestBody['model'], 'model-a');
     expect(requestBody['stream'], isTrue);
+    expect(requestBody['max_tokens'], 512);
+    expect(requestBody['reasoning_effort'], 'none');
     expect((requestBody['messages'] as List).single['content'], 'Hi');
     expect(
       events.whereType<AiTextDelta>().map((event) => event.text).join(),
@@ -176,6 +182,44 @@ void main() {
     expect(event.retryable, isTrue);
   });
 
+  test('omits reasoning effort when the profile uses automatic', () async {
+    late http.Request sentRequest;
+    final repository = OpenAiCompatibleAssistantRepository(
+      client: MockClient((request) async {
+        sentRequest = request;
+        return http.Response('data: [DONE]\n\n', 200);
+      }),
+    );
+    final handle = await repository.startResponse(_request(profile));
+
+    await handle.events.toList();
+    final requestBody = jsonDecode(sentRequest.body) as Map<String, dynamic>;
+
+    expect(requestBody, isNot(contains('reasoning_effort')));
+    expect(requestBody['max_tokens'], aiDefaultMaxOutputTokens);
+  });
+
+  test(
+    'uses the profile connection timeout while starting a response',
+    () async {
+      final repository = OpenAiCompatibleAssistantRepository(
+        client: _StreamedResponseClient(
+          (_) => Completer<http.StreamedResponse>().future,
+        ),
+      );
+      final handle = await repository.startResponse(
+        _request(
+          profile.copyWith(connectionTimeout: const Duration(milliseconds: 10)),
+        ),
+      );
+
+      final event = (await handle.events.toList()).single as AiResponseFailed;
+
+      expect(event.code, 'connection_timeout');
+      expect(event.message, contains('did not start'));
+    },
+  );
+
   test('normalizes a plain-string streamed Ollama error', () async {
     final repository = OpenAiCompatibleAssistantRepository(
       client: MockClient(
@@ -201,9 +245,12 @@ void main() {
       client: _StreamedResponseClient(
         (_) async => http.StreamedResponse(streamController.stream, 200),
       ),
-      responseIdleTimeout: const Duration(milliseconds: 10),
     );
-    final handle = await repository.startResponse(_request(profile));
+    final handle = await repository.startResponse(
+      _request(
+        profile.copyWith(responseIdleTimeout: const Duration(milliseconds: 10)),
+      ),
+    );
 
     final event = (await handle.events.toList()).single as AiResponseFailed;
 

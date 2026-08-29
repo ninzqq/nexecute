@@ -368,10 +368,26 @@ before adding hosted providers or advanced application actions.
 
 #### Step 6: local phase 2 — configuration and reliability hardening
 
+##### Step 6A: generation controls ✅
+
+- [x] Persist reasoning effort, maximum output tokens, connection/start
+  timeout, and stream-idle timeout in each connection profile.
+- [x] Keep automatic reasoning provider-compatible by omitting the optional
+  request field; send an explicit effort only when selected.
+- [x] Apply output and timeout limits to model discovery and streamed chat
+  requests.
+- [x] Provide bounded editor validation and backward-compatible defaults for
+  existing saved profiles.
+
+Current defaults are automatic reasoning, 1,024 maximum output tokens, a
+120-second connection/start timeout, and a 90-second stream-idle timeout.
+
+##### Step 6B: remaining reliability and secure access
+
 - [ ] Add platform secure credential storage for optional local/private
   endpoint tokens.
-- [ ] Add explicit context-window, maximum-output-token, connection-timeout,
-  and warm-up settings where the server supports them.
+- [ ] Add explicit context-window and warm-up settings where the server and
+  protocol support them reliably.
 - [ ] Detect or record relevant model capabilities instead of assuming that
   every OpenAI-compatible model supports tools or structured output.
 - [ ] Keep automatic retries away from ambiguous generation requests that may

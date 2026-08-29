@@ -312,6 +312,13 @@ class _ProfileCard extends StatelessWidget {
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(color: colorScheme.onSurfaceVariant),
                         ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${profile.reasoningEffort.label} reasoning · '
+                          '${profile.maxOutputTokens} max tokens',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: colorScheme.onSurfaceVariant),
+                        ),
                       ],
                     ),
                   ),
@@ -461,9 +468,13 @@ class _AiConnectionProfileEditorState
   late final TextEditingController _nameController;
   late final TextEditingController _baseUrlController;
   late final TextEditingController _modelController;
+  late final TextEditingController _maxOutputTokensController;
+  late final TextEditingController _connectionTimeoutController;
+  late final TextEditingController _responseIdleTimeoutController;
   late final String _profileId;
   late AiProtocol _protocol;
   late AiAuthenticationMode _authenticationMode;
+  late AiReasoningEffort _reasoningEffort;
   List<AiModelInfo> _models = const [];
   bool _discoveringModels = false;
   String? _discoveryMessage;
@@ -479,9 +490,24 @@ class _AiConnectionProfileEditorState
       text: profile?.baseUrl.toString() ?? '',
     );
     _modelController = TextEditingController(text: profile?.modelId ?? '');
+    _maxOutputTokensController = TextEditingController(
+      text: (profile?.maxOutputTokens ?? aiDefaultMaxOutputTokens).toString(),
+    );
+    _connectionTimeoutController = TextEditingController(
+      text:
+          (profile?.connectionTimeout ?? aiDefaultConnectionTimeout).inSeconds
+              .toString(),
+    );
+    _responseIdleTimeoutController = TextEditingController(
+      text:
+          (profile?.responseIdleTimeout ?? aiDefaultResponseIdleTimeout)
+              .inSeconds
+              .toString(),
+    );
     _protocol = profile?.protocol ?? AiProtocol.openAiCompatibleChat;
     _authenticationMode =
         profile?.authenticationMode ?? AiAuthenticationMode.none;
+    _reasoningEffort = profile?.reasoningEffort ?? AiReasoningEffort.automatic;
     _updateUrlWarning();
   }
 
@@ -490,6 +516,9 @@ class _AiConnectionProfileEditorState
     _nameController.dispose();
     _baseUrlController.dispose();
     _modelController.dispose();
+    _maxOutputTokensController.dispose();
+    _connectionTimeoutController.dispose();
+    _responseIdleTimeoutController.dispose();
     super.dispose();
   }
 
@@ -640,6 +669,92 @@ class _AiConnectionProfileEditorState
                   Text(message, style: Theme.of(context).textTheme.bodySmall),
                 ],
                 const SizedBox(height: 14),
+                ExpansionTile(
+                  key: const Key('ai-generation-controls'),
+                  initiallyExpanded: true,
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: const EdgeInsets.only(bottom: 8),
+                  title: const Text('Generation controls'),
+                  subtitle: const Text('Reasoning, output, and timeouts'),
+                  children: [
+                    DropdownButtonFormField<AiReasoningEffort>(
+                      key: const Key('ai-profile-reasoning-field'),
+                      initialValue: _reasoningEffort,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Reasoning effort',
+                        helperText:
+                            'Automatic keeps the model or server default.',
+                      ),
+                      items: [
+                        for (final effort in AiReasoningEffort.values)
+                          DropdownMenuItem(
+                            value: effort,
+                            child: Text(effort.label),
+                          ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => _reasoningEffort = value);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      key: const Key('ai-profile-max-output-tokens-field'),
+                      controller: _maxOutputTokensController,
+                      decoration: const InputDecoration(
+                        labelText: 'Maximum output tokens',
+                        helperText: 'Limits the length of each model response.',
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator:
+                          (value) => _boundedIntegerError(
+                            value,
+                            label: 'maximum output tokens',
+                            minimum: aiMinOutputTokens,
+                            maximum: aiMaxOutputTokens,
+                          ),
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      key: const Key('ai-profile-connection-timeout-field'),
+                      controller: _connectionTimeoutController,
+                      decoration: const InputDecoration(
+                        labelText: 'Connection/start timeout (seconds)',
+                        helperText:
+                            'Includes waiting for a cold model to begin.',
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator:
+                          (value) => _boundedIntegerError(
+                            value,
+                            label: 'connection timeout',
+                            minimum: aiMinTimeoutSeconds,
+                            maximum: aiMaxTimeoutSeconds,
+                          ),
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      key: const Key('ai-profile-stream-timeout-field'),
+                      controller: _responseIdleTimeoutController,
+                      decoration: const InputDecoration(
+                        labelText: 'Stream idle timeout (seconds)',
+                        helperText:
+                            'Stops a response that has stopped sending data.',
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator:
+                          (value) => _boundedIntegerError(
+                            value,
+                            label: 'stream idle timeout',
+                            minimum: aiMinTimeoutSeconds,
+                            maximum: aiMaxTimeoutSeconds,
+                          ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
                 DropdownButtonFormField<AiAuthenticationMode>(
                   key: const Key('ai-profile-auth-field'),
                   initialValue: _authenticationMode,
@@ -668,7 +783,7 @@ class _AiConnectionProfileEditorState
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Bearer-token and API-key entry will be enabled only with secure credential storage. Hosted provider keys will use the Nexecute gateway.',
+                  'Bearer-token and API-key entry will be enabled only with secure credential storage. Direct hosted-provider credentials remain unavailable on web.',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
@@ -756,8 +871,30 @@ class _AiConnectionProfileEditorState
       modelId: fallbackModelId,
       authenticationMode: _authenticationMode,
       credentialReference: widget.profile?.credentialReference,
+      reasoningEffort: _reasoningEffort,
+      maxOutputTokens: int.parse(_maxOutputTokensController.text.trim()),
+      connectionTimeout: Duration(
+        seconds: int.parse(_connectionTimeoutController.text.trim()),
+      ),
+      responseIdleTimeout: Duration(
+        seconds: int.parse(_responseIdleTimeoutController.text.trim()),
+      ),
       capabilityOverrides: widget.profile?.capabilityOverrides ?? const {},
     );
+  }
+
+  static String? _boundedIntegerError(
+    String? rawValue, {
+    required String label,
+    required int minimum,
+    required int maximum,
+  }) {
+    final value = int.tryParse(rawValue?.trim() ?? '');
+    if (value == null) return 'Enter $label as a whole number.';
+    if (value < minimum || value > maximum) {
+      return 'Use a value from $minimum to $maximum.';
+    }
+    return null;
   }
 }
 
@@ -802,5 +939,15 @@ extension on AiAuthenticationMode {
     AiAuthenticationMode.bearerToken => 'Bearer token (not yet available)',
     AiAuthenticationMode.apiKeyHeader => 'API key header (not yet available)',
     AiAuthenticationMode.gatewaySession => 'Nexecute gateway session',
+  };
+}
+
+extension on AiReasoningEffort {
+  String get label => switch (this) {
+    AiReasoningEffort.automatic => 'Automatic',
+    AiReasoningEffort.none => 'None',
+    AiReasoningEffort.low => 'Low',
+    AiReasoningEffort.medium => 'Medium',
+    AiReasoningEffort.high => 'High',
   };
 }

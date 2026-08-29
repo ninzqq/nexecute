@@ -11,17 +11,27 @@ void main() {
       modelId: 'local-model',
       authenticationMode: AiAuthenticationMode.bearerToken,
       credentialReference: 'secure-storage:home',
+      reasoningEffort: AiReasoningEffort.low,
+      maxOutputTokens: 2048,
+      connectionTimeout: const Duration(seconds: 60),
+      responseIdleTimeout: const Duration(seconds: 30),
       capabilityOverrides: const {AiCapability.tools: false},
     );
 
     expect(profile.isValid, isTrue);
     expect(profile.credentialReference, 'secure-storage:home');
     expect(profile.capabilityOverrides[AiCapability.tools], isFalse);
+    expect(profile.reasoningEffort, AiReasoningEffort.low);
+    expect(profile.maxOutputTokens, 2048);
+    expect(profile.connectionTimeout, const Duration(seconds: 60));
+    expect(profile.responseIdleTimeout, const Duration(seconds: 30));
     expect(profile.copyWith(clearCredentialReference: true).isValid, isFalse);
     expect(
       profile.copyWith(baseUrl: Uri.parse('ftp://ai.example.test')).isValid,
       isFalse,
     );
+    expect(profile.copyWith(maxOutputTokens: 0).isValid, isFalse);
+    expect(profile.copyWith(connectionTimeout: Duration.zero).isValid, isFalse);
   });
 
   test('conversation and request expose immutable message snapshots', () {

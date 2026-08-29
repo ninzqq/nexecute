@@ -15,15 +15,15 @@ import 'package:nexecute/ai/repositories/ai_response_handle.dart';
 class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
   OpenAiCompatibleAssistantRepository({
     http.Client? client,
-    this.connectionTimeout = const Duration(seconds: 20),
-    this.responseIdleTimeout = const Duration(seconds: 90),
+    this.connectionTimeout,
+    this.responseIdleTimeout,
   }) : _client = client ?? http.Client(),
        _ownsClient = client == null;
 
   final http.Client _client;
   final bool _ownsClient;
-  final Duration connectionTimeout;
-  final Duration responseIdleTimeout;
+  final Duration? connectionTimeout;
+  final Duration? responseIdleTimeout;
 
   @override
   Future<AiConnectionResult> testConnection(AiConnectionProfile profile) async {
@@ -32,7 +32,9 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
 
     final stopwatch = Stopwatch()..start();
     try {
-      final models = await listModels(profile).timeout(connectionTimeout);
+      final models = await listModels(
+        profile,
+      ).timeout(connectionTimeout ?? profile.connectionTimeout);
       stopwatch.stop();
       if (models.isNotEmpty &&
           !models.any((model) => model.id == profile.modelId)) {
@@ -81,7 +83,7 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
     }
     final response = await _client
         .get(_endpoint(profile.baseUrl, 'models'), headers: _headers(profile))
-        .timeout(connectionTimeout);
+        .timeout(connectionTimeout ?? profile.connectionTimeout);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw OpenAiCompatibleHttpException(
         response.statusCode,
@@ -148,13 +150,16 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
         for (final message in request.messages) _messageJson(message),
       ],
       'stream': true,
+      'max_tokens': profile.maxOutputTokens,
+      if (profile.reasoningEffort != AiReasoningEffort.automatic)
+        'reasoning_effort': profile.reasoningEffort.name,
     });
 
     var responseStarted = false;
     try {
       final response = await _client
           .send(httpRequest)
-          .timeout(connectionTimeout);
+          .timeout(connectionTimeout ?? profile.connectionTimeout);
       responseStarted = true;
       if (response.statusCode < 200 || response.statusCode >= 300) {
         final body = await response.stream.bytesToString();
@@ -171,7 +176,7 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
       var completed = false;
       AiTokenUsage? usage;
       await for (final line in response.stream
-          .timeout(responseIdleTimeout)
+          .timeout(responseIdleTimeout ?? profile.responseIdleTimeout)
           .transform(utf8.decoder)
           .transform(const LineSplitter())) {
         final trimmed = line.trim();

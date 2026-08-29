@@ -59,6 +59,25 @@ void main() {
       find.byKey(const Key('ai-profile-model-field')),
       'qwen3:8b',
     );
+    await tester.ensureVisible(
+      find.byKey(const Key('ai-profile-reasoning-field')),
+    );
+    await tester.tap(find.byKey(const Key('ai-profile-reasoning-field')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Low').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('ai-profile-max-output-tokens-field')),
+      '2048',
+    );
+    await tester.enterText(
+      find.byKey(const Key('ai-profile-connection-timeout-field')),
+      '180',
+    );
+    await tester.enterText(
+      find.byKey(const Key('ai-profile-stream-timeout-field')),
+      '60',
+    );
     await tester.tap(find.byKey(const Key('ai-profile-save')));
     await tester.pumpAndSettle();
 
@@ -67,6 +86,10 @@ void main() {
     expect(repository.listedProfiles, hasLength(1));
 
     final profile = (await store.getProfiles()).single;
+    expect(profile.reasoningEffort, AiReasoningEffort.low);
+    expect(profile.maxOutputTokens, 2048);
+    expect(profile.connectionTimeout, const Duration(seconds: 180));
+    expect(profile.responseIdleTimeout, const Duration(seconds: 60));
     await tester.tap(find.byKey(Key('ai-profile-test-${profile.id}')));
     await tester.pumpAndSettle();
 
@@ -140,5 +163,14 @@ void main() {
       find.textContaining('localhost points to this device'),
       findsOneWidget,
     );
+
+    await tester.enterText(
+      find.byKey(const Key('ai-profile-max-output-tokens-field')),
+      '0',
+    );
+    await tester.tap(find.byKey(const Key('ai-profile-save')));
+    await tester.pump();
+
+    expect(find.text('Use a value from 1 to 131072.'), findsOneWidget);
   });
 }

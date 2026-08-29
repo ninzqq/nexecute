@@ -1,5 +1,15 @@
 import 'package:nexecute/ai/domain/ai_protocol.dart';
 
+const aiDefaultMaxOutputTokens = 1024;
+const aiMinOutputTokens = 1;
+const aiMaxOutputTokens = 131072;
+const aiDefaultConnectionTimeout = Duration(seconds: 120);
+const aiDefaultResponseIdleTimeout = Duration(seconds: 90);
+const aiMinTimeoutSeconds = 5;
+const aiMaxTimeoutSeconds = 900;
+
+enum AiReasoningEffort { automatic, none, low, medium, high }
+
 class AiConnectionProfile {
   AiConnectionProfile({
     required this.id,
@@ -9,6 +19,10 @@ class AiConnectionProfile {
     required this.modelId,
     this.authenticationMode = AiAuthenticationMode.none,
     this.credentialReference,
+    this.reasoningEffort = AiReasoningEffort.automatic,
+    this.maxOutputTokens = aiDefaultMaxOutputTokens,
+    this.connectionTimeout = aiDefaultConnectionTimeout,
+    this.responseIdleTimeout = aiDefaultResponseIdleTimeout,
     Map<AiCapability, bool> capabilityOverrides = const {},
   }) : capabilityOverrides = Map.unmodifiable(capabilityOverrides);
 
@@ -19,6 +33,10 @@ class AiConnectionProfile {
   final String modelId;
   final AiAuthenticationMode authenticationMode;
   final String? credentialReference;
+  final AiReasoningEffort reasoningEffort;
+  final int maxOutputTokens;
+  final Duration connectionTimeout;
+  final Duration responseIdleTimeout;
   final Map<AiCapability, bool> capabilityOverrides;
 
   bool get hasRequiredCredential =>
@@ -32,6 +50,12 @@ class AiConnectionProfile {
       (baseUrl.scheme == 'http' || baseUrl.scheme == 'https') &&
       baseUrl.host.isNotEmpty &&
       modelId.trim().isNotEmpty &&
+      maxOutputTokens >= aiMinOutputTokens &&
+      maxOutputTokens <= aiMaxOutputTokens &&
+      connectionTimeout > Duration.zero &&
+      connectionTimeout <= Duration(seconds: aiMaxTimeoutSeconds) &&
+      responseIdleTimeout > Duration.zero &&
+      responseIdleTimeout <= Duration(seconds: aiMaxTimeoutSeconds) &&
       hasRequiredCredential;
 
   bool supports(AiCapability capability) =>
@@ -47,6 +71,10 @@ class AiConnectionProfile {
     AiAuthenticationMode? authenticationMode,
     String? credentialReference,
     bool clearCredentialReference = false,
+    AiReasoningEffort? reasoningEffort,
+    int? maxOutputTokens,
+    Duration? connectionTimeout,
+    Duration? responseIdleTimeout,
     Map<AiCapability, bool>? capabilityOverrides,
   }) {
     return AiConnectionProfile(
@@ -60,6 +88,10 @@ class AiConnectionProfile {
           clearCredentialReference
               ? null
               : credentialReference ?? this.credentialReference,
+      reasoningEffort: reasoningEffort ?? this.reasoningEffort,
+      maxOutputTokens: maxOutputTokens ?? this.maxOutputTokens,
+      connectionTimeout: connectionTimeout ?? this.connectionTimeout,
+      responseIdleTimeout: responseIdleTimeout ?? this.responseIdleTimeout,
       capabilityOverrides: capabilityOverrides ?? this.capabilityOverrides,
     );
   }
