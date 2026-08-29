@@ -9,6 +9,7 @@ import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/note_folder.dart';
 import 'package:nexecute/repositories/note_repository.dart';
+import 'package:nexecute/repositories/todo_repository.dart';
 import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
 
@@ -40,9 +41,7 @@ class QuicxecItem extends StatelessWidget {
                     ? null
                     : () {
                       Navigator.of(sheetContext).pop();
-                      unawaited(
-                        showAiNoteTaskExtractionPreview(context, note: quicxec),
-                      );
+                      unawaited(_extractTasks(context));
                     },
             onMove:
                 quicxec.trashed
@@ -54,6 +53,22 @@ class QuicxecItem extends StatelessWidget {
                     ? () => _deletePermanently(context, sheetContext)
                     : null,
           ),
+    );
+  }
+
+  Future<void> _extractTasks(BuildContext context) async {
+    final createdCount = await showAiNoteTaskExtractionPreview(
+      context,
+      note: quicxec,
+      onCreate: context.read<TodoRepository>().createTodos,
+    );
+    if (createdCount == null || !context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '$createdCount task${createdCount == 1 ? '' : 's'} created',
+        ),
+      ),
     );
   }
 

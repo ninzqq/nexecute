@@ -4,53 +4,74 @@ import 'package:flutter/material.dart';
 import 'package:nexecute/ai/application/ai_note_task_prompt.dart';
 import 'package:nexecute/ai/domain/ai_task_proposal.dart';
 import 'package:nexecute/ai/presentation/ai_note_task_extraction_controller.dart';
+import 'package:nexecute/ai/presentation/ai_task_proposal_creation_controller.dart';
 import 'package:nexecute/ai/repositories/ai_assistant_repository.dart';
 import 'package:nexecute/ai/repositories/ai_connection_profile_store.dart';
 import 'package:nexecute/models/quicxec.dart';
+import 'package:nexecute/repositories/todo_repository.dart';
 import 'package:provider/provider.dart';
 
 typedef AiTaskProposalCreateCallback =
-    Future<void> Function(List<AiProposedTask> tasks);
+    Future<void> Function(CreateTodosCommand command);
 
-Future<void> showAiNoteTaskExtractionPreview(
+Future<int?> showAiNoteTaskExtractionPreview(
   BuildContext context, {
   required Quicxec note,
   AiTaskProposalCreateCallback? onCreate,
+  String Function()? creationIdFactory,
+  DateTime Function()? clock,
 }) async {
-  final controller = AiNoteTaskExtractionController(
+  final extractionController = AiNoteTaskExtractionController(
     assistantRepository: context.read<AiAssistantRepository>(),
     connectionProfileStore: context.read<AiConnectionProfileStore>(),
   );
-  await controller.initialize();
+  final creationController =
+      onCreate == null
+          ? null
+          : AiTaskProposalCreationController(
+            submit: onCreate,
+            idFactory: creationIdFactory,
+            clock: clock,
+          );
+  await extractionController.initialize();
   if (!context.mounted) {
-    controller.dispose();
-    return;
+    extractionController.dispose();
+    creationController?.dispose();
+    return null;
   }
-  await showModalBottomSheet<void>(
-    context: context,
-    useSafeArea: true,
-    isScrollControlled: true,
-    showDragHandle: true,
-    builder:
-        (_) => _AiNoteTaskExtractionSheet(
-          note: note,
-          controller: controller,
-          onCreate: onCreate,
-        ),
-  );
-  controller.dispose();
+  try {
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder:
+          (_) => _AiNoteTaskExtractionSheet(
+            note: note,
+            extractionController: extractionController,
+            creationController: creationController,
+          ),
+    );
+    if (creationController?.status == AiTaskProposalCreationStatus.completed) {
+      return creationController!.command!.titles.length;
+    }
+    return null;
+  } finally {
+    extractionController.dispose();
+    creationController?.dispose();
+  }
 }
 
 class _AiNoteTaskExtractionSheet extends StatefulWidget {
   const _AiNoteTaskExtractionSheet({
     required this.note,
-    required this.controller,
-    this.onCreate,
+    required this.extractionController,
+    required this.creationController,
   });
 
   final Quicxec note;
-  final AiNoteTaskExtractionController controller;
-  final AiTaskProposalCreateCallback? onCreate;
+  final AiNoteTaskExtractionController extractionController;
+  final AiTaskProposalCreationController? creationController;
 
   @override
   State<_AiNoteTaskExtractionSheet> createState() =>
@@ -62,12 +83,14 @@ class _AiNoteTaskExtractionSheetState
   @override
   void initState() {
     super.initState();
-    widget.controller.addListener(_refresh);
+    widget.extractionController.addListener(_refresh);
+    widget.creationController?.addListener(_refresh);
   }
 
   @override
   void dispose() {
-    widget.controller.removeListener(_refresh);
+    widget.extractionController.removeListener(_refresh);
+    widget.creationController?.removeListener(_refresh);
     super.dispose();
   }
 
@@ -77,7 +100,8 @@ class _AiNoteTaskExtractionSheetState
 
   @override
   Widget build(BuildContext context) {
-    final controller = widget.controller;
+    final controller = widget.extractionController;
+    final creationController = widget.creationController;
     final profile = controller.activeProfile;
     final content = widget.note.contentAsPlainText;
     final sourceTooLarge =
@@ -96,6 +120,13 @@ class _AiNoteTaskExtractionSheetState
     final retrying =
         controller.status == AiNoteTaskExtractionStatus.failed ||
         controller.status == AiNoteTaskExtractionStatus.cancelled;
+    final creationStatus = creationController?.status;
+    final creationStarted = creationController?.command != null;
+    final creating = creationStatus == AiTaskProposalCreationStatus.creating;
+    final creationFailed =
+        creationStatus == AiTaskProposalCreationStatus.failed;
+    final creationCompleted =
+        creationStatus == AiTaskProposalCreationStatus.completed;
 
     return FractionallySizedBox(
       heightFactor: 0.9,
@@ -161,7 +192,7 @@ class _AiNoteTaskExtractionSheetState
                     ),
                   const SizedBox(height: 12),
                   Text(
-                    'The dedicated extraction instructions are sent separately. The note is not modified, and no tasks are created in this step.',
+                    'The dedicated extraction instructions are sent separately. The source note is never modified, and tasks are created only after final confirmation.',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   if (sourceTooLarge) ...[
@@ -196,7 +227,14 @@ class _AiNoteTaskExtractionSheetState
                   ],
                   if (completed) ...[
                     const SizedBox(height: 12),
-                    _TaskProposalReview(controller: controller),
+                    _TaskProposalReview(
+                      controller: controller,
+                      enabled: !creationStarted,
+                    ),
+                    if (creationStarted) ...[
+                      const SizedBox(height: 12),
+                      _CreationStatus(controller: creationController!),
+                    ],
                   ],
                 ],
               ),
@@ -208,7 +246,13 @@ class _AiNoteTaskExtractionSheetState
                 TextButton(
                   onPressed:
                       generating ? null : () => Navigator.of(context).pop(),
-                  child: Text(completed ? 'Discard' : 'Cancel'),
+                  child: Text(
+                    completed
+                        ? creationStarted
+                            ? 'Close'
+                            : 'Discard'
+                        : 'Cancel',
+                  ),
                 ),
                 const SizedBox(width: 8),
                 if (generating)
@@ -255,26 +299,48 @@ class _AiNoteTaskExtractionSheetState
                     label: const Text('Retry'),
                   )
                 else if (controller.reviewItems.isNotEmpty)
-                  Tooltip(
-                    message:
-                        widget.onCreate == null
-                            ? 'Task creation will be enabled in Step 7D.'
-                            : '',
-                    child: FilledButton.icon(
-                      key: const Key('ai-note-task-create'),
-                      onPressed:
-                          controller.selectedTaskCount == 0 ||
-                                  widget.onCreate == null
-                              ? null
-                              : () => unawaited(
-                                widget.onCreate!(controller.selectedTasks),
-                              ),
-                      icon: const Icon(Icons.add_task_rounded),
-                      label: Text(
-                        'Create selected (${controller.selectedTaskCount})',
+                  if (creating)
+                    FilledButton.icon(
+                      key: const Key('ai-note-task-creating'),
+                      onPressed: null,
+                      icon: const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      label: const Text('Creating tasks...'),
+                    )
+                  else if (creationFailed)
+                    FilledButton.icon(
+                      key: const Key('ai-note-task-retry-create'),
+                      onPressed: () => unawaited(creationController!.retry()),
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('Retry same creation'),
+                    )
+                  else if (!creationCompleted)
+                    Tooltip(
+                      message:
+                          creationController == null
+                              ? 'Task creation is not configured.'
+                              : '',
+                      child: FilledButton.icon(
+                        key: const Key('ai-note-task-create'),
+                        onPressed:
+                            controller.selectedTaskCount == 0 ||
+                                    creationController == null
+                                ? null
+                                : () => unawaited(
+                                  _confirmAndCreate(
+                                    context,
+                                    extractionController: controller,
+                                    creationController: creationController,
+                                  ),
+                                ),
+                        icon: const Icon(Icons.add_task_rounded),
+                        label: Text(
+                          'Create selected (${controller.selectedTaskCount})',
+                        ),
                       ),
                     ),
-                  ),
               ],
             ),
           ],
@@ -282,12 +348,79 @@ class _AiNoteTaskExtractionSheetState
       ),
     );
   }
+
+  Future<void> _confirmAndCreate(
+    BuildContext context, {
+    required AiNoteTaskExtractionController extractionController,
+    required AiTaskProposalCreationController creationController,
+  }) async {
+    final titles = [
+      for (final task in extractionController.selectedTasks) task.title,
+    ];
+    if (titles.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (dialogContext) => AlertDialog(
+            title: Text(
+              'Create ${titles.length} task${titles.length == 1 ? '' : 's'}?',
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('These exact task titles will be created:'),
+                  const SizedBox(height: 12),
+                  for (final title in titles)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('•  '),
+                          Expanded(child: Text(title)),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'The source note will remain unchanged.',
+                    key: Key('ai-note-task-preserve-note'),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Back'),
+              ),
+              FilledButton.icon(
+                key: const Key('ai-note-task-confirm-create'),
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                icon: const Icon(Icons.add_task_rounded),
+                label: Text(
+                  'Create ${titles.length} task${titles.length == 1 ? '' : 's'}',
+                ),
+              ),
+            ],
+          ),
+    );
+    if (confirmed != true || !mounted) return;
+    await creationController.create(
+      sourceNoteId: widget.note.id,
+      titles: titles,
+    );
+  }
 }
 
 class _TaskProposalReview extends StatelessWidget {
-  const _TaskProposalReview({required this.controller});
+  const _TaskProposalReview({required this.controller, required this.enabled});
 
   final AiNoteTaskExtractionController controller;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -318,12 +451,14 @@ class _TaskProposalReview extends StatelessWidget {
             ),
             TextButton(
               key: const Key('ai-note-task-select-all'),
-              onPressed: () => controller.setAllTasksSelected(true),
+              onPressed:
+                  enabled ? () => controller.setAllTasksSelected(true) : null,
               child: const Text('Select all'),
             ),
             TextButton(
               key: const Key('ai-note-task-select-none'),
-              onPressed: () => controller.setAllTasksSelected(false),
+              onPressed:
+                  enabled ? () => controller.setAllTasksSelected(false) : null,
               child: const Text('None'),
             ),
           ],
@@ -336,26 +471,35 @@ class _TaskProposalReview extends StatelessWidget {
               key: Key('ai-note-task-review-$index'),
               value: items[index].selected,
               onChanged:
-                  (selected) =>
-                      controller.setTaskSelected(index, selected ?? false),
+                  enabled
+                      ? (selected) =>
+                          controller.setTaskSelected(index, selected ?? false)
+                      : null,
               controlAffinity: ListTileControlAffinity.leading,
               title: Text(items[index].title),
               secondary: IconButton(
                 key: Key('ai-note-task-edit-$index'),
                 tooltip: 'Edit task',
-                onPressed: () => _editTask(context, controller, index),
+                onPressed:
+                    enabled
+                        ? () => _editTask(context, controller, index)
+                        : null,
                 icon: const Icon(Icons.edit_outlined),
               ),
             ),
           ),
         ],
         Text(
-          'Review is local. No tasks have been created yet.',
+          enabled
+              ? 'Review is local. No tasks have been created yet.'
+              : 'The reviewed titles are locked to the submitted creation.',
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 4),
         Text(
-          'Creation will be enabled in Step 7D.',
+          enabled
+              ? 'Select the tasks you want to create.'
+              : 'The confirmed selection is frozen for safe retries.',
           key: const Key('ai-note-task-create-pending'),
           style: Theme.of(context).textTheme.bodySmall,
         ),
@@ -417,6 +561,75 @@ class _TaskProposalReview extends StatelessWidget {
           ),
     );
     if (updatedTitle != null) controller.updateTaskTitle(index, updatedTitle);
+  }
+}
+
+class _CreationStatus extends StatelessWidget {
+  const _CreationStatus({required this.controller});
+
+  final AiTaskProposalCreationController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final command = controller.command!;
+    final colorScheme = Theme.of(context).colorScheme;
+    final (icon, title, message, color) = switch (controller.status) {
+      AiTaskProposalCreationStatus.ready => (
+        Icons.info_outline_rounded,
+        'Ready',
+        '',
+        colorScheme.primary,
+      ),
+      AiTaskProposalCreationStatus.creating => (
+        Icons.cloud_upload_outlined,
+        'Creating ${command.titles.length} tasks',
+        'The confirmed selection is being written atomically. Closing this window will not cancel the submitted write.',
+        colorScheme.primary,
+      ),
+      AiTaskProposalCreationStatus.failed => (
+        Icons.error_outline_rounded,
+        'Creation not confirmed',
+        controller.errorMessage!,
+        colorScheme.error,
+      ),
+      AiTaskProposalCreationStatus.completed => (
+        Icons.check_circle_outline_rounded,
+        '${command.titles.length} task${command.titles.length == 1 ? '' : 's'} created',
+        'The source note was not changed.',
+        colorScheme.primary,
+      ),
+    };
+
+    return DecoratedBox(
+      key: const Key('ai-note-task-creation-status'),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        border: Border.all(color: color.withValues(alpha: 0.45)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: Theme.of(context).textTheme.titleSmall),
+                  if (message.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(message),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

@@ -1,16 +1,21 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/todo_item.dart';
+import 'package:nexecute/repositories/commands/create_todos_command.dart';
 import 'package:nexecute/repositories/firestore/todo_document_mapper.dart';
 import 'package:nexecute/repositories/firestore/schema/app_data_schema.dart';
 import 'package:nexecute/services/auth.dart';
 import 'package:nexecute/services/authenticated_data_stream.dart';
 import 'package:uuid/uuid.dart';
 
+export 'package:nexecute/repositories/commands/create_todos_command.dart';
+
 abstract interface class TodoRepository {
   Stream<DataState<List<TodoItem>>> watchTodos();
 
   Future<void> addTodo(String title);
+
+  Future<void> createTodos(CreateTodosCommand command);
 
   Future<void> updateTitle(TodoItem todo, String title);
 
@@ -64,6 +69,30 @@ class FirestoreTodoRepository implements TodoRepository {
       updatedAt: now,
     );
     await _todosCollection().doc(id).set(TodoDocumentMapper.toMap(todo));
+  }
+
+  @override
+  Future<void> createTodos(CreateTodosCommand command) async {
+    final todos = _todosCollection();
+    final batch = _db.batch();
+
+    for (var index = 0; index < command.titles.length; index++) {
+      final todo = TodoItem(
+        id: command.todoIdAt(index),
+        title: command.titles[index],
+        isCompleted: false,
+        createdAt: command.createdAt,
+        updatedAt: command.createdAt,
+      );
+      batch.set(todos.doc(todo.id), {
+        ...TodoDocumentMapper.toMap(todo),
+        'creationId': command.creationId,
+        'sourceNoteId': command.sourceNoteId,
+        'creationSource': 'aiNoteTaskProposal',
+      });
+    }
+
+    await batch.commit();
   }
 
   @override

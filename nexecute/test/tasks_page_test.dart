@@ -158,6 +158,9 @@ class _FakeTodoRepository implements TodoRepository {
   Future<void> addTodo(String title) async {}
 
   @override
+  Future<void> createTodos(CreateTodosCommand command) async {}
+
+  @override
   Future<void> updateTitle(TodoItem todo, String title) async {}
 
   @override

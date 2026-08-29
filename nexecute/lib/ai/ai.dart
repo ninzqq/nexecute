@@ -20,6 +20,7 @@ export 'presentation/ai_endpoint_validation.dart';
 export 'presentation/ai_chat_controller.dart';
 export 'presentation/ai_note_task_extraction_controller.dart';
 export 'presentation/ai_note_task_extraction_sheet.dart';
+export 'presentation/ai_task_proposal_creation_controller.dart';
 export 'presentation/assistant_page.dart';
 export 'presentation/ai_settings_controller.dart';
 export 'presentation/ai_settings_section.dart';

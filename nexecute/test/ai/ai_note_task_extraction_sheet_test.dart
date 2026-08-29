@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/ai/ai.dart';
 import 'package:nexecute/models/quicxec.dart';
+import 'package:nexecute/repositories/todo_repository.dart';
 import 'package:provider/provider.dart';
 
 import '../support/fake_ai_dependencies.dart';
@@ -261,5 +262,120 @@ void main() {
     await tester.tap(find.byKey(const Key('ai-note-task-send')));
     await tester.pumpAndSettle();
     expect(repository.startedRequests, hasLength(2));
+  });
+
+  testWidgets('confirms exact titles and safely retries a frozen creation', (
+    tester,
+  ) async {
+    final profile = AiConnectionProfile(
+      id: 'home',
+      name: 'Home AI',
+      protocol: AiProtocol.openAiCompatibleChat,
+      baseUrl: Uri.parse('https://ai.example.test/v1'),
+      modelId: 'local-model',
+    );
+    final profileStore = FakeAiConnectionProfileStore(
+      profiles: [profile],
+      activeProfileId: profile.id,
+    );
+    final repository = FakeAiAssistantRepository(
+      responseEvents: const [
+        AiTextDelta(
+          '{"schemaVersion":1,"tasks":[{"title":"Buy coffee"},{"title":"Call Sam"}]}',
+        ),
+        AiResponseCompleted(),
+      ],
+    );
+    final note = Quicxec(
+      id: 'note-1',
+      title: 'Weekend plan',
+      text: 'Buy coffee and call Sam.',
+      created: DateTime.utc(2026, 8, 29),
+    );
+    final commands = <CreateTodosCommand>[];
+    var shouldFail = true;
+    addTearDown(profileStore.dispose);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<AiAssistantRepository>.value(value: repository),
+          Provider<AiConnectionProfileStore>.value(value: profileStore),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder:
+                  (context) => FilledButton(
+                    onPressed:
+                        () => showAiNoteTaskExtractionPreview(
+                          context,
+                          note: note,
+                          creationIdFactory: () => 'creation-1',
+                          clock: () => DateTime.utc(2026, 8, 29, 12),
+                          onCreate: (command) async {
+                            commands.add(command);
+                            if (shouldFail) {
+                              throw StateError('ambiguous write failure');
+                            }
+                          },
+                        ),
+                    child: const Text('Open preview'),
+                  ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open preview'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('ai-note-task-send')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('ai-note-task-create')));
+    await tester.tap(find.byKey(const Key('ai-note-task-create')));
+    await tester.pumpAndSettle();
+
+    expect(commands, isEmpty);
+    expect(find.text('Create 2 tasks?'), findsOneWidget);
+    expect(find.text('Buy coffee'), findsWidgets);
+    expect(find.text('Call Sam'), findsWidgets);
+    expect(find.text('The source note will remain unchanged.'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('ai-note-task-confirm-create')));
+    await tester.pumpAndSettle();
+
+    expect(commands, hasLength(1));
+    expect(commands.single.creationId, 'creation-1');
+    expect(commands.single.sourceNoteId, note.id);
+    expect(commands.single.titles, ['Buy coffee', 'Call Sam']);
+    expect(note.title, 'Weekend plan');
+    expect(note.text, 'Buy coffee and call Sam.');
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('ai-note-task-creation-status')),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('Creation not confirmed'), findsOneWidget);
+    expect(
+      tester
+          .widget<IconButton>(find.byKey(const Key('ai-note-task-edit-0')))
+          .onPressed,
+      isNull,
+    );
+
+    shouldFail = false;
+    await tester.tap(find.byKey(const Key('ai-note-task-retry-create')));
+    await tester.pumpAndSettle();
+
+    expect(commands, hasLength(2));
+    expect(identical(commands[0], commands[1]), isTrue);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('ai-note-task-creation-status')),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('2 tasks created'), findsOneWidget);
+    expect(repository.startedRequests, hasLength(1));
   });
 }

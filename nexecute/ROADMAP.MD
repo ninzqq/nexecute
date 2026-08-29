@@ -414,7 +414,7 @@ system message.
 - [ ] Add actionable diagnostics for DNS, TLS, CORS, mixed-content, local
   network, authentication, model-missing, and protocol-compatibility failures.
 
-#### Step 7: local phase 3 — first confirmed structured action
+#### Step 7: local phase 3 — first confirmed structured action ✅
 
 Start with **Note → proposed tasks** as the first end-to-end application AI
 workflow.
@@ -441,19 +441,34 @@ workflow.
 - [x] Keep extraction outside chat history and Firestore, parse the response
   locally, and stop at a proposal-count confirmation until review UI exists.
 
-##### Step 7C: proposal review
+##### Step 7C: proposal review ✅
 
 - [x] Present valid proposed tasks with Edit, selection, Create, and Discard
-  controls. Keep the creation handoff disabled until Step 7D wires the
-  confirmed selection to `TodoRepository`.
+  controls, while keeping review local until the confirmed creation flow.
 - [x] Treat malformed, incomplete, and adversarial model output as recoverable
   untrusted input with retry or cancel guidance.
 
-##### Step 7D: confirmed, idempotent creation
+##### Step 7D: confirmed, idempotent creation ✅
 
-- [ ] Require explicit confirmation before writing through `TodoRepository`.
-- [ ] Preserve the source note and prevent retries or duplicate responses from
-  creating duplicate tasks.
+###### Step 7D-a: atomic, idempotent repository operation ✅
+
+- [x] Add a validated bulk-creation command with a stable creation ID, source
+  note ID, selected titles, and creation timestamp.
+- [x] Write all selected tasks through one Firestore batch using deterministic
+  document IDs, so retrying the exact command cannot create duplicates or a
+  partial set.
+
+###### Step 7D-b: explicit confirmation and creation states ✅
+
+- [x] Show the exact selected titles again and require explicit confirmation
+  before writing through `TodoRepository`.
+- [x] Freeze the confirmed command, prevent repeated submission, and make an
+  uncertain failure retry the exact same idempotent command.
+
+###### Step 7D-c: completed workflow verification ✅
+
+- [x] Preserve the source note, report the creation result, and cover the
+  complete workflow with widget and Firestore emulator tests.
 
 #### Step 8: local phase 4 — repeatable quality evaluation
 

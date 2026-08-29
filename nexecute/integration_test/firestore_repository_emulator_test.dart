@@ -36,6 +36,7 @@ void main() {
     await FirebaseAuth.instance.useAuthEmulator(emulatorHost, 9099);
     FirebaseFirestore.instance.useFirestoreEmulator(emulatorHost, 8080);
 
+    await FirebaseAuth.instance.signOut();
     final credential = await FirebaseAuth.instance.signInAnonymously();
     uid = credential.user!.uid;
     firestore = FirebaseFirestore.instance;
@@ -120,6 +121,40 @@ void main() {
     expect(
       addedNote.data(),
       containsPair(AppDataSchema.versionField, AppDataSchema.currentVersion),
+    );
+    final sourceNoteBeforeTaskCreation = Map<String, dynamic>.from(
+      addedNote.data(),
+    );
+    final aiTodoCommand = CreateTodosCommand(
+      creationId: 'proposal-1',
+      sourceNoteId: addedNote.id,
+      titles: const ['Buy coffee', 'Call Sam'],
+      createdAt: DateTime.utc(2026, 8, 29, 12),
+    );
+    await todos.createTodos(aiTodoCommand);
+    await todos.createTodos(aiTodoCommand);
+    final todoDocuments = await user.collection('todos').get();
+    expect(todoDocuments.docs, hasLength(3));
+    for (var index = 0; index < aiTodoCommand.titles.length; index++) {
+      final document =
+          await user
+              .collection('todos')
+              .doc(aiTodoCommand.todoIdAt(index))
+              .get();
+      expect(
+        document.data(),
+        containsPair('title', aiTodoCommand.titles[index]),
+      );
+      expect(document.data(), containsPair('creationId', 'proposal-1'));
+      expect(document.data(), containsPair('sourceNoteId', addedNote.id));
+      expect(
+        document.data(),
+        containsPair('creationSource', 'aiNoteTaskProposal'),
+      );
+    }
+    expect(
+      (await addedNote.reference.get()).data(),
+      sourceNoteBeforeTaskCreation,
     );
     await noteFolders.deleteFolder(addedFolder.id);
     expect((await user.collection('noteFolders').get()).docs, isEmpty);
