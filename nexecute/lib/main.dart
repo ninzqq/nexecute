@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:nexecute/ai/ai.dart';
 import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/models/app_theme_controller.dart';
 import 'package:nexecute/models/calendar_settings_controller.dart';
@@ -153,6 +154,17 @@ class NexecuteState extends State<Nexecute> {
                 eventRepository: context.read<EventRepository>(),
                 noteRepository: context.read<NoteRepository>(),
               ),
+        ),
+        Provider<AiAssistantRepository>(
+          create: (_) => const UnconfiguredAiAssistantRepository(),
+        ),
+        Provider<AiConnectionProfileStore>(
+          create: (_) => InMemoryAiConnectionProfileStore(),
+          dispose: (_, store) => store.dispose(),
+        ),
+        Provider<AiConversationStore>(
+          create: (_) => InMemoryAiConversationStore(),
+          dispose: (_, store) => store.dispose(),
         ),
         StreamProvider<DataState<List<Quicxec>>>(
           create: (context) => context.read<NoteRepository>().watchNotes(),

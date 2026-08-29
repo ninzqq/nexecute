@@ -284,15 +284,16 @@ nexecuteGateway
 
 #### Step 2: provider-neutral foundation
 
-- [ ] Add the connection profile, protocol, message, conversation, stream-event,
-  model-info, and connection-result domain types.
-- [ ] Add `AiAssistantRepository`, `AiConnectionProfileStore`, and
-  `AiConversationStore` interfaces.
-- [ ] Return a response handle that exposes normalized stream events and an
-  explicit cancellation operation.
-- [ ] Add fake implementations and contract tests before wiring a real server.
-- [ ] Register the assistant dependencies with Provider without making startup
-  depend on endpoint availability.
+- [x] ~~Add the connection profile, protocol, message, conversation,~~
+  ~~stream-event, model-info, and connection-result domain types.~~
+- [x] ~~Add `AiAssistantRepository`, `AiConnectionProfileStore`, and~~
+  ~~`AiConversationStore` interfaces.~~
+- [x] ~~Return a response handle that exposes normalized stream events and an~~
+  ~~explicit cancellation operation.~~
+- [x] ~~Add fake implementations and contract tests before wiring a real~~
+  ~~server.~~
+- [x] ~~Register the assistant dependencies with Provider without making~~
+  ~~startup depend on endpoint availability.~~
 
 #### Step 3: AI settings and connection profiles
 
@@ -544,8 +545,8 @@ These improvements should be considered before or alongside larger features.
   ~~tasks, tags, and the legacy count feature. Register the repository interfaces~~
   ~~with Provider and migrate callers away from constructing Firestore services~~
   ~~directly.~~
-- Add an independent assistant repository when AI work begins. Its interface
-  must not depend on provider-specific response types.
+- [x] ~~Add an independent assistant repository when AI work begins. Its~~
+  ~~interface must not depend on provider-specific response types.~~
 - [x] ~~Query calendar events by a bounded visible range instead of maintaining~~
   ~~one live stream containing the user's complete event history. Month and week~~
   ~~views now include one adjacent `PageView` page in each direction as a swipe~~
