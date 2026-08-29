@@ -506,24 +506,93 @@ failure. Generated reports remain local and ignored until reviewed and
 deliberately selected as safe comparison baselines. The suite can be validated
 without endpoint access, and real model runs remain opt-in.
 
-#### Step 9: optional application context and narrow reads
+#### Step 9: optional application context and narrow reads 🚧
 
-- [ ] Let the user explicitly attach selected notes, active tasks, today's
-  events, or another clearly defined date range to a conversation.
-- [ ] Preview exactly which application data will be sent to the model.
-- [ ] Represent attached context as small, typed objects and omit unnecessary
-  fields.
-- [ ] Cap records, date ranges, search results, and field lengths.
-- [ ] Support useful read-only requests such as planning a day, summarizing a
-  note, or finding unfinished checklist items.
-- [ ] Never automatically send the user's complete Firestore data.
+Ship explicit, request-scoped context attachments before model-requested read
+tools. Attachments must work with models that have no tool capability. Context
+payloads and later tool results remain session-only rather than being copied
+into Firestore conversation history; only the ordinary user message and final
+assistant response persist.
 
-- [ ] Support bounded `listTasks`, `eventsForDateRange`, `searchNotes`, and
-  `getNote` operations through Nexecute repositories.
-- [ ] Return only bounded tool results to the model without exposing Firebase
-  configuration or credentials.
-- [ ] Enforce limits by date range, search query, result count, and
-  user-selected context.
+##### Step 9A: context contract and privacy limits ✅
+
+- [x] Define immutable, provider-neutral version 1 context envelopes for
+  selected notes, active tasks, and bounded event ranges.
+- [x] Map application models to explicit AI context fields without Firestore
+  paths, document IDs, credentials, tags, folders, reminders, or unrelated
+  metadata.
+- [x] Mark serialized context as untrusted application data and expose field,
+  checklist-item, record, and whole-payload truncation through explicit flags
+  and omission counts.
+- [x] Enforce deterministic limits before any attachment UI or model request is
+  added.
+
+Version 1 allows three selected notes, 4,000 content characters per note and
+12,000 across notes, 50 checklist items per note, 50 active tasks, 100 events,
+a 31-day event range, 300-character general titles, 200-character task titles,
+500-character checklist items and event descriptions, and 24,000 characters
+for the complete serialized envelope. Selected notes receive priority if the
+whole-payload cap requires additional records to be omitted.
+
+##### Step 9B: bounded application read service ✅
+
+- [x] Add a dedicated application-layer service that maps data obtained through
+  Nexecute repositories into the Step 9A context types.
+- [x] Support bounded `listTasks`, `eventsForDateRange`, `searchNotes`, and
+  `getNote` operations without exposing Firebase details to AI infrastructure.
+- [x] Validate date ranges, search queries, identifiers, result counts, field
+  lengths, and user-selected scope at the application boundary.
+
+The read service accepts an immutable per-request authorization scope and
+rejects unauthorized operations before touching a repository. It consumes the
+first non-loading repository snapshot, bounds and maps the result locally, and
+normalizes unauthenticated, unavailable, timed-out, invalid, and missing-data
+failures without exposing underlying Firebase errors. Note search is the same
+predictable local text matching used by unified search, excludes trashed notes,
+and returns at most three matches. Trusted application-local note IDs are kept
+outside the serialized context so a later tool coordinator can replace them
+with request-scoped opaque references.
+
+##### Step 9C: explicit one-message attachments
+
+- [ ] Let users select notes, active tasks, today's events, or a bounded custom
+  event range beside the assistant composer.
+- [ ] Preview the exact fields and text that will be sent, including truncation
+  and omitted-record counts, and allow each attachment to be removed.
+- [ ] Send attached context as untrusted JSON for one user request, clear it
+  after a successful send, and never attach application data automatically.
+- [ ] Support requests such as planning a day, summarizing a selected note, and
+  summarizing unfinished tasks without requiring tool-capable models.
+
+##### Step 9D: provider-neutral read-tool protocol
+
+- [ ] Add normalized tool definitions, strict argument schemas, assistant tool
+  calls, and tool-result continuation messages to the AI domain.
+- [ ] Serialize tool definitions and parse fragmented tool-call streams in the
+  OpenAI-compatible adapter.
+- [ ] Advertise read tools only when the active profile has tools explicitly
+  confirmed as supported and the user has granted the relevant request scope.
+
+##### Step 9E: authorized read-tool execution
+
+- [ ] Validate and execute approved read calls through the Step 9B service,
+  return only bounded context results, and continue generation to a final text
+  response.
+- [ ] Bound tool calls, continuation rounds, cumulative result size, timeouts,
+  and cancellation while safely rejecting unknown, malformed, excessive, or
+  unauthorized requests.
+- [ ] Keep transient tool calls and results out of conversation persistence and
+  leave every application write for Step 10's confirmed-action path.
+
+##### Step 9F: completed workflow verification
+
+- [ ] Cover exact preview/request equality, opt-in behavior, persistence
+  exclusion, offline and failure states, capability fallback, all limits, and
+  every application theme.
+- [ ] Extend the repeatable quality suite with attached-context questions and
+  malformed, excessive, unknown, and unauthorized tool-call cases.
+- [ ] Verify that no request contains Firebase credentials, document paths, or
+  application data outside the user's explicit scope.
 
 #### Firebase data and AI tool boundary
 

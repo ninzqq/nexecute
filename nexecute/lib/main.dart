@@ -142,6 +142,14 @@ class NexecuteState extends State<Nexecute> {
                 authService: context.read<AuthService>(),
               ),
         ),
+        Provider<AiApplicationContextReadService>(
+          create:
+              (context) => RepositoryBackedAiApplicationContextReadService(
+                todoRepository: context.read<TodoRepository>(),
+                eventRepository: context.read<EventRepository>(),
+                noteRepository: context.read<NoteRepository>(),
+              ),
+        ),
         Provider<TagRepository>(
           create:
               (context) => FirestoreTagRepository(
