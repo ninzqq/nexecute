@@ -673,7 +673,9 @@ class _AiConnectionProfileEditorState
                   key: const Key('ai-generation-controls'),
                   initiallyExpanded: true,
                   tilePadding: EdgeInsets.zero,
-                  childrenPadding: const EdgeInsets.only(bottom: 8),
+                  childrenPadding: const EdgeInsets.only(top: 12, bottom: 8),
+                  shape: const Border(),
+                  collapsedShape: const Border(),
                   title: const Text('Generation controls'),
                   subtitle: const Text('Reasoning, output, and timeouts'),
                   children: [

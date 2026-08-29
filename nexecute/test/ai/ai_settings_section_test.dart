@@ -43,6 +43,16 @@ void main() {
     await tester.tap(find.byKey(const Key('ai-add-profile')));
     await tester.pumpAndSettle();
 
+    final generationControls = tester.widget<ExpansionTile>(
+      find.byKey(const Key('ai-generation-controls')),
+    );
+    expect(
+      generationControls.childrenPadding,
+      const EdgeInsets.only(top: 12, bottom: 8),
+    );
+    expect(generationControls.shape, const Border());
+    expect(generationControls.collapsedShape, const Border());
+
     await tester.enterText(
       find.byKey(const Key('ai-profile-name-field')),
       'Home Ollama',
