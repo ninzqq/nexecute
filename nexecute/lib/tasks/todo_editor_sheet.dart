@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/models/todo_item.dart';
 import 'package:nexecute/repositories/todo_repository.dart';
+import 'package:nexecute/shared/bottom_sheet_safe_area.dart';
 import 'package:provider/provider.dart';
 
 Future<void> showTodoEditor(BuildContext context, {TodoItem? todo}) {
@@ -9,11 +10,13 @@ Future<void> showTodoEditor(BuildContext context, {TodoItem? todo}) {
     isScrollControlled: true,
     useSafeArea: true,
     builder:
-        (context) => Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.viewInsetsOf(context).bottom,
+        (context) => BottomSheetSafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.viewInsetsOf(context).bottom,
+            ),
+            child: _TodoEditorSheet(todo: todo),
           ),
-          child: _TodoEditorSheet(todo: todo),
         ),
   );
 }

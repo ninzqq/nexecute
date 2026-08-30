@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:nexecute/ai/ai.dart';
 import 'package:nexecute/domain/calendar/calendar_query_range.dart';
+import 'package:nexecute/shared/bottom_sheet_safe_area.dart';
 import 'package:provider/provider.dart';
 
 class AssistantPage extends StatefulWidget {
@@ -225,7 +226,7 @@ class _AssistantPageState extends State<AssistantPage> {
   Future<void> _showAttachmentMenu() async {
     final choice = await showModalBottomSheet<_AttachmentChoice>(
       context: context,
-      builder: (context) => const _AttachmentMenu(),
+      builder: (context) => const BottomSheetSafeArea(child: _AttachmentMenu()),
     );
     if (!mounted || choice == null) return;
     switch (choice) {
@@ -398,13 +399,15 @@ class _AssistantPageState extends State<AssistantPage> {
       context: context,
       isScrollControlled: true,
       builder:
-          (context) => _ConversationSheet(
-            conversations: _controller.conversations,
-            activeConversationId: _controller.conversation?.id,
-            onDelete: (id) async {
-              await _controller.deleteConversation(id);
-              if (context.mounted) Navigator.pop(context);
-            },
+          (context) => BottomSheetSafeArea(
+            child: _ConversationSheet(
+              conversations: _controller.conversations,
+              activeConversationId: _controller.conversation?.id,
+              onDelete: (id) async {
+                await _controller.deleteConversation(id);
+                if (context.mounted) Navigator.pop(context);
+              },
+            ),
           ),
     );
     if (selectedId == null) return;

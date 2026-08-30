@@ -10,6 +10,7 @@ import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/note_folder.dart';
 import 'package:nexecute/repositories/note_repository.dart';
 import 'package:nexecute/repositories/todo_repository.dart';
+import 'package:nexecute/shared/bottom_sheet_safe_area.dart';
 import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
 
@@ -33,25 +34,27 @@ class QuicxecItem extends StatelessWidget {
       useSafeArea: true,
       showDragHandle: true,
       builder:
-          (sheetContext) => NoteActionsSheet(
-            note: quicxec,
-            folderName: currentFolderName,
-            onExtractTasks:
-                quicxec.trashed
-                    ? null
-                    : () {
-                      Navigator.of(sheetContext).pop();
-                      unawaited(_extractTasks(context));
-                    },
-            onMove:
-                quicxec.trashed
-                    ? null
-                    : () => _showMoveSheet(context, sheetContext),
-            onToggleTrash: () => _toggleTrash(context, sheetContext),
-            onDelete:
-                quicxec.trashed
-                    ? () => _deletePermanently(context, sheetContext)
-                    : null,
+          (sheetContext) => BottomSheetSafeArea(
+            child: NoteActionsSheet(
+              note: quicxec,
+              folderName: currentFolderName,
+              onExtractTasks:
+                  quicxec.trashed
+                      ? null
+                      : () {
+                        Navigator.of(sheetContext).pop();
+                        unawaited(_extractTasks(context));
+                      },
+              onMove:
+                  quicxec.trashed
+                      ? null
+                      : () => _showMoveSheet(context, sheetContext),
+              onToggleTrash: () => _toggleTrash(context, sheetContext),
+              onDelete:
+                  quicxec.trashed
+                      ? () => _deletePermanently(context, sheetContext)
+                      : null,
+            ),
           ),
     );
   }
@@ -84,9 +87,11 @@ class QuicxecItem extends StatelessWidget {
       useSafeArea: true,
       showDragHandle: true,
       builder:
-          (sheetContext) => _FolderDestinationSheet(
-            folders: folders,
-            currentFolderId: quicxec.folderId,
+          (sheetContext) => BottomSheetSafeArea(
+            child: _FolderDestinationSheet(
+              folders: folders,
+              currentFolderId: quicxec.folderId,
+            ),
           ),
     );
     if (destination == null || !context.mounted) return;

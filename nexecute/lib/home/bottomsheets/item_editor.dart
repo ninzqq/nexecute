@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/home/bottomsheets/item_editor_sheet.dart';
+import 'package:nexecute/shared/bottom_sheet_safe_area.dart';
 
 void showItemEditor(
   BuildContext context, {
@@ -21,16 +22,18 @@ void showItemEditor(
     ),
     context: context,
     builder:
-        (context) => Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: SingleChildScrollView(
-            child: ItemEditorSheet(
-              event: event,
-              quicxec: quicxec,
-              date: date,
-              isEditing: isEditing,
+        (context) => BottomSheetSafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: SingleChildScrollView(
+              child: ItemEditorSheet(
+                event: event,
+                quicxec: quicxec,
+                date: date,
+                isEditing: isEditing,
+              ),
             ),
           ),
         ),

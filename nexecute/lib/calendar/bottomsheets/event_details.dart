@@ -4,6 +4,7 @@ import 'package:nexecute/home/bottomsheets/item_editor.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/event_reminder.dart';
 import 'package:nexecute/repositories/event_repository.dart';
+import 'package:nexecute/shared/bottom_sheet_safe_area.dart';
 import 'package:nexecute/shared/event_reminder_labels.dart';
 import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
@@ -14,7 +15,9 @@ Future<void> showEventDetails(BuildContext context, Event event) {
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: true,
-    builder: (_) => EventDetailsBottomSheet(event: event),
+    builder:
+        (_) =>
+            BottomSheetSafeArea(child: EventDetailsBottomSheet(event: event)),
   );
 }
 

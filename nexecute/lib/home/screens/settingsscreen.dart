@@ -15,44 +15,50 @@ class SettingsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
-        children: [
-          Text('Appearance', style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 4),
-          Text(
-            'Choose a look that matches your focus.',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 18),
-          for (final preset in AppThemePreset.values) ...[
-            _ThemeOption(
-              preset: preset,
-              selected: controller.preset == preset,
-              onTap: () => controller.select(preset),
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+          children: [
+            Text(
+              'Appearance',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Choose a look that matches your focus.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 18),
+            for (final preset in AppThemePreset.values) ...[
+              _ThemeOption(
+                preset: preset,
+                selected: controller.preset == preset,
+                onTap: () => controller.select(preset),
+              ),
+              const SizedBox(height: 12),
+            ],
+            const SizedBox(height: 12),
+            const Divider(),
+            const SizedBox(height: 12),
+            Text('Calendar', style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 8),
+            SwitchListTile.adaptive(
+              key: const Key('show-week-numbers-switch'),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Show week numbers'),
+              subtitle: const Text(
+                'Display ISO week numbers beside the month view.',
+              ),
+              value: calendarSettings.showWeekNumbers,
+              onChanged: calendarSettings.setShowWeekNumbers,
             ),
             const SizedBox(height: 12),
+            const Divider(),
+            const SizedBox(height: 12),
+            const AiSettingsSection(),
           ],
-          const SizedBox(height: 12),
-          const Divider(),
-          const SizedBox(height: 12),
-          Text('Calendar', style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 8),
-          SwitchListTile.adaptive(
-            key: const Key('show-week-numbers-switch'),
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Show week numbers'),
-            subtitle: const Text(
-              'Display ISO week numbers beside the month view.',
-            ),
-            value: calendarSettings.showWeekNumbers,
-            onChanged: calendarSettings.setShowWeekNumbers,
-          ),
-          const SizedBox(height: 12),
-          const Divider(),
-          const SizedBox(height: 12),
-          const AiSettingsSection(),
-        ],
+        ),
       ),
     );
   }

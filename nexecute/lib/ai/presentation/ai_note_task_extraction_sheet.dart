@@ -9,6 +9,7 @@ import 'package:nexecute/ai/repositories/ai_assistant_repository.dart';
 import 'package:nexecute/ai/repositories/ai_connection_profile_store.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/repositories/todo_repository.dart';
+import 'package:nexecute/shared/bottom_sheet_safe_area.dart';
 import 'package:provider/provider.dart';
 
 typedef AiTaskProposalCreateCallback =
@@ -46,10 +47,12 @@ Future<int?> showAiNoteTaskExtractionPreview(
       isScrollControlled: true,
       showDragHandle: true,
       builder:
-          (_) => _AiNoteTaskExtractionSheet(
-            note: note,
-            extractionController: extractionController,
-            creationController: creationController,
+          (_) => BottomSheetSafeArea(
+            child: _AiNoteTaskExtractionSheet(
+              note: note,
+              extractionController: extractionController,
+              creationController: creationController,
+            ),
           ),
     );
     if (creationController?.status == AiTaskProposalCreationStatus.completed) {
