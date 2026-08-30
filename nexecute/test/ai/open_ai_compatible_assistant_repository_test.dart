@@ -304,6 +304,241 @@ void main() {
     expect(event.retryable, isFalse);
   });
 
+  test(
+    'serializes strict scoped tools and tool-result continuations',
+    () async {
+      late http.Request sentRequest;
+      final repository = OpenAiCompatibleAssistantRepository(
+        client: MockClient((request) async {
+          sentRequest = request;
+          return http.Response(
+            'data: ${jsonEncode({
+              'choices': [
+                {
+                  'delta': {'content': 'Finished'},
+                  'finish_reason': 'stop',
+                },
+              ],
+            })}\n\ndata: [DONE]\n\n',
+            200,
+            headers: {'content-type': 'text/event-stream'},
+          );
+        }),
+      );
+      final configured = profile.copyWith(
+        capabilityOverrides: const {AiCapability.tools: true},
+      );
+      final call = AiToolCall(
+        id: 'call-1',
+        name: AiReadToolNames.listTasks,
+        arguments: const {'limit': 5},
+      );
+      final handle = await repository.startResponse(
+        AiChatRequest(
+          connectionProfile: configured,
+          conversationId: 'conversation-1',
+          messages: [
+            AiChatMessage(
+              id: 'message-1',
+              role: AiMessageRole.user,
+              content: 'What should I do?',
+              createdAt: DateTime.utc(2026, 8, 30),
+            ),
+          ],
+          readToolAuthorization: AiReadToolAuthorization(
+            allowActiveTasks: true,
+          ),
+          continuationMessages: [
+            AiAssistantToolCallMessage(calls: [call]),
+            AiToolResultMessage(
+              toolCallId: call.id,
+              toolName: call.name,
+              result: const {'items': <Object?>[]},
+            ),
+          ],
+        ),
+      );
+
+      await handle.events.toList();
+      final body = jsonDecode(sentRequest.body) as Map<String, dynamic>;
+      final tools = body['tools'] as List<dynamic>;
+      final messages = body['messages'] as List<dynamic>;
+
+      expect(body['tool_choice'], 'auto');
+      expect(tools, hasLength(1));
+      expect(tools.single['type'], 'function');
+      expect(tools.single['function']['name'], AiReadToolNames.listTasks);
+      expect(tools.single['function']['strict'], isTrue);
+      expect(
+        tools.single['function']['parameters']['additionalProperties'],
+        isFalse,
+      );
+      expect(messages, hasLength(3));
+      expect(messages[1]['role'], 'assistant');
+      expect(messages[1]['tool_calls'].single['id'], call.id);
+      expect(
+        jsonDecode(messages[1]['tool_calls'].single['function']['arguments']),
+        call.arguments,
+      );
+      expect(messages[2]['role'], 'tool');
+      expect(messages[2]['tool_call_id'], call.id);
+      expect(jsonDecode(messages[2]['content']), {
+        'ok': true,
+        'result': {'items': <Object?>[]},
+      });
+    },
+  );
+
+  test('omits tools unless support is explicitly confirmed', () async {
+    late http.Request sentRequest;
+    final repository = OpenAiCompatibleAssistantRepository(
+      client: MockClient((request) async {
+        sentRequest = request;
+        return http.Response(
+          'data: ${jsonEncode({
+            'choices': [
+              {
+                'delta': {'content': 'No tools'},
+                'finish_reason': 'stop',
+              },
+            ],
+          })}\n\ndata: [DONE]\n\n',
+          200,
+          headers: {'content-type': 'text/event-stream'},
+        );
+      }),
+    );
+    final handle = await repository.startResponse(
+      AiChatRequest(
+        connectionProfile: profile,
+        conversationId: 'conversation-1',
+        messages: const [],
+        readToolAuthorization: AiReadToolAuthorization(allowActiveTasks: true),
+      ),
+    );
+
+    await handle.events.toList();
+    final body = jsonDecode(sentRequest.body) as Map<String, dynamic>;
+
+    expect(body, isNot(contains('tools')));
+    expect(body, isNot(contains('tool_choice')));
+  });
+
+  test(
+    'parses parallel fragmented tool calls before completing the turn',
+    () async {
+      final repository = OpenAiCompatibleAssistantRepository(
+        client: MockClient(
+          (_) async => http.Response(
+            [
+              'data: ${jsonEncode({
+                'choices': [
+                  {
+                    'delta': {
+                      'tool_calls': [
+                        {
+                          'index': 0,
+                          'id': 'call_',
+                          'type': 'function',
+                          'function': {'name': 'list', 'arguments': '{"lim'},
+                        },
+                        {
+                          'index': 1,
+                          'id': 'event-call',
+                          'type': 'function',
+                          'function': {'name': 'eventsFor', 'arguments': '{"startInclusive":"2026-08-30T00:00:00Z",'},
+                        },
+                      ],
+                    },
+                    'finish_reason': null,
+                  },
+                ],
+              })}',
+              '',
+              'data: ${jsonEncode({
+                'choices': [
+                  {
+                    'delta': {
+                      'tool_calls': [
+                        {
+                          'index': 0,
+                          'id': 'tasks',
+                          'function': {'name': 'Tasks', 'arguments': 'it":5}'},
+                        },
+                        {
+                          'index': 1,
+                          'function': {'name': 'DateRange', 'arguments': '"endExclusive":"2026-08-31T00:00:00Z"}'},
+                        },
+                      ],
+                    },
+                    'finish_reason': 'tool_calls',
+                  },
+                ],
+              })}',
+              '',
+              'data: [DONE]',
+              '',
+            ].join('\n'),
+            200,
+            headers: {'content-type': 'text/event-stream'},
+          ),
+        ),
+      );
+      final handle = await repository.startResponse(_request(profile));
+
+      final events = await handle.events.toList();
+      final calls = events.whereType<AiToolCallRequested>().toList();
+
+      expect(calls, hasLength(2));
+      expect(calls[0].id, 'call_tasks');
+      expect(calls[0].name, AiReadToolNames.listTasks);
+      expect(calls[0].arguments, {'limit': 5});
+      expect(calls[1].id, 'event-call');
+      expect(calls[1].name, AiReadToolNames.eventsForDateRange);
+      expect(calls[1].arguments, {
+        'startInclusive': '2026-08-30T00:00:00Z',
+        'endExclusive': '2026-08-31T00:00:00Z',
+      });
+      expect(events.last, isA<AiResponseCompleted>());
+      expect((events.last as AiResponseCompleted).finishReason, 'tool_calls');
+    },
+  );
+
+  test('normalizes malformed fragmented tool arguments', () async {
+    final repository = OpenAiCompatibleAssistantRepository(
+      client: MockClient(
+        (_) async => http.Response(
+          'data: ${jsonEncode({
+            'choices': [
+              {
+                'delta': {
+                  'tool_calls': [
+                    {
+                      'index': 0,
+                      'id': 'call-1',
+                      'type': 'function',
+                      'function': {'name': 'listTasks', 'arguments': '{not-json}'},
+                    },
+                  ],
+                },
+                'finish_reason': 'tool_calls',
+              },
+            ],
+          })}\n\n',
+          200,
+          headers: {'content-type': 'text/event-stream'},
+        ),
+      ),
+    );
+    final handle = await repository.startResponse(_request(profile));
+
+    final event = (await handle.events.toList()).single as AiResponseFailed;
+
+    expect(event.code, 'invalid_response');
+    expect(event.message, contains('malformed'));
+    expect(event.message, isNot(contains('not-json')));
+  });
+
   test('turns a client connection failure into actionable guidance', () async {
     final repository = OpenAiCompatibleAssistantRepository(
       client: MockClient((_) async => throw http.ClientException('offline')),

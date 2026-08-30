@@ -10,6 +10,7 @@ export 'domain/ai_conversation.dart';
 export 'domain/ai_model_info.dart';
 export 'domain/ai_protocol.dart';
 export 'domain/ai_stream_event.dart';
+export 'domain/ai_tool.dart';
 export 'domain/ai_task_proposal.dart';
 export 'infrastructure/in_memory_ai_connection_profile_store.dart';
 export 'infrastructure/in_memory_ai_conversation_store.dart';

@@ -1,3 +1,5 @@
+import 'package:nexecute/ai/domain/ai_tool.dart';
+
 sealed class AiStreamEvent {
   const AiStreamEvent();
 }
@@ -16,14 +18,18 @@ final class AiReasoningDelta extends AiStreamEvent {
 
 final class AiToolCallRequested extends AiStreamEvent {
   AiToolCallRequested({
-    required this.id,
-    required this.name,
+    required String id,
+    required String name,
     required Map<String, Object?> arguments,
-  }) : arguments = Map.unmodifiable(arguments);
+  }) : call = AiToolCall(id: id, name: name, arguments: arguments);
 
-  final String id;
-  final String name;
-  final Map<String, Object?> arguments;
+  AiToolCallRequested.fromCall(this.call);
+
+  final AiToolCall call;
+
+  String get id => call.id;
+  String get name => call.name;
+  Map<String, Object?> get arguments => call.arguments;
 }
 
 class AiTokenUsage {

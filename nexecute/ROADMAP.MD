@@ -573,14 +573,24 @@ before the current user message with a warning that it is untrusted data, while
 the conversation store continues to receive only ordinary user and assistant
 messages.
 
-##### Step 9D: provider-neutral read-tool protocol
+##### Step 9D: provider-neutral read-tool protocol ✅
 
-- [ ] Add normalized tool definitions, strict argument schemas, assistant tool
+- [x] Add normalized tool definitions, strict argument schemas, assistant tool
   calls, and tool-result continuation messages to the AI domain.
-- [ ] Serialize tool definitions and parse fragmented tool-call streams in the
+- [x] Serialize tool definitions and parse fragmented tool-call streams in the
   OpenAI-compatible adapter.
-- [ ] Advertise read tools only when the active profile has tools explicitly
+- [x] Advertise read tools only when the active profile has tools explicitly
   confirmed as supported and the user has granted the relevant request scope.
+
+The provider-neutral contract now covers the four bounded reads, fully required
+JSON argument schemas with no additional properties, immutable calls and tool
+results, and transient assistant/result continuation messages. Read-tool
+advertisement requires both an explicit per-profile tools confirmation and a
+matching request authorization; protocol defaults alone are insufficient. The
+OpenAI-compatible adapter serializes only that filtered catalog, reconstructs
+parallel calls whose IDs, names, and JSON arguments arrive across stream
+fragments, and normalizes malformed calls as invalid endpoint responses. Tool
+execution and continuation-round coordination remain deferred to Step 9E.
 
 ##### Step 9E: authorized read-tool execution
 

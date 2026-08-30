@@ -9,6 +9,7 @@ import 'package:nexecute/ai/domain/ai_connection_result.dart';
 import 'package:nexecute/ai/domain/ai_model_info.dart';
 import 'package:nexecute/ai/domain/ai_protocol.dart';
 import 'package:nexecute/ai/domain/ai_stream_event.dart';
+import 'package:nexecute/ai/domain/ai_tool.dart';
 import 'package:nexecute/ai/repositories/ai_assistant_repository.dart';
 import 'package:nexecute/ai/repositories/ai_response_handle.dart';
 
@@ -142,6 +143,7 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
       abortTrigger: abortTrigger,
     );
     httpRequest.headers.addAll(_headers(profile));
+    final toolDefinitions = request.toolDefinitions;
     httpRequest.body = jsonEncode({
       'model': profile.modelId,
       'messages': [
@@ -158,7 +160,15 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
             },
           _messageJson(request.messages[index]),
         ],
+        for (final message in request.continuationMessages)
+          _continuationMessageJson(message),
       ],
+      if (toolDefinitions.isNotEmpty) ...{
+        'tools': [
+          for (final tool in toolDefinitions) _toolDefinitionJson(tool),
+        ],
+        'tool_choice': 'auto',
+      },
       'stream': true,
       'max_tokens': profile.maxOutputTokens,
       if (profile.reasoningEffort != AiReasoningEffort.automatic)
@@ -186,6 +196,7 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
       var completed = false;
       var receivedOutput = false;
       AiTokenUsage? usage;
+      final pendingToolCalls = <int, _OpenAiToolCallAccumulator>{};
       await for (final line in response.stream
           .timeout(responseIdleTimeout ?? profile.responseIdleTimeout)
           .transform(utf8.decoder)
@@ -195,6 +206,11 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
         final payload = trimmed.substring(5).trim();
         if (payload.isEmpty) continue;
         if (payload == '[DONE]') {
+          final calls = _takeCompletedToolCalls(pendingToolCalls);
+          for (final call in calls) {
+            receivedOutput = true;
+            yield AiToolCallRequested.fromCall(call);
+          }
           if (!completed) {
             if (receivedOutput) {
               yield AiResponseCompleted(usage: usage);
@@ -238,6 +254,7 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
             receivedOutput = true;
             yield AiTextDelta(content);
           }
+          _collectToolCallFragments(delta['tool_calls'], pendingToolCalls);
         }
         final message = choice['message'];
         if (delta is! Map && message is Map) {
@@ -251,9 +268,15 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
             receivedOutput = true;
             yield AiTextDelta(content);
           }
+          _collectToolCallFragments(message['tool_calls'], pendingToolCalls);
         }
         final finishReason = choice['finish_reason']?.toString();
         if (finishReason != null && finishReason != 'null') {
+          final calls = _takeCompletedToolCalls(pendingToolCalls);
+          for (final call in calls) {
+            receivedOutput = true;
+            yield AiToolCallRequested.fromCall(call);
+          }
           completed = true;
           if (receivedOutput) {
             yield AiResponseCompleted(finishReason: finishReason, usage: usage);
@@ -263,6 +286,11 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
         }
       }
       if (!completed) {
+        final calls = _takeCompletedToolCalls(pendingToolCalls);
+        for (final call in calls) {
+          receivedOutput = true;
+          yield AiToolCallRequested.fromCall(call);
+        }
         if (receivedOutput) {
           yield AiResponseCompleted(usage: usage);
         } else {
@@ -345,6 +373,48 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
     return result;
   }
 
+  static Map<String, Object?> _toolDefinitionJson(AiToolDefinition tool) => {
+    'type': 'function',
+    'function': {
+      'name': tool.name,
+      'description': tool.description,
+      'parameters': tool.parameters.toJson(),
+      'strict': true,
+    },
+  };
+
+  static Map<String, Object?> _continuationMessageJson(
+    AiToolContinuationMessage message,
+  ) => switch (message) {
+    AiAssistantToolCallMessage() => {
+      'role': 'assistant',
+      'content': message.content,
+      'tool_calls': [
+        for (final call in message.calls)
+          {
+            'id': call.id,
+            'type': 'function',
+            'function': {
+              'name': call.name,
+              'arguments': jsonEncode(call.arguments),
+            },
+          },
+      ],
+    },
+    AiToolResultMessage() => {
+      'role': 'tool',
+      'tool_call_id': message.toolCallId,
+      'name': message.toolName,
+      'content': jsonEncode({
+        'ok': !message.isError,
+        if (message.isError)
+          'error': message.result
+        else
+          'result': message.result,
+      }),
+    },
+  };
+
   static AiTokenUsage? _usage(Object? value) {
     if (value is! Map) return null;
     final input = value['prompt_tokens'];
@@ -412,6 +482,116 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
 
   void dispose() {
     if (_ownsClient) _client.close();
+  }
+}
+
+void _collectToolCallFragments(
+  Object? value,
+  Map<int, _OpenAiToolCallAccumulator> pending,
+) {
+  if (value == null) return;
+  if (value is! List) {
+    throw const FormatException('tool_calls must be a list');
+  }
+  for (var position = 0; position < value.length; position++) {
+    final fragment = value[position];
+    if (fragment is! Map) {
+      throw const FormatException('tool call fragment must be an object');
+    }
+    final rawIndex = fragment['index'];
+    final int index;
+    if (rawIndex == null) {
+      index = position;
+    } else if (rawIndex is num &&
+        rawIndex.isFinite &&
+        rawIndex == rawIndex.toInt() &&
+        rawIndex >= 0) {
+      index = rawIndex.toInt();
+    } else {
+      throw const FormatException('tool call index is invalid');
+    }
+    final accumulator = pending.putIfAbsent(
+      index,
+      _OpenAiToolCallAccumulator.new,
+    );
+    final type = fragment['type'];
+    if (type != null && type != 'function') {
+      throw const FormatException('unsupported tool call type');
+    }
+    accumulator.appendId(fragment['id']);
+    final function = fragment['function'];
+    if (function != null) {
+      if (function is! Map) {
+        throw const FormatException('tool function must be an object');
+      }
+      accumulator.appendName(function['name']);
+      accumulator.appendArguments(function['arguments']);
+    }
+  }
+}
+
+List<AiToolCall> _takeCompletedToolCalls(
+  Map<int, _OpenAiToolCallAccumulator> pending,
+) {
+  if (pending.isEmpty) return const [];
+  final indexes = pending.keys.toList()..sort();
+  final calls = [for (final index in indexes) pending[index]!.complete()];
+  pending.clear();
+  return calls;
+}
+
+class _OpenAiToolCallAccumulator {
+  String _id = '';
+  String _name = '';
+  final StringBuffer _arguments = StringBuffer();
+
+  void appendId(Object? value) {
+    if (value == null) return;
+    if (value is! String) throw const FormatException('invalid tool call id');
+    if (_id.isEmpty) {
+      _id = value;
+    } else if (value != _id) {
+      _id += value;
+    }
+  }
+
+  void appendName(Object? value) {
+    if (value == null) return;
+    if (value is! String) throw const FormatException('invalid tool name');
+    if (_name.isEmpty) {
+      _name = value;
+    } else if (value != _name) {
+      _name += value;
+    }
+  }
+
+  void appendArguments(Object? value) {
+    if (value == null) return;
+    if (value is! String) {
+      throw const FormatException('invalid tool arguments');
+    }
+    _arguments.write(value);
+  }
+
+  AiToolCall complete() {
+    if (_id.trim().isEmpty || _name.trim().isEmpty) {
+      throw const FormatException('incomplete tool call');
+    }
+    final encodedArguments = _arguments.toString();
+    final decoded = jsonDecode(
+      encodedArguments.isEmpty ? '{}' : encodedArguments,
+    );
+    if (decoded is! Map) {
+      throw const FormatException('tool arguments must be an object');
+    }
+    final arguments = <String, Object?>{};
+    for (final entry in decoded.entries) {
+      if (entry.key is! String) {
+        throw const FormatException('tool argument keys must be strings');
+      }
+      arguments[entry.key as String] = entry.value;
+    }
+    return AiToolCall(id: _id, name: _name, arguments: arguments);
   }
 }
 
