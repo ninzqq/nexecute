@@ -992,6 +992,8 @@ These improvements should be considered before or alongside larger features.
   ~~becoming stuck range selections after Gboard Shift input.~~
 - [x] ~~Align Android builds with the Flutter 3.47 template using Gradle 9.3,~~
   ~~Android Gradle Plugin 9.1, and Kotlin 2.4.~~
+- [x] ~~Migrate the Android app and its plugins from the legacy Kotlin Gradle~~
+  ~~Plugin to AGP 9's built-in Kotlin support.~~
 
 ### Quality and accessibility
 
