@@ -95,6 +95,14 @@ class FakeAiCredentialStore implements AiCredentialStore {
 
 class FakeAiConversationStore extends InMemoryAiConversationStore {
   FakeAiConversationStore({super.conversations});
+
+  int watchConversationsCallCount = 0;
+
+  @override
+  Stream<List<AiConversation>> watchConversations() {
+    watchConversationsCallCount += 1;
+    return super.watchConversations();
+  }
 }
 
 class FakeAiApplicationContextReadService

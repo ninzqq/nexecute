@@ -75,13 +75,30 @@ class AiChatController extends ChangeNotifier {
           false);
 
   Future<void> initialize() async {
+    final initialConversations = Completer<List<AiConversation>>();
     try {
       activeProfile = await _connectionProfileStore.getActiveProfile();
-      final initialConversations =
-          await _conversationStore.watchConversations().first;
-      conversations = initialConversations;
-      if (initialConversations.isNotEmpty) {
-        final latestConversationId = initialConversations.first.id;
+      _conversationsSubscription = _conversationStore
+          .watchConversations()
+          .listen(
+            (value) {
+              conversations = value;
+              _notify();
+              if (!initialConversations.isCompleted) {
+                initialConversations.complete(value);
+              }
+            },
+            onError: (Object error, StackTrace stackTrace) {
+              errorMessage = 'Could not synchronize AI conversations: $error';
+              _notify();
+              if (!initialConversations.isCompleted) {
+                initialConversations.completeError(error, stackTrace);
+              }
+            },
+          );
+      final initial = await initialConversations.future;
+      if (initial.isNotEmpty) {
+        final latestConversationId = initial.first.id;
         await _watchCurrentConversation(latestConversationId);
       }
     } catch (error) {
@@ -101,21 +118,10 @@ class AiChatController extends ChangeNotifier {
         _notify();
       },
     );
-    _conversationsSubscription = _conversationStore.watchConversations().listen(
-      (value) {
-        conversations = value;
-        _notify();
-      },
-      onError: (Object error) {
-        errorMessage = 'Could not synchronize AI conversations: $error';
-        _notify();
-      },
-    );
   }
 
   Future<void> openConversation(String conversationId) async {
     if (isGenerating) await stopResponse();
-    await _conversationSubscription?.cancel();
     _draftAssistant = null;
     errorMessage = null;
     await _watchCurrentConversation(conversationId);
@@ -157,8 +163,16 @@ class AiChatController extends ChangeNotifier {
           updatedAt: now,
         );
         conversation = current;
-        await _conversationStore.saveConversation(current);
-        await _watchCurrentConversation(current.id);
+        final conversationId = current.id;
+        _persistInBackground(
+          _conversationStore.saveConversation(current),
+          failureMessage: 'The conversation could not be synchronized',
+          afterSynchronization: () async {
+            if (conversation?.id == conversationId) {
+              await _watchCurrentConversation(conversationId);
+            }
+          },
+        );
       } else if (current.connectionProfileId != profile.id ||
           current.modelId != profile.modelId) {
         current = current.copyWith(
@@ -167,7 +181,10 @@ class AiChatController extends ChangeNotifier {
           updatedAt: now,
         );
         conversation = current;
-        await _conversationStore.saveConversation(current);
+        _persistInBackground(
+          _conversationStore.saveConversation(current),
+          failureMessage: 'The conversation could not be synchronized',
+        );
       }
 
       final userMessage = AiChatMessage(
@@ -183,7 +200,10 @@ class AiChatController extends ChangeNotifier {
       );
       errorMessage = null;
       _notify();
-      await _conversationStore.saveMessage(current.id, userMessage);
+      _persistInBackground(
+        _conversationStore.saveMessage(current.id, userMessage),
+        failureMessage: 'The message could not be synchronized',
+      );
       return await _beginResponse(
         profile,
         requestMessages,
@@ -216,7 +236,10 @@ class AiChatController extends ChangeNotifier {
     conversation = current.copyWith(messages: retained);
     _notify();
     try {
-      await _conversationStore.deleteMessage(current.id, failed.id);
+      _persistInBackground(
+        _conversationStore.deleteMessage(current.id, failed.id),
+        failureMessage: 'The failed response could not be removed',
+      );
       await _beginResponse(profile, retained);
     } catch (error) {
       errorMessage = 'Could not retry the response: $error';
@@ -395,12 +418,10 @@ class AiChatController extends ChangeNotifier {
     );
     _draftAssistant = null;
     _notify();
-    try {
-      await _conversationStore.saveMessage(current.id, persisted);
-    } catch (error) {
-      errorMessage = 'The response could not be synchronized: $error';
-      _notify();
-    }
+    _persistInBackground(
+      _conversationStore.saveMessage(current.id, persisted),
+      failureMessage: 'The response could not be synchronized',
+    );
   }
 
   Future<void> _watchCurrentConversation(String conversationId) async {
@@ -410,7 +431,7 @@ class AiChatController extends ChangeNotifier {
         .watchConversation(conversationId)
         .listen(
           (value) {
-            if (value != null) conversation = value;
+            conversation = value;
             _notify();
             if (!completer.isCompleted) completer.complete();
           },
@@ -421,6 +442,22 @@ class AiChatController extends ChangeNotifier {
           },
         );
     await completer.future;
+  }
+
+  void _persistInBackground(
+    Future<void> operation, {
+    required String failureMessage,
+    Future<void> Function()? afterSynchronization,
+  }) {
+    unawaited(() async {
+      try {
+        await operation;
+        await afterSynchronization?.call();
+      } catch (error) {
+        errorMessage = '$failureMessage: $error';
+        _notify();
+      }
+    }());
   }
 
   DateTime _nextMessageTime() {

@@ -338,12 +338,14 @@ nexecuteGateway
 - [x] ~~Verify offline/error behavior and all application themes.~~
 
 Conversation documents are stored at
-`users/{userId}/aiConversations/{conversationId}` with messages embedded
-directly inside the conversation document to minimize Firestore read, write,
-and delete operations. API credentials and provider-internal reasoning are
-never written to these documents. User messages are stored before generation;
-assistant messages are stored once they complete, fail, or are stopped so
-partial output can sync without writing every streamed token.
+`users/{userId}/aiConversations/{conversationId}` with lightweight metadata in
+the conversation document and messages in its `messages` subcollection. This
+keeps conversation-list reads small, avoids Firestore's per-document size limit
+for long chats, and lets message batches use Firestore's offline write queue.
+API credentials and provider-internal reasoning are never written to these
+documents. User messages are queued locally before generation; assistant
+messages are queued once they complete, fail, or are stopped so partial output
+can sync without writing every streamed token.
 
 #### Step 5: local phase 1 — validate real chat 🚧
 
@@ -897,11 +899,10 @@ These improvements should be considered before or alongside larger features.
 - [x] ~~Initialize Firebase through one clearly owned application startup path.~~
 - [x] ~~Add Firestore Emulator tests for repository behavior and security rules.~~
 - [x] ~~Optimize Firestore read, write, and deletion costs across AI chats and~~
-  ~~calendar events. AI conversations embed messages directly in~~
-  ~~`users/{userId}/aiConversations/{conversationId}` to reduce conversation~~
-  ~~reads from O(N) to O(1) and eliminate N+1 reads on deletion. Redundant~~
-  ~~duplicate reads in AI chat initialization and unnecessary `get()` queries~~
-  ~~prior to calendar event deletions have been removed.~~
+  ~~calendar events. AI conversation metadata stays lightweight while messages~~
+  ~~use an offline-compatible subcollection, and chat initialization reuses one~~
+  ~~conversation-list subscription. Unnecessary `get()` queries prior to~~
+  ~~calendar event deletions have also been removed.~~
 
 ### Maintainability cleanup
 

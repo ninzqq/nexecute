@@ -4,7 +4,7 @@ import 'package:nexecute/ai/ai.dart';
 import 'package:nexecute/repositories/firestore/schema/app_data_schema.dart';
 
 void main() {
-  test('conversation metadata round-trips with embedded messages', () {
+  test('conversation metadata round-trips without embedding messages', () {
     final conversation = AiConversation(
       id: 'conversation-1',
       title: 'Planning',
@@ -22,14 +22,16 @@ void main() {
       ],
     );
 
-    final data = AiConversationDocumentMapper.toMap(conversation);
+    final data = AiConversationDocumentMapper.conversationMetadataToMap(
+      conversation,
+    );
     final restored = AiConversationDocumentMapper.fromMap('conversation-1', {
       ...data,
       'createdAt': Timestamp.fromDate(conversation.createdAt),
       'updatedAt': Timestamp.fromDate(conversation.updatedAt),
-    });
+    }, messages: conversation.messages);
 
-    expect(data, contains('messages'));
+    expect(data, isNot(contains('messages')));
     expect(data[AppDataSchema.versionField], AppDataSchema.currentVersion);
     expect(restored.title, conversation.title);
     expect(restored.modelId, conversation.modelId);

@@ -68,6 +68,13 @@ void main() {
 
     expect(controller.conversation?.id, latest.id);
     expect(controller.messages.single.content, 'Most recent answer');
+    expect(conversationStore.watchConversationsCallCount, 1);
+
+    await conversationStore.deleteConversation(latest.id);
+    await _flushEvents();
+
+    expect(controller.conversation, isNull);
+    expect(controller.messages, isEmpty);
   });
 
   test('sends, streams, and persists a completed conversation', () async {
@@ -126,6 +133,42 @@ void main() {
     );
     expect(controller.isGenerating, isFalse);
   });
+
+  test(
+    'starts a local response while Firestore acknowledgement is pending',
+    () async {
+      final pendingStore = _PendingPersistenceConversationStore();
+      addTearDown(pendingStore.dispose);
+      final repository = FakeAiAssistantRepository(
+        responseEvents: const [
+          AiTextDelta('Offline answer'),
+          AiResponseCompleted(),
+        ],
+      );
+      var nextId = 0;
+      final controller = AiChatController(
+        assistantRepository: repository,
+        connectionProfileStore: profileStore,
+        conversationStore: pendingStore,
+        idFactory: () => 'offline-${nextId++}',
+        clock: () => DateTime.utc(2026, 8, 30, 12),
+      );
+      addTearDown(controller.dispose);
+      await controller.initialize();
+
+      final started = await controller
+          .send('Work without Firestore connectivity')
+          .timeout(const Duration(seconds: 1));
+      await _flushEvents();
+
+      expect(started, isTrue);
+      expect(repository.startedRequests, hasLength(1));
+      expect(
+        controller.messages.first.content,
+        'Work without Firestore connectivity',
+      );
+    },
+  );
 
   test('stop aborts generation and preserves the partial response', () async {
     final stream = StreamController<AiStreamEvent>();
@@ -316,4 +359,20 @@ void main() {
 Future<void> _flushEvents() async {
   await Future<void>.delayed(Duration.zero);
   await Future<void>.delayed(Duration.zero);
+}
+
+class _PendingPersistenceConversationStore extends InMemoryAiConversationStore {
+  final _acknowledgement = Completer<void>();
+
+  @override
+  Future<void> saveConversation(AiConversation conversation) async {
+    await super.saveConversation(conversation);
+    await _acknowledgement.future;
+  }
+
+  @override
+  Future<void> saveMessage(String conversationId, AiChatMessage message) async {
+    await super.saveMessage(conversationId, message);
+    await _acknowledgement.future;
+  }
 }

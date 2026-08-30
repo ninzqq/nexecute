@@ -238,6 +238,29 @@ void main() {
     );
     final restored = await aiConversations.getConversation(conversation.id);
     expect(restored!.messages.single.content, 'Hello from another device');
+    await aiConversations.saveConversation(
+      restored.copyWith(
+        title: 'Renamed synced chat',
+        updatedAt: DateTime.utc(2026, 1, 10, 12, 2),
+      ),
+    );
+    final messageDocuments =
+        await user
+            .collection('aiConversations')
+            .doc(conversation.id)
+            .collection('messages')
+            .get();
+    expect(messageDocuments.docs, hasLength(1));
+    expect(
+      messageDocuments.docs.single.data()['content'],
+      'Hello from another device',
+    );
+    await aiConversations.deleteConversation(conversation.id);
+    expect(
+      (await user.collection('aiConversations').doc(conversation.id).get())
+          .exists,
+      isFalse,
+    );
     expect(
       (await user
               .collection('aiConversations')
@@ -245,13 +268,35 @@ void main() {
               .collection('messages')
               .get())
           .docs,
-      hasLength(1),
+      isEmpty,
     );
-    await aiConversations.deleteConversation(conversation.id);
+
+    final largeConversation = conversation.copyWith(
+      id: 'large-ai-conversation',
+      title: 'Large synced chat',
+    );
+    await aiConversations.saveConversation(largeConversation);
+    final largeConversationReference = user
+        .collection('aiConversations')
+        .doc(largeConversation.id);
+    for (var offset = 0; offset < 401; offset += 400) {
+      final batch = firestore.batch();
+      final end = offset == 0 ? 400 : 401;
+      for (var index = offset; index < end; index++) {
+        batch.set(
+          largeConversationReference
+              .collection('messages')
+              .doc('message-$index'),
+          {'createdAt': Timestamp.fromDate(DateTime.utc(2026, 1, 10, 13))},
+        );
+      }
+      await batch.commit();
+    }
+    await aiConversations.deleteConversation(largeConversation.id);
+    expect((await largeConversationReference.get()).exists, isFalse);
     expect(
-      (await user.collection('aiConversations').doc(conversation.id).get())
-          .exists,
-      isFalse,
+      (await largeConversationReference.collection('messages').get()).docs,
+      isEmpty,
     );
   });
 }
