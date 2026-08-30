@@ -228,6 +228,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('The final answer'), findsOneWidget);
+    expect(find.text('Considering the options'), findsNothing);
+
+    await tester.tap(find.text('Reasoning'));
+    await tester.pumpAndSettle();
+
     expect(find.text('Considering the options'), findsOneWidget);
     final saved = (await conversationStore.getConversations()).single;
     expect(saved.messages.last.content, 'The final answer');

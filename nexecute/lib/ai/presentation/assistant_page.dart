@@ -812,6 +812,7 @@ class _MessageBubble extends StatelessWidget {
                     message.status == AiMessageStatus.streaming &&
                     message.content.isEmpty,
                 streaming: message.status == AiMessageStatus.streaming,
+                completed: message.status == AiMessageStatus.complete,
               ),
               if (message.content.isNotEmpty) const SizedBox(height: 10),
             ],
@@ -852,17 +853,46 @@ class _MessageBubble extends StatelessWidget {
   }
 }
 
-class _ReasoningPanel extends StatelessWidget {
+class _ReasoningPanel extends StatefulWidget {
   const _ReasoningPanel({
     super.key,
     required this.text,
     required this.initiallyExpanded,
     required this.streaming,
+    required this.completed,
   });
 
   final String text;
   final bool initiallyExpanded;
   final bool streaming;
+  final bool completed;
+
+  @override
+  State<_ReasoningPanel> createState() => _ReasoningPanelState();
+}
+
+class _ReasoningPanelState extends State<_ReasoningPanel> {
+  late final ExpansibleController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = ExpansibleController();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ReasoningPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.completed && widget.completed && _controller.isExpanded) {
+      _controller.collapse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -876,12 +906,13 @@ class _ReasoningPanel extends StatelessWidget {
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          initiallyExpanded: initiallyExpanded,
+          controller: _controller,
+          initiallyExpanded: widget.initiallyExpanded,
           maintainState: true,
           tilePadding: const EdgeInsets.symmetric(horizontal: 10),
           childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
           leading:
-              streaming
+              widget.streaming
                   ? const SizedBox.square(
                     dimension: 17,
                     child: CircularProgressIndicator(strokeWidth: 2),
@@ -893,7 +924,7 @@ class _ReasoningPanel extends StatelessWidget {
             Align(
               alignment: Alignment.centerLeft,
               child: SelectableText(
-                text,
+                widget.text,
                 key: const Key('assistant-reasoning-text'),
                 style: Theme.of(
                   context,
