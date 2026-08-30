@@ -3,18 +3,27 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:nexecute/ai/application/ai_note_event_prompt.dart';
 import 'package:nexecute/ai/domain/ai_event_proposal.dart';
+import 'package:nexecute/ai/presentation/ai_event_proposal_creation_controller.dart';
 import 'package:nexecute/ai/presentation/ai_note_event_extraction_controller.dart';
 import 'package:nexecute/ai/repositories/ai_assistant_repository.dart';
 import 'package:nexecute/ai/repositories/ai_connection_profile_store.dart';
 import 'package:nexecute/home/bottomsheets/editor_tag_selector.dart';
 import 'package:nexecute/home/bottomsheets/event_reminder_field.dart';
+import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/quicxec.dart';
+import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/shared/bottom_sheet_safe_area.dart';
+import 'package:nexecute/shared/event_reminder_labels.dart';
 import 'package:provider/provider.dart';
 
-Future<AiEventProposalReviewDraft?> showAiNoteEventExtractionPreview(
+typedef AiEventProposalCreateCallback =
+    Future<Event> Function(CreateEventCommand command);
+
+Future<Event?> showAiNoteEventExtractionPreview(
   BuildContext context, {
   required Quicxec note,
+  AiEventProposalCreateCallback? onCreate,
+  String Function()? creationIdFactory,
   DateTime Function()? clock,
 }) async {
   final controller = AiNoteEventExtractionController(
@@ -22,13 +31,22 @@ Future<AiEventProposalReviewDraft?> showAiNoteEventExtractionPreview(
     connectionProfileStore: context.read<AiConnectionProfileStore>(),
     clock: clock,
   );
+  final creationController =
+      onCreate == null
+          ? null
+          : AiEventProposalCreationController(
+            submit: onCreate,
+            idFactory: creationIdFactory,
+            clock: clock,
+          );
   await controller.initialize();
   if (!context.mounted) {
     controller.dispose();
+    creationController?.dispose();
     return null;
   }
   try {
-    return await showModalBottomSheet<AiEventProposalReviewDraft>(
+    await showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
       isScrollControlled: true,
@@ -38,11 +56,17 @@ Future<AiEventProposalReviewDraft?> showAiNoteEventExtractionPreview(
             child: _AiNoteEventExtractionSheet(
               note: note,
               controller: controller,
+              creationController: creationController,
             ),
           ),
     );
+    if (creationController?.status == AiEventProposalCreationStatus.completed) {
+      return creationController!.createdEvent;
+    }
+    return null;
   } finally {
     controller.dispose();
+    creationController?.dispose();
   }
 }
 
@@ -50,10 +74,12 @@ class _AiNoteEventExtractionSheet extends StatefulWidget {
   const _AiNoteEventExtractionSheet({
     required this.note,
     required this.controller,
+    required this.creationController,
   });
 
   final Quicxec note;
   final AiNoteEventExtractionController controller;
+  final AiEventProposalCreationController? creationController;
 
   @override
   State<_AiNoteEventExtractionSheet> createState() =>
@@ -66,11 +92,13 @@ class _AiNoteEventExtractionSheetState
   void initState() {
     super.initState();
     widget.controller.addListener(_refresh);
+    widget.creationController?.addListener(_refresh);
   }
 
   @override
   void dispose() {
     widget.controller.removeListener(_refresh);
+    widget.creationController?.removeListener(_refresh);
     super.dispose();
   }
 
@@ -81,6 +109,7 @@ class _AiNoteEventExtractionSheetState
   @override
   Widget build(BuildContext context) {
     final controller = widget.controller;
+    final creationController = widget.creationController;
     final profile = controller.activeProfile;
     final content = widget.note.contentAsPlainText;
     final sourceTooLarge =
@@ -101,170 +130,255 @@ class _AiNoteEventExtractionSheetState
         controller.status == AiNoteEventExtractionStatus.failed ||
         controller.status == AiNoteEventExtractionStatus.cancelled;
     final draft = controller.reviewDraft;
+    final creationStatus = creationController?.status;
+    final creationStarted = creationController?.command != null;
+    final creating = creationStatus == AiEventProposalCreationStatus.creating;
+    final creationFailed =
+        creationStatus == AiEventProposalCreationStatus.failed;
+    final creationCompleted =
+        creationStatus == AiEventProposalCreationStatus.completed;
 
-    return FractionallySizedBox(
-      heightFactor: 0.92,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Propose event with AI',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              profile == null
-                  ? 'No AI connection selected'
-                  : '${profile.name} · ${profile.modelId}',
-              key: const Key('ai-note-event-destination'),
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 14),
-            const Text(
-              'Only the exact note and reference time shown below will be sent to the selected AI endpoint.',
-            ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: ListView(
-                children: [
-                  _PreviewField(
-                    label: 'Note title',
-                    value:
-                        widget.note.title.isEmpty
-                            ? '(No title)'
-                            : widget.note.title,
-                  ),
-                  const SizedBox(height: 12),
-                  _PreviewField(
-                    label: 'Note content',
-                    value: content.isEmpty ? '(Empty note)' : content,
-                  ),
-                  const SizedBox(height: 12),
-                  if (requestPreview != null)
-                    ExpansionTile(
-                      key: const Key('ai-note-event-technical-preview'),
-                      tilePadding: EdgeInsets.zero,
-                      shape: const Border(),
-                      collapsedShape: const Border(),
-                      title: const Text('Exact technical request'),
-                      subtitle: const Text(
-                        'Fixed instructions, reference time, and note JSON',
-                      ),
-                      children: [
-                        _PreviewField(
-                          label: 'System instruction',
-                          value: requestPreview.systemInstruction,
-                        ),
-                        const SizedBox(height: 12),
-                        _PreviewField(
-                          label: 'User message',
-                          value: requestPreview.userMessage,
-                        ),
-                      ],
+    return PopScope(
+      canPop: !creating,
+      child: FractionallySizedBox(
+        heightFactor: 0.92,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Propose event with AI',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                profile == null
+                    ? 'No AI connection selected'
+                    : '${profile.name} · ${profile.modelId}',
+                key: const Key('ai-note-event-destination'),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'Only the exact note and reference time shown below will be sent to the selected AI endpoint.',
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: ListView(
+                  children: [
+                    _PreviewField(
+                      label: 'Note title',
+                      value:
+                          widget.note.title.isEmpty
+                              ? '(No title)'
+                              : widget.note.title,
                     ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'The proposal stays on this device, outside AI chat history and Firestore. The source note is never modified.',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  if (sourceTooLarge) ...[
+                    const SizedBox(height: 12),
+                    _PreviewField(
+                      label: 'Note content',
+                      value: content.isEmpty ? '(Empty note)' : content,
+                    ),
+                    const SizedBox(height: 12),
+                    if (requestPreview != null)
+                      ExpansionTile(
+                        key: const Key('ai-note-event-technical-preview'),
+                        tilePadding: EdgeInsets.zero,
+                        shape: const Border(),
+                        collapsedShape: const Border(),
+                        title: const Text('Exact technical request'),
+                        subtitle: const Text(
+                          'Fixed instructions, reference time, and note JSON',
+                        ),
+                        children: [
+                          _PreviewField(
+                            label: 'System instruction',
+                            value: requestPreview.systemInstruction,
+                          ),
+                          const SizedBox(height: 12),
+                          _PreviewField(
+                            label: 'User message',
+                            value: requestPreview.userMessage,
+                          ),
+                        ],
+                      ),
                     const SizedBox(height: 12),
                     Text(
-                      'This note exceeds the event extraction limit and cannot be sent.',
-                      key: const Key('ai-note-event-source-too-large'),
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
+                      'The proposal stays on this device, outside AI chat history and Firestore. The source note is never modified.',
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
-                  ],
-                  if (controller.errorMessage case final message?) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      message,
-                      key: const Key('ai-note-event-status'),
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                    if (retrying) ...[
-                      const SizedBox(height: 6),
-                      const Text(
-                        'Nothing was created. You can retry the request or discard it.',
-                        key: Key('ai-note-event-retry-guidance'),
+                    if (sourceTooLarge) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        'This note exceeds the event extraction limit and cannot be sent.',
+                        key: const Key('ai-note-event-source-too-large'),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                       ),
                     ],
+                    if (controller.errorMessage case final message?) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        message,
+                        key: const Key('ai-note-event-status'),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                      if (retrying) ...[
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Nothing was created. You can retry the request or discard it.',
+                          key: Key('ai-note-event-retry-guidance'),
+                        ),
+                      ],
+                    ],
+                    if (completed) ...[
+                      const SizedBox(height: 16),
+                      if (draft == null)
+                        const _NoEventProposal()
+                      else ...[
+                        IgnorePointer(
+                          ignoring: creationStarted,
+                          child: Opacity(
+                            opacity: creationStarted ? 0.72 : 1,
+                            child: _EventProposalReview(controller: controller),
+                          ),
+                        ),
+                        if (creationStarted) ...[
+                          const SizedBox(height: 12),
+                          _CreationStatus(controller: creationController!),
+                        ],
+                      ],
+                    ],
                   ],
-                  if (completed) ...[
-                    const SizedBox(height: 16),
-                    if (draft == null)
-                      const _NoEventProposal()
-                    else
-                      _EventProposalReview(controller: controller),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed:
-                      generating ? null : () => Navigator.of(context).pop(),
-                  child: Text(completed ? 'Discard' : 'Cancel'),
                 ),
-                const SizedBox(width: 8),
-                if (generating)
-                  OutlinedButton.icon(
-                    key: const Key('ai-note-event-stop'),
-                    onPressed: () => unawaited(controller.cancel()),
-                    icon: const Icon(Icons.stop_rounded),
-                    label: const Text('Stop request'),
-                  )
-                else if (!completed || draft == null)
-                  FilledButton.icon(
-                    key: const Key('ai-note-event-send'),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
                     onPressed:
-                        profile == null || sourceTooLarge
+                        generating || creating
                             ? null
-                            : () => unawaited(
-                              controller.start(
-                                noteId: widget.note.id,
-                                noteTitle: widget.note.title,
-                                noteContent: content,
-                              ),
-                            ),
-                    icon: Icon(
-                      retrying || completed
-                          ? Icons.refresh_rounded
-                          : Icons.auto_awesome_rounded,
-                    ),
-                    label: Text(retrying || completed ? 'Retry' : 'Send to AI'),
-                  )
-                else
-                  Tooltip(
-                    message:
-                        controller.canContinue
-                            ? 'No event will be written before Step 10C confirmation.'
-                            : draft.validationMessage ?? '',
-                    child: FilledButton.icon(
-                      key: const Key('ai-note-event-ready'),
-                      onPressed:
-                          controller.canContinue
-                              ? () => Navigator.of(context).pop(draft)
-                              : null,
-                      icon: const Icon(Icons.check_circle_outline_rounded),
-                      label: const Text('Ready for confirmation'),
+                            : () => Navigator.of(context).pop(),
+                    child: Text(
+                      completed
+                          ? creationStarted
+                              ? 'Close'
+                              : 'Discard'
+                          : 'Cancel',
                     ),
                   ),
-              ],
-            ),
-          ],
+                  const SizedBox(width: 8),
+                  if (generating)
+                    OutlinedButton.icon(
+                      key: const Key('ai-note-event-stop'),
+                      onPressed: () => unawaited(controller.cancel()),
+                      icon: const Icon(Icons.stop_rounded),
+                      label: const Text('Stop request'),
+                    )
+                  else if (!completed || draft == null)
+                    FilledButton.icon(
+                      key: const Key('ai-note-event-send'),
+                      onPressed:
+                          profile == null || sourceTooLarge
+                              ? null
+                              : () => unawaited(
+                                controller.start(
+                                  noteId: widget.note.id,
+                                  noteTitle: widget.note.title,
+                                  noteContent: content,
+                                ),
+                              ),
+                      icon: Icon(
+                        retrying || completed
+                            ? Icons.refresh_rounded
+                            : Icons.auto_awesome_rounded,
+                      ),
+                      label: Text(
+                        retrying || completed ? 'Retry' : 'Send to AI',
+                      ),
+                    )
+                  else if (creating)
+                    FilledButton.icon(
+                      key: const Key('ai-note-event-creating'),
+                      onPressed: null,
+                      icon: const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      label: const Text('Creating event...'),
+                    )
+                  else if (creationFailed)
+                    FilledButton.icon(
+                      key: const Key('ai-note-event-retry-create'),
+                      onPressed: () => unawaited(creationController!.retry()),
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('Retry same creation'),
+                    )
+                  else if (!creationCompleted)
+                    Tooltip(
+                      message:
+                          creationController == null
+                              ? 'Event creation is not configured.'
+                              : draft.validationMessage ?? '',
+                      child: FilledButton.icon(
+                        key: const Key('ai-note-event-create'),
+                        onPressed:
+                            controller.canContinue && creationController != null
+                                ? () => unawaited(
+                                  _confirmAndCreate(
+                                    context,
+                                    draft: draft,
+                                    creationController: creationController,
+                                  ),
+                                )
+                                : null,
+                        icon: const Icon(Icons.event_available_rounded),
+                        label: const Text('Create event'),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  Future<void> _confirmAndCreate(
+    BuildContext context, {
+    required AiEventProposalReviewDraft draft,
+    required AiEventProposalCreationController creationController,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (dialogContext) => AlertDialog(
+            title: const Text('Create this event?'),
+            content: SingleChildScrollView(
+              child: _EventConfirmationSummary(draft: draft),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Back'),
+              ),
+              FilledButton.icon(
+                key: const Key('ai-note-event-confirm-create'),
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                icon: const Icon(Icons.event_available_rounded),
+                label: const Text('Create event'),
+              ),
+            ],
+          ),
+    );
+    if (confirmed != true || !mounted) return;
+    await creationController.create(sourceNoteId: widget.note.id, draft: draft);
   }
 }
 
@@ -281,6 +395,150 @@ class _NoEventProposal extends StatelessWidget {
         SizedBox(height: 6),
         Text('Discard this result or send the note again to retry.'),
       ],
+    );
+  }
+}
+
+class _EventConfirmationSummary extends StatelessWidget {
+  const _EventConfirmationSummary({required this.draft});
+
+  final AiEventProposalReviewDraft draft;
+
+  @override
+  Widget build(BuildContext context) {
+    final localizations = MaterialLocalizations.of(context);
+    final startDate = localizations.formatMediumDate(draft.startDate!);
+    final endDate = localizations.formatMediumDate(draft.endDate!);
+    final String schedule;
+    if (draft.isAllDay!) {
+      schedule =
+          draft.startDate == draft.endDate
+              ? '$startDate · All day'
+              : '$startDate – $endDate · All day (inclusive)';
+    } else {
+      final startTime = localizations.formatTimeOfDay(
+        _timeOfDay(draft.startTime!),
+      );
+      final endTime = localizations.formatTimeOfDay(_timeOfDay(draft.endTime!));
+      schedule = '$startDate $startTime – $endDate $endTime';
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _ConfirmationValue(label: 'Title', value: draft.title.trim()),
+        if (draft.description.trim().isNotEmpty) ...[
+          const SizedBox(height: 10),
+          _ConfirmationValue(
+            label: 'Description',
+            value: draft.description.trim(),
+          ),
+        ],
+        const SizedBox(height: 10),
+        _ConfirmationValue(
+          key: const Key('ai-note-event-confirm-schedule'),
+          label: 'Schedule',
+          value: schedule,
+        ),
+        const SizedBox(height: 10),
+        _ConfirmationValue(
+          label: 'Tags',
+          value: draft.tags.isEmpty ? 'None' : draft.tags.join(', '),
+        ),
+        const SizedBox(height: 10),
+        _ConfirmationValue(label: 'Reminder', value: draft.reminder.label),
+        const SizedBox(height: 14),
+        const Text(
+          'The source note will remain unchanged.',
+          key: Key('ai-note-event-preserve-note'),
+        ),
+      ],
+    );
+  }
+
+  static TimeOfDay _timeOfDay(Duration value) =>
+      TimeOfDay(hour: value.inHours, minute: value.inMinutes.remainder(60));
+}
+
+class _ConfirmationValue extends StatelessWidget {
+  const _ConfirmationValue({
+    super.key,
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.labelMedium),
+        const SizedBox(height: 2),
+        Text(value),
+      ],
+    );
+  }
+}
+
+class _CreationStatus extends StatelessWidget {
+  const _CreationStatus({required this.controller});
+
+  final AiEventProposalCreationController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final command = controller.command!;
+    final isFailed = controller.status == AiEventProposalCreationStatus.failed;
+    final isCompleted =
+        controller.status == AiEventProposalCreationStatus.completed;
+    return Container(
+      key: const Key('ai-note-event-creation-status'),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            isCompleted
+                ? Icons.check_circle_rounded
+                : isFailed
+                ? Icons.error_outline_rounded
+                : Icons.sync_rounded,
+            color:
+                isFailed
+                    ? Theme.of(context).colorScheme.error
+                    : Theme.of(context).colorScheme.primary,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isCompleted
+                      ? 'Event created'
+                      : isFailed
+                      ? 'Creation not confirmed'
+                      : 'Creating event',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  controller.errorMessage ??
+                      '${command.title} · ${command.eventId}',
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

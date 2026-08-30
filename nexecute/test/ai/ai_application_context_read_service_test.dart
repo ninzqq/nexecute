@@ -398,6 +398,10 @@ class _EventRepository implements EventRepository {
   Future<Event> addEvent(Event event) async => event;
 
   @override
+  Future<Event> createEvent(CreateEventCommand command) async =>
+      command.toEvent();
+
+  @override
   Future<void> deleteEvent(Event event) async {}
 
   @override

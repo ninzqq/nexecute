@@ -722,15 +722,15 @@ edit, move, complete, or delete existing application data.
 
 ##### Step 10C: confirmed and idempotent event creation
 
-- [ ] Turn the review-ready handoff into the final Create confirmation and
+- [x] Turn the review-ready handoff into the final Create confirmation and
   introduce a validated create-event command with a stable creation ID, source
   note ID, frozen reviewed values, and creation timestamp.
-- [ ] Use a deterministic event document ID so retrying the exact confirmed
+- [x] Use a deterministic event document ID so retrying the exact confirmed
   command cannot create a duplicate after an uncertain write result.
-- [ ] Execute the frozen command through the normal `EventRepository` and event
+- [x] Execute the frozen command through the normal `EventRepository` and event
   reminder scheduling pipeline; model-facing code must never call Firestore or
   platform reminder APIs directly.
-- [ ] Preserve the source note, prevent repeated submission, and retry only the
+- [x] Preserve the source note, prevent repeated submission, and retry only the
   exact same confirmed command after an uncertain failure.
 
 ##### Step 10D: verification and rollout

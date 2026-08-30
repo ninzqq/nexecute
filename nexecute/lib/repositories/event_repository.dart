@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nexecute/domain/calendar/calendar_query_range.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/event.dart';
+import 'package:nexecute/repositories/commands/create_event_command.dart';
 import 'package:nexecute/repositories/commands/update_event_command.dart';
 import 'package:nexecute/repositories/firestore/event_document_mapper.dart';
 import 'package:nexecute/repositories/firestore/schema/app_data_schema.dart';
@@ -11,6 +12,7 @@ import 'package:nexecute/services/authenticated_data_stream.dart';
 import 'package:uuid/uuid.dart';
 
 export 'package:nexecute/repositories/commands/update_event_command.dart';
+export 'package:nexecute/repositories/commands/create_event_command.dart';
 
 abstract interface class EventRepository {
   Stream<DataState<List<Event>>> watchEvents(CalendarQueryRange range);
@@ -18,6 +20,8 @@ abstract interface class EventRepository {
   Future<List<Event>> searchEvents(String query, {int limit = 50});
 
   Future<Event> addEvent(Event event);
+
+  Future<Event> createEvent(CreateEventCommand command);
 
   Future<void> updateEvent(UpdateEventCommand command);
 
@@ -84,6 +88,15 @@ class FirestoreEventRepository implements EventRepository {
     final data = EventDocumentMapper.toMap(savedEvent);
     await ref.doc(id).set(data);
     return savedEvent;
+  }
+
+  @override
+  Future<Event> createEvent(CreateEventCommand command) async {
+    final event = command.toEvent();
+    await _eventsCollection()
+        .doc(event.id)
+        .set(EventDocumentMapper.toCreateMap(command));
+    return event;
   }
 
   @override

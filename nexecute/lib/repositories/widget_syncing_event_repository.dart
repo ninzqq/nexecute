@@ -41,6 +41,11 @@ class WidgetSyncingEventRepository implements EventRepository {
   Future<Event> addEvent(Event event) => _delegate.addEvent(event);
 
   @override
+  Future<Event> createEvent(CreateEventCommand command) {
+    return _delegate.createEvent(command);
+  }
+
+  @override
   Future<void> updateEvent(UpdateEventCommand command) {
     return _delegate.updateEvent(command);
   }

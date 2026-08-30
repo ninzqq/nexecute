@@ -32,6 +32,13 @@ class ReminderSchedulingEventRepository implements EventRepository {
   }
 
   @override
+  Future<Event> createEvent(CreateEventCommand command) async {
+    final savedEvent = await _delegate.createEvent(command);
+    await _scheduleSafely(savedEvent);
+    return savedEvent;
+  }
+
+  @override
   Future<void> updateEvent(UpdateEventCommand command) async {
     await _delegate.updateEvent(command);
     await _scheduleSafely(command.toEvent());

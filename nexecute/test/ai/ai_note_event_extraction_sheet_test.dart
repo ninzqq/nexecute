@@ -4,8 +4,10 @@ import 'package:nexecute/ai/ai.dart';
 import 'package:nexecute/home/bottomsheets/editor_tag_selector.dart';
 import 'package:nexecute/home/bottomsheets/event_reminder_field.dart';
 import 'package:nexecute/models/data_state.dart';
+import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/tag.dart' as app_models;
+import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
 
@@ -58,17 +60,33 @@ void main() {
     expect(find.byType(EditorTagSelector), findsOneWidget);
     expect(find.byType(EventReminderField), findsOneWidget);
 
-    await tester.ensureVisible(find.byKey(const Key('ai-note-event-ready')));
-    final readyButton = tester.widget<FilledButton>(
-      find.byKey(const Key('ai-note-event-ready')),
+    await tester.ensureVisible(find.byKey(const Key('ai-note-event-create')));
+    final createButton = tester.widget<FilledButton>(
+      find.byKey(const Key('ai-note-event-create')),
     );
-    expect(readyButton.onPressed, isNotNull);
-    expect(dependencies.reviewedDraft, isNull);
+    expect(createButton.onPressed, isNotNull);
+    expect(dependencies.commands, isEmpty);
 
-    await tester.tap(find.byKey(const Key('ai-note-event-ready')));
+    await tester.tap(find.byKey(const Key('ai-note-event-create')));
     await tester.pumpAndSettle();
-    expect(dependencies.reviewedDraft?.title, 'Dentist');
-    expect(dependencies.reviewedDraft?.isComplete, isTrue);
+    expect(find.text('Create this event?'), findsOneWidget);
+    expect(find.text('Dentist'), findsWidgets);
+    expect(
+      find.byKey(const Key('ai-note-event-confirm-schedule')),
+      findsOneWidget,
+    );
+    expect(find.text('The source note will remain unchanged.'), findsOneWidget);
+    expect(dependencies.commands, isEmpty);
+
+    await tester.tap(find.byKey(const Key('ai-note-event-confirm-create')));
+    await tester.pumpAndSettle();
+    expect(dependencies.commands, hasLength(1));
+    expect(dependencies.commands.single.sourceNoteId, 'note-1');
+    expect(dependencies.commands.single.eventId, 'ai-event-creation-1');
+
+    await tester.tap(find.widgetWithText(TextButton, 'Close'));
+    await tester.pumpAndSettle();
+    expect(dependencies.createdEvent?.title, 'Dentist');
   });
 
   testWidgets('highlights missing schedule fields and keeps continue disabled', (
@@ -98,14 +116,14 @@ void main() {
       scrollable: find.byType(Scrollable).last,
     );
     expect(find.text('Required — missing from the note'), findsWidgets);
-    await tester.ensureVisible(find.byKey(const Key('ai-note-event-ready')));
+    await tester.ensureVisible(find.byKey(const Key('ai-note-event-create')));
     expect(
       tester
-          .widget<FilledButton>(find.byKey(const Key('ai-note-event-ready')))
+          .widget<FilledButton>(find.byKey(const Key('ai-note-event-create')))
           .onPressed,
       isNull,
     );
-    expect(dependencies.reviewedDraft, isNull);
+    expect(dependencies.commands, isEmpty);
   });
 
   testWidgets('offers retry after malformed output without writing anything', (
@@ -133,16 +151,57 @@ void main() {
       findsOneWidget,
     );
     expect(find.widgetWithText(FilledButton, 'Retry'), findsOneWidget);
-    expect(dependencies.reviewedDraft, isNull);
+    expect(dependencies.commands, isEmpty);
 
     await tester.tap(find.byKey(const Key('ai-note-event-send')));
     await tester.pumpAndSettle();
     expect(dependencies.repository.startedRequests, hasLength(2));
   });
+
+  testWidgets('retries an ambiguous creation with the same frozen command', (
+    tester,
+  ) async {
+    final dependencies = _Dependencies(
+      response:
+          '{"schemaVersion":1,"event":{"title":"Dentist","description":"Check-up","startDate":"2026-09-03","startTime":"14:00","endDate":"2026-09-03","endTime":"15:00","isAllDay":false}}',
+      failCreation: true,
+    );
+    addTearDown(dependencies.dispose);
+
+    await tester.pumpWidget(dependencies.app());
+    await tester.tap(find.text('Open preview'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('ai-note-event-send')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('ai-note-event-create')));
+    await tester.tap(find.byKey(const Key('ai-note-event-create')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('ai-note-event-confirm-create')));
+    await tester.pumpAndSettle();
+
+    expect(dependencies.commands, hasLength(1));
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('ai-note-event-creation-status')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Creation not confirmed'), findsOneWidget);
+
+    dependencies.failCreation = false;
+    await tester.tap(find.byKey(const Key('ai-note-event-retry-create')));
+    await tester.pumpAndSettle();
+
+    expect(dependencies.commands, hasLength(2));
+    expect(
+      identical(dependencies.commands[0], dependencies.commands[1]),
+      isTrue,
+    );
+    expect(dependencies.repository.startedRequests, hasLength(1));
+  });
 }
 
 class _Dependencies {
-  _Dependencies({required String response})
+  _Dependencies({required String response, this.failCreation = false})
     : profileStore = FakeAiConnectionProfileStore(
         profiles: [
           AiConnectionProfile(
@@ -161,7 +220,9 @@ class _Dependencies {
 
   final FakeAiConnectionProfileStore profileStore;
   final FakeAiAssistantRepository repository;
-  AiEventProposalReviewDraft? reviewedDraft;
+  final commands = <CreateEventCommand>[];
+  bool failCreation;
+  Event? createdEvent;
 
   Widget app() {
     final note = Quicxec(
@@ -185,10 +246,18 @@ class _Dependencies {
             builder:
                 (context) => FilledButton(
                   onPressed: () async {
-                    reviewedDraft = await showAiNoteEventExtractionPreview(
+                    createdEvent = await showAiNoteEventExtractionPreview(
                       context,
                       note: note,
+                      creationIdFactory: () => 'creation-1',
                       clock: () => DateTime(2026, 8, 30, 17, 45),
+                      onCreate: (command) async {
+                        commands.add(command);
+                        if (failCreation) {
+                          throw StateError('ambiguous write failure');
+                        }
+                        return command.toEvent();
+                      },
                     );
                   },
                   child: const Text('Open preview'),

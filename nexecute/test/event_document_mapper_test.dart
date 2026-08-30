@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/event_reminder.dart';
+import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/repositories/firestore/event_document_mapper.dart';
 import 'package:nexecute/repositories/firestore/schema/app_data_schema.dart';
 import 'package:test/test.dart';
@@ -44,6 +45,34 @@ void main() {
       expect(data['tags'], isEmpty);
       expect(data['reminderMinutesBefore'], 30);
       expect(data[AppDataSchema.versionField], AppDataSchema.currentVersion);
+    },
+  );
+
+  test(
+    'maps deterministic AI creation metadata without changing event fields',
+    () {
+      final createdAt = DateTime.utc(2026, 8, 30, 12);
+      final command = CreateEventCommand(
+        creationId: 'creation-1',
+        sourceNoteId: 'note-1',
+        title: 'Planning',
+        description: 'Prepare the release',
+        startTime: DateTime(2026, 9, 1, 10),
+        endTime: DateTime(2026, 9, 1, 11),
+        isAllDay: false,
+        tags: const ['Work'],
+        reminder: EventReminder.fifteenMinutesBefore,
+        createdAt: createdAt,
+      );
+
+      final data = EventDocumentMapper.toCreateMap(command);
+
+      expect(data['id'], 'ai-event-creation-1');
+      expect(data['creationId'], 'creation-1');
+      expect(data['sourceNoteId'], 'note-1');
+      expect(data['creationSource'], 'aiNoteEventProposal');
+      expect(data['createdAt'], createdAt);
+      expect(data['reminderMinutesBefore'], 15);
     },
   );
 

@@ -75,6 +75,10 @@ class _FakeEventRepository implements EventRepository {
   }
 
   @override
+  Future<Event> createEvent(CreateEventCommand command) async =>
+      command.toEvent();
+
+  @override
   Future<void> updateEvent(UpdateEventCommand command) async {}
 
   @override

@@ -12,6 +12,7 @@ class FakeEventRepository implements EventRepository {
   final watchedRanges = <CalendarQueryRange>[];
   final searchedQueries = <String>[];
   Event? addedEvent;
+  CreateEventCommand? createCommand;
   Event? deletedEvent;
   UpdateEventCommand? updateCommand;
 
@@ -47,6 +48,12 @@ class FakeEventRepository implements EventRepository {
   Future<Event> addEvent(Event event) async {
     addedEvent = event;
     return event;
+  }
+
+  @override
+  Future<Event> createEvent(CreateEventCommand command) async {
+    createCommand = command;
+    return command.toEvent();
   }
 
   @override

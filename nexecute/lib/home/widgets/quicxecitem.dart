@@ -10,6 +10,7 @@ import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/note_folder.dart';
 import 'package:nexecute/repositories/note_repository.dart';
+import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/repositories/todo_repository.dart';
 import 'package:nexecute/shared/bottom_sheet_safe_area.dart';
 import 'package:nexecute/themes.dart';
@@ -68,13 +69,14 @@ class QuicxecItem extends StatelessWidget {
   }
 
   Future<void> _extractEvent(BuildContext context) async {
-    final reviewedDraft = await showAiNoteEventExtractionPreview(
+    final createdEvent = await showAiNoteEventExtractionPreview(
       context,
       note: quicxec,
+      onCreate: context.read<EventRepository>().createEvent,
     );
-    if (reviewedDraft == null || !context.mounted) return;
+    if (createdEvent == null || !context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Proposal reviewed. No event was created.')),
+      SnackBar(content: Text('Event created: ${createdEvent.title}')),
     );
   }
 

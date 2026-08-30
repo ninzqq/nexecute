@@ -6,11 +6,14 @@ import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/note_folder.dart';
 import 'package:nexecute/models/todo_item.dart';
+import 'package:nexecute/models/tag.dart' as app_models;
+import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/repositories/todo_repository.dart';
 import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
 
 import 'support/fake_ai_dependencies.dart';
+import 'support/fake_event_repository.dart';
 
 void main() {
   testWidgets('long-pressing a note opens its action sheet', (tester) async {
@@ -200,6 +203,86 @@ void main() {
     await tester.tap(find.widgetWithText(TextButton, 'Close'));
     await tester.pumpAndSettle();
     expect(find.text('2 tasks created'), findsOneWidget);
+    expect(assistantRepository.startedRequests, hasLength(1));
+  });
+
+  testWidgets('creates a confirmed AI event without changing the source note', (
+    tester,
+  ) async {
+    final note = Quicxec(
+      id: 'note-event',
+      title: 'Appointment',
+      text: 'Dentist on Thursday from 14 to 15.',
+      created: DateTime.utc(2026, 8, 29),
+    );
+    final profile = AiConnectionProfile(
+      id: 'home',
+      name: 'Home AI',
+      protocol: AiProtocol.openAiCompatibleChat,
+      baseUrl: Uri.parse('https://ai.example.test/v1'),
+      modelId: 'local-model',
+    );
+    final profileStore = FakeAiConnectionProfileStore(
+      profiles: [profile],
+      activeProfileId: profile.id,
+    );
+    final assistantRepository = FakeAiAssistantRepository(
+      responseEvents: const [
+        AiTextDelta(
+          '{"schemaVersion":1,"event":{"title":"Dentist","description":"Check-up","startDate":"2026-09-03","startTime":"14:00","endDate":"2026-09-03","endTime":"15:00","isAllDay":false}}',
+        ),
+        AiResponseCompleted(),
+      ],
+    );
+    final eventRepository = FakeEventRepository();
+    addTearDown(profileStore.dispose);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<DataState<List<NoteFolder>>>.value(
+            value: const DataEmpty([]),
+          ),
+          Provider<DataState<app_models.Tags>>.value(
+            value: DataReady(app_models.Tags()),
+          ),
+          Provider<AiAssistantRepository>.value(value: assistantRepository),
+          Provider<AiConnectionProfileStore>.value(value: profileStore),
+          Provider<EventRepository>.value(value: eventRepository),
+        ],
+        child: MaterialApp(
+          theme: AppThemes.forPreset(AppThemePreset.midnight),
+          home: Scaffold(
+            body: SizedBox(
+              width: 400,
+              height: 120,
+              child: QuicxecItem(quicxec: note),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.longPress(find.byType(QuicxecItem));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Propose event with AI'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('ai-note-event-send')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('ai-note-event-create')));
+    await tester.tap(find.byKey(const Key('ai-note-event-create')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('ai-note-event-confirm-create')));
+    await tester.pumpAndSettle();
+
+    expect(eventRepository.createCommand?.sourceNoteId, note.id);
+    expect(eventRepository.createCommand?.title, 'Dentist');
+    expect(note.title, 'Appointment');
+    expect(note.text, 'Dentist on Thursday from 14 to 15.');
+
+    await tester.tap(find.widgetWithText(TextButton, 'Close'));
+    await tester.pumpAndSettle();
+    expect(find.text('Event created: Dentist'), findsOneWidget);
     expect(assistantRepository.startedRequests, hasLength(1));
   });
 }

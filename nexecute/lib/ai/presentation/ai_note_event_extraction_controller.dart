@@ -12,6 +12,7 @@ import 'package:nexecute/ai/repositories/ai_assistant_repository.dart';
 import 'package:nexecute/ai/repositories/ai_connection_profile_store.dart';
 import 'package:nexecute/ai/repositories/ai_response_handle.dart';
 import 'package:nexecute/models/event_reminder.dart';
+import 'package:nexecute/repositories/commands/create_event_command.dart';
 import 'package:uuid/uuid.dart';
 
 enum AiNoteEventExtractionStatus {
@@ -61,11 +62,29 @@ class AiEventProposalReviewDraft {
     if (description.trim().length > aiMaxProposedEventDescriptionCharacters) {
       return 'Use at most $aiMaxProposedEventDescriptionCharacters description characters.';
     }
+    if (tags.length > maxCreateEventTags ||
+        tags.any(
+          (tag) =>
+              tag.trim().isEmpty ||
+              tag.trim().length > maxCreateEventTagCharacters ||
+              tag.contains('\n') ||
+              tag.contains('\r'),
+        )) {
+      return 'Review the selected tags.';
+    }
+    if (tags.map((tag) => tag.trim().toLowerCase()).toSet().length !=
+        tags.length) {
+      return 'Review the selected tags.';
+    }
     if (isAllDay == null) return 'Choose timed or all-day.';
     if (startDate == null) return 'Choose a start date.';
     if (endDate == null) return 'Choose an end date.';
     if (!isAllDay! && startTime == null) return 'Choose a start time.';
     if (!isAllDay! && endTime == null) return 'Choose an end time.';
+    if (!isAllDay! &&
+        (!_isWallClockTime(startTime!) || !_isWallClockTime(endTime!))) {
+      return 'Choose valid wall-clock times.';
+    }
 
     final start = _combine(startDate!, isAllDay! ? Duration.zero : startTime!);
     final end = _combine(endDate!, isAllDay! ? Duration.zero : endTime!);
@@ -74,7 +93,7 @@ class AiEventProposalReviewDraft {
     } else if (!end.isAfter(start)) {
       return 'A timed event must end after it starts.';
     }
-    if (_dateOnly(endDate!).difference(_dateOnly(startDate!)).inDays >=
+    if (_utcDateOnly(endDate!).difference(_utcDateOnly(startDate!)).inDays >=
         aiMaxProposedEventSpanDays) {
       return 'The event spans too many days.';
     }
@@ -91,8 +110,11 @@ class AiEventProposalReviewDraft {
     time.inMinutes.remainder(60),
   );
 
-  static DateTime _dateOnly(DateTime value) =>
-      DateTime(value.year, value.month, value.day);
+  static DateTime _utcDateOnly(DateTime value) =>
+      DateTime.utc(value.year, value.month, value.day);
+
+  static bool _isWallClockTime(Duration value) =>
+      !value.isNegative && value < const Duration(days: 1);
 }
 
 class AiNoteEventExtractionController extends ChangeNotifier {

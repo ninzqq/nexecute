@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/event_reminder.dart';
+import 'package:nexecute/repositories/commands/create_event_command.dart';
 import 'package:nexecute/repositories/firestore/schema/firestore_document_schema.dart';
 
 abstract final class EventDocumentMapper {
@@ -22,6 +23,14 @@ abstract final class EventDocumentMapper {
     'tags': event.tags,
     'reminderMinutesBefore': event.reminder.minutesBefore,
   });
+
+  static Map<String, dynamic> toCreateMap(CreateEventCommand command) => {
+    ...toMap(command.toEvent()),
+    'creationId': command.creationId,
+    'sourceNoteId': command.sourceNoteId,
+    'creationSource': 'aiNoteEventProposal',
+    'createdAt': command.createdAt,
+  };
 
   static Event fromDocument(DocumentSnapshot<Map<String, dynamic>> document) {
     return fromMap(document.id, document.data() ?? const {});

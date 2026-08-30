@@ -32,6 +32,40 @@ void main() {
     );
   });
 
+  test(
+    'schedules a deterministically created event through the same pipeline',
+    () async {
+      final delegate = _RecordingEventRepository();
+      final scheduler = _RecordingReminderScheduler();
+      final repository = ReminderSchedulingEventRepository(
+        delegate: delegate,
+        reminderScheduler: scheduler,
+      );
+      final command = CreateEventCommand(
+        creationId: 'creation-1',
+        sourceNoteId: 'note-1',
+        title: 'Planning',
+        description: '',
+        startTime: DateTime(2026, 9, 1, 10),
+        endTime: DateTime(2026, 9, 1, 11),
+        isAllDay: false,
+        tags: const ['Work'],
+        reminder: EventReminder.fifteenMinutesBefore,
+        createdAt: DateTime.utc(2026, 8, 30),
+      );
+
+      final saved = await repository.createEvent(command);
+
+      expect(delegate.createCommand, same(command));
+      expect(saved.id, command.eventId);
+      expect(scheduler.scheduledEvents.single.id, command.eventId);
+      expect(
+        scheduler.scheduledEvents.single.reminder,
+        EventReminder.fifteenMinutesBefore,
+      );
+    },
+  );
+
   test('cancels the local reminder after deleting an event', () async {
     final delegate = _RecordingEventRepository();
     final scheduler = _RecordingReminderScheduler();
@@ -101,6 +135,7 @@ class _RecordingEventRepository implements EventRepository {
   Event? addedEvent;
   Event? deletedEvent;
   UpdateEventCommand? updateCommand;
+  CreateEventCommand? createCommand;
   String? searchQuery;
   int? searchLimit;
 
@@ -120,6 +155,12 @@ class _RecordingEventRepository implements EventRepository {
   Future<Event> addEvent(Event event) async {
     addedEvent = event;
     return event.copyWith(id: 'stored-event');
+  }
+
+  @override
+  Future<Event> createEvent(CreateEventCommand command) async {
+    createCommand = command;
+    return command.toEvent();
   }
 
   @override
