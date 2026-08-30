@@ -687,26 +687,26 @@ if a rejected call crosses the authorization boundary.
 #### Step 10: additional structured, confirmed actions
 
 Extend the proven Note → proposed tasks workflow one bounded action at a time.
-The first scope is **Note → proposed calendar event**. It creates one new event
-from one explicitly selected note and does not let the model select, edit, move,
-complete, or delete existing application data.
+The first scope is **Note → proposed calendar event**. It proposes at most one
+new event from one explicitly selected note and does not let the model select,
+edit, move, complete, or delete existing application data.
 
 ##### Step 10A: event proposal contract and prompt
 
-- [ ] Define a versioned, provider-neutral JSON contract for exactly one event
+- [x] Define a versioned, provider-neutral JSON contract for at most one event
   proposal containing a bounded title and description, local calendar date and
   time fields, end date and time, and an all-day flag.
-- [ ] Keep tags and reminders out of the model contract initially. Let the user
+- [x] Keep tags and reminders out of the model contract initially. Let the user
   select them with trusted Nexecute controls during review.
-- [ ] Build a dedicated prompt from one explicitly selected, size-bounded note.
+- [x] Build a dedicated prompt from one explicitly selected, size-bounded note.
   Include the device's reference date, local time, and UTC offset so relative
   dates have explicit context without exposing unrelated application data.
-- [ ] Require ambiguous or missing dates and times to remain visibly incomplete
+- [x] Require ambiguous or missing dates and times to remain visibly incomplete
   instead of letting the model silently invent required scheduling details.
-- [ ] Parse the response locally and reject extra fields, unsupported schema
+- [x] Parse the response locally and reject extra fields, unsupported schema
   versions, invalid calendar values, reversed ranges, excessive durations,
   oversized text, and unexpected output outside the allowed JSON envelope.
-- [ ] Keep Firestore IDs, repository commands, reminder permissions, and write
+- [x] Keep Firestore IDs, repository commands, reminder permissions, and write
   decisions outside model output.
 
 ##### Step 10B: explicit selection and editable review
