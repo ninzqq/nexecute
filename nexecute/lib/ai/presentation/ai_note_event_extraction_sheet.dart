@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:nexecute/ai/application/ai_note_event_prompt.dart';
 import 'package:nexecute/ai/domain/ai_event_proposal.dart';
+import 'package:nexecute/ai/presentation/ai_generation_progress.dart';
 import 'package:nexecute/ai/presentation/ai_event_proposal_creation_controller.dart';
 import 'package:nexecute/ai/presentation/ai_note_event_extraction_controller.dart';
 import 'package:nexecute/ai/repositories/ai_assistant_repository.dart';
@@ -215,6 +216,13 @@ class _AiNoteEventExtractionSheetState
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.error,
                         ),
+                      ),
+                    ],
+                    if (generating) ...[
+                      const SizedBox(height: 12),
+                      AiGenerationProgress(
+                        reasoning: controller.reasoning,
+                        keyPrefix: 'ai-note-event',
                       ),
                     ],
                     if (controller.errorMessage case final message?) ...[

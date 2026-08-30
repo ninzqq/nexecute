@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/ai/ai.dart';
@@ -17,11 +19,12 @@ void main() {
   testWidgets('previews the exact note, reference, connection, and model first', (
     tester,
   ) async {
+    final responseStream = StreamController<AiStreamEvent>();
     final dependencies = _Dependencies(
-      response:
-          '{"schemaVersion":1,"event":{"title":"Dentist","description":"Check-up","startDate":"2026-09-03","startTime":"14:00","endDate":"2026-09-03","endTime":"15:00","isAllDay":false}}',
+      responseStreamBuilder: (_) => responseStream.stream,
     );
     addTearDown(dependencies.dispose);
+    addTearDown(responseStream.close);
 
     await tester.pumpWidget(dependencies.app());
     await tester.tap(find.text('Open preview'));
@@ -48,6 +51,26 @@ void main() {
     await tester.tap(find.text('Exact technical request'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('ai-note-event-send')));
+    await tester.pump();
+
+    expect(find.byKey(const Key('ai-note-event-progress')), findsOneWidget);
+    expect(find.byKey(const Key('ai-note-event-waiting')), findsOneWidget);
+
+    responseStream.add(
+      const AiReasoningDelta('Resolving the relative date and time range…'),
+    );
+    await tester.pump();
+    expect(
+      find.text('Resolving the relative date and time range…'),
+      findsOneWidget,
+    );
+
+    responseStream.add(
+      const AiTextDelta(
+        '{"schemaVersion":1,"event":{"title":"Dentist","description":"Check-up","startDate":"2026-09-03","startTime":"14:00","endDate":"2026-09-03","endTime":"15:00","isAllDay":false}}',
+      ),
+    );
+    responseStream.add(const AiResponseCompleted());
     await tester.pumpAndSettle();
 
     expect(dependencies.repository.startedRequests, hasLength(1));
@@ -208,22 +231,31 @@ void main() {
 }
 
 class _Dependencies {
-  _Dependencies({required String response, this.failCreation = false})
-    : profileStore = FakeAiConnectionProfileStore(
-        profiles: [
-          AiConnectionProfile(
-            id: 'home',
-            name: 'Home AI',
-            protocol: AiProtocol.openAiCompatibleChat,
-            baseUrl: Uri.parse('https://ai.example.test/v1'),
-            modelId: 'local-model',
-          ),
-        ],
-        activeProfileId: 'home',
-      ),
-      repository = FakeAiAssistantRepository(
-        responseEvents: [AiTextDelta(response), const AiResponseCompleted()],
-      );
+  _Dependencies({
+    String? response,
+    Stream<AiStreamEvent> Function(AiChatRequest request)?
+    responseStreamBuilder,
+    this.failCreation = false,
+  }) : assert(response != null || responseStreamBuilder != null),
+       profileStore = FakeAiConnectionProfileStore(
+         profiles: [
+           AiConnectionProfile(
+             id: 'home',
+             name: 'Home AI',
+             protocol: AiProtocol.openAiCompatibleChat,
+             baseUrl: Uri.parse('https://ai.example.test/v1'),
+             modelId: 'local-model',
+           ),
+         ],
+         activeProfileId: 'home',
+       ),
+       repository = FakeAiAssistantRepository(
+         responseEvents:
+             response == null
+                 ? const []
+                 : [AiTextDelta(response), const AiResponseCompleted()],
+         responseStreamBuilder: responseStreamBuilder,
+       );
 
   final FakeAiConnectionProfileStore profileStore;
   final FakeAiAssistantRepository repository;

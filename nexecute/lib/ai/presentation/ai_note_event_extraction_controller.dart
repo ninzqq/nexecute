@@ -144,6 +144,7 @@ class AiNoteEventExtractionController extends ChangeNotifier {
   AiEventProposal? proposal;
   AiEventProposalReviewDraft? reviewDraft;
   Set<AiEventReviewField> originallyMissingFields = const {};
+  String reasoning = '';
   String? errorMessage;
 
   bool get canContinue => reviewDraft?.isComplete ?? false;
@@ -198,6 +199,7 @@ class AiNoteEventExtractionController extends ChangeNotifier {
     proposal = null;
     reviewDraft = null;
     originallyMissingFields = const {};
+    reasoning = '';
     errorMessage = null;
     _finalized = false;
     _notify();
@@ -230,8 +232,9 @@ class AiNoteEventExtractionController extends ChangeNotifier {
           switch (event) {
             case AiTextDelta(:final text):
               output.write(text);
-            case AiReasoningDelta():
-              break;
+            case AiReasoningDelta(:final text):
+              reasoning = '$reasoning$text';
+              _notify();
             case AiResponseCompleted():
               _complete(output.toString());
             case AiResponseFailed(:final message, :final code):

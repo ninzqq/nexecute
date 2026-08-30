@@ -31,6 +31,7 @@ void main() {
     () async {
       final repository = FakeAiAssistantRepository(
         responseEvents: const [
+          AiReasoningDelta('The note gives a specific date and time range.'),
           AiTextDelta(
             '{"schemaVersion":1,"event":{"title":"Dentist","description":"Check-up","startDate":"2026-09-03","startTime":"14:00","endDate":"2026-09-03","endTime":"15:00","isAllDay":false}}',
           ),
@@ -58,6 +59,10 @@ void main() {
       await _flushEvents();
 
       expect(controller.status, AiNoteEventExtractionStatus.completed);
+      expect(
+        controller.reasoning,
+        'The note gives a specific date and time range.',
+      );
       expect(controller.reviewDraft?.title, 'Dentist');
       expect(controller.canContinue, isTrue);
       final request = repository.startedRequests.single;

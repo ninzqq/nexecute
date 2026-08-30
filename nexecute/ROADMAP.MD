@@ -387,7 +387,8 @@ before adding hosted providers or advanced application actions.
 - [x] Apply output and timeout limits to model discovery and streamed chat
   requests.
 - [x] Show streamed model reasoning in a collapsible, session-only chat panel
-  without persisting it to Firestore or sending it back to the model.
+  and live during Note-to-Task and Note-to-Event proposal generation, without
+  persisting it to Firestore or sending it back to the model.
 - [x] Provide bounded editor validation and backward-compatible defaults for
   existing saved profiles.
 - [x] Add a bounded, locally stored system prompt per connection profile with

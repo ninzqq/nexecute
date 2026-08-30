@@ -28,6 +28,7 @@ void main() {
   test('requests and parses task proposals without creating a chat', () async {
     final repository = FakeAiAssistantRepository(
       responseEvents: const [
+        AiReasoningDelta('The note contains one concrete action.'),
         AiTextDelta('{"schemaVersion":1,"tasks":[{"title":"Buy coffee"}]}'),
         AiResponseCompleted(),
       ],
@@ -48,6 +49,7 @@ void main() {
     await _flushEvents();
 
     expect(controller.status, AiNoteTaskExtractionStatus.completed);
+    expect(controller.reasoning, 'The note contains one concrete action.');
     expect(controller.proposal?.tasks.single.title, 'Buy coffee');
     final request = repository.startedRequests.single;
     expect(request.conversationId, 'note-task-extraction:note-1');

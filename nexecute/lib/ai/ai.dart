@@ -28,6 +28,7 @@ export 'infrastructure/shared_preferences_ai_connection_profile_store.dart';
 export 'infrastructure/unconfigured_ai_assistant_repository.dart';
 export 'presentation/ai_endpoint_validation.dart';
 export 'presentation/ai_event_proposal_creation_controller.dart';
+export 'presentation/ai_generation_progress.dart';
 export 'presentation/ai_chat_controller.dart';
 export 'presentation/ai_note_event_extraction_controller.dart';
 export 'presentation/ai_note_event_extraction_sheet.dart';

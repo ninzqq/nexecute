@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/ai/ai.dart';
@@ -22,11 +24,9 @@ void main() {
       profiles: [profile],
       activeProfileId: profile.id,
     );
+    final responseStream = StreamController<AiStreamEvent>();
     final repository = FakeAiAssistantRepository(
-      responseEvents: const [
-        AiTextDelta('{"schemaVersion":1,"tasks":[]}'),
-        AiResponseCompleted(),
-      ],
+      responseStreamBuilder: (_) => responseStream.stream,
     );
     final note = Quicxec(
       id: 'note-1',
@@ -35,6 +35,7 @@ void main() {
       created: DateTime.utc(2026, 8, 29),
     );
     addTearDown(profileStore.dispose);
+    addTearDown(responseStream.close);
 
     await tester.pumpWidget(
       MultiProvider(
@@ -83,6 +84,26 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('ai-note-task-send')));
+    await tester.pump();
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('ai-note-task-progress')),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.byKey(const Key('ai-note-task-progress')), findsOneWidget);
+    expect(find.byKey(const Key('ai-note-task-waiting')), findsOneWidget);
+
+    responseStream.add(const AiReasoningDelta('Finding concrete actions…'));
+    await tester.pump();
+    expect(find.text('Finding concrete actions…'), findsOneWidget);
+    expect(
+      find.text('Reasoning · session only · not synchronized'),
+      findsOneWidget,
+    );
+
+    responseStream.add(const AiTextDelta('{"schemaVersion":1,"tasks":[]}'));
+    responseStream.add(const AiResponseCompleted());
     await tester.pumpAndSettle();
 
     expect(repository.startedRequests, hasLength(1));

@@ -58,6 +58,7 @@ class AiNoteTaskExtractionController extends ChangeNotifier {
   AiConnectionProfile? activeProfile;
   AiTaskProposal? proposal;
   List<AiTaskProposalReviewItem> reviewItems = const [];
+  String reasoning = '';
   String? errorMessage;
 
   int get selectedTaskCount =>
@@ -108,6 +109,7 @@ class AiNoteTaskExtractionController extends ChangeNotifier {
     status = AiNoteTaskExtractionStatus.generating;
     proposal = null;
     reviewItems = const [];
+    reasoning = '';
     errorMessage = null;
     _finalized = false;
     _notify();
@@ -140,8 +142,9 @@ class AiNoteTaskExtractionController extends ChangeNotifier {
           switch (event) {
             case AiTextDelta(:final text):
               output.write(text);
-            case AiReasoningDelta():
-              break;
+            case AiReasoningDelta(:final text):
+              reasoning = '$reasoning$text';
+              _notify();
             case AiResponseCompleted():
               _complete(output.toString());
             case AiResponseFailed(:final message, :final code):
