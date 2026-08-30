@@ -686,16 +686,74 @@ if a rejected call crosses the authorization boundary.
 
 #### Step 10: additional structured, confirmed actions
 
-- [ ] Let the model propose a new task, note, or calendar event.
-- [ ] Present proposed actions as preview cards with Create, Edit, and Discard
-  options.
-- [ ] Support note-to-task, task-to-event, and event-to-follow-up-task proposals.
-- [ ] Treat all model output as untrusted and validate identifiers, dates, field
-  lengths, allowed action types, and required values inside Nexecute.
-- [ ] Require explicit user confirmation before creating, editing, completing,
-  moving, or deleting application data.
-- [ ] Keep model output separate from trusted application operations and execute
-  confirmed writes through the existing repositories.
+Extend the proven Note → proposed tasks workflow one bounded action at a time.
+The first scope is **Note → proposed calendar event**. It creates one new event
+from one explicitly selected note and does not let the model select, edit, move,
+complete, or delete existing application data.
+
+##### Step 10A: event proposal contract and prompt
+
+- [ ] Define a versioned, provider-neutral JSON contract for exactly one event
+  proposal containing a bounded title and description, local calendar date and
+  time fields, end date and time, and an all-day flag.
+- [ ] Keep tags and reminders out of the model contract initially. Let the user
+  select them with trusted Nexecute controls during review.
+- [ ] Build a dedicated prompt from one explicitly selected, size-bounded note.
+  Include the device's reference date, local time, and UTC offset so relative
+  dates have explicit context without exposing unrelated application data.
+- [ ] Require ambiguous or missing dates and times to remain visibly incomplete
+  instead of letting the model silently invent required scheduling details.
+- [ ] Parse the response locally and reject extra fields, unsupported schema
+  versions, invalid calendar values, reversed ranges, excessive durations,
+  oversized text, and unexpected output outside the allowed JSON envelope.
+- [ ] Keep Firestore IDs, repository commands, reminder permissions, and write
+  decisions outside model output.
+
+##### Step 10B: explicit selection and editable review
+
+- [ ] Add a Note action that previews exactly what will be sent and identifies
+  the active connection and model before starting the proposal request.
+- [ ] Present the result in an event-specific review sheet using the application's
+  trusted date, time, all-day, tag, and reminder controls.
+- [ ] Highlight missing or assumed scheduling values and require the user to
+  resolve every required field before Create becomes available.
+- [ ] Provide Create, Edit, Retry, and Discard states while keeping the proposal
+  local and out of chat history and Firestore until confirmation.
+
+##### Step 10C: confirmed and idempotent event creation
+
+- [ ] Introduce a validated create-event command with a stable creation ID,
+  source note ID, frozen reviewed values, and creation timestamp.
+- [ ] Use a deterministic event document ID so retrying the exact confirmed
+  command cannot create a duplicate after an uncertain write result.
+- [ ] Execute the frozen command through the normal `EventRepository` and event
+  reminder scheduling pipeline; model-facing code must never call Firestore or
+  platform reminder APIs directly.
+- [ ] Preserve the source note, prevent repeated submission, and retry only the
+  exact same confirmed command after an uncertain failure.
+
+##### Step 10D: verification and rollout
+
+- [ ] Cover strict parsing, prompt injection, Finnish and English date phrases,
+  missing information, invalid and overnight ranges, all-day events, local time
+  changes, and oversized output with deterministic tests.
+- [ ] Add controller and widget tests for preview, editing, confirmation,
+  cancellation, retry, and no-write-before-confirmation behavior.
+- [ ] Add repository-contract and Firestore Emulator tests for deterministic
+  creation, duplicate retries, source-note preservation, and reminder handoff.
+- [ ] Validate the bounded workflow against the owner's real Ollama model and
+  record quality results before expanding the action set.
+
+##### Later Step 10 scopes
+
+- [ ] Consider chat → proposed task, note, or event only after the dedicated
+  Note → Event workflow is reliable.
+- [ ] Add Task → proposed event and Event → proposed follow-up task as separate
+  bounded workflows with their own source previews and schemas.
+- [ ] Defer AI-proposed updates, completion, moving, and deletion of existing
+  data until creation-only actions are proven. Those operations require explicit
+  target selection, current-version checks, conflict handling, and a final
+  confirmation showing the exact before-and-after values.
 
 #### Step 11: semantic-search design and prototype
 
