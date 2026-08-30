@@ -905,33 +905,36 @@ class _ReasoningPanelState extends State<_ReasoningPanel> {
       ),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          controller: _controller,
-          initiallyExpanded: widget.initiallyExpanded,
-          maintainState: true,
-          tilePadding: const EdgeInsets.symmetric(horizontal: 10),
-          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-          leading:
-              widget.streaming
-                  ? const SizedBox.square(
-                    dimension: 17,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                  : const Icon(Icons.psychology_outlined, size: 20),
-          title: const Text('Reasoning'),
-          subtitle: const Text('Session only · not synchronized'),
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: SelectableText(
-                widget.text,
-                key: const Key('assistant-reasoning-text'),
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+        child: Material(
+          color: Colors.transparent,
+          child: ExpansionTile(
+            controller: _controller,
+            initiallyExpanded: widget.initiallyExpanded,
+            maintainState: true,
+            tilePadding: const EdgeInsets.symmetric(horizontal: 10),
+            childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            leading:
+                widget.streaming
+                    ? const SizedBox.square(
+                      dimension: 17,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                    : const Icon(Icons.psychology_outlined, size: 20),
+            title: const Text('Reasoning'),
+            subtitle: const Text('Session only · not synchronized'),
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: SelectableText(
+                  widget.text,
+                  key: const Key('assistant-reasoning-text'),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

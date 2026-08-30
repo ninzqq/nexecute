@@ -987,6 +987,9 @@ These improvements should be considered before or alongside larger features.
   ~~objects.~~
 - [x] ~~Introduce an explicit data schema version and migrations before models gain~~
   ~~substantially more fields.~~
+- [x] ~~Require Flutter 3.44 or newer so Android builds include the upstream~~
+  ~~virtual-keyboard modifier fix that prevents ordinary cursor taps from~~
+  ~~becoming stuck range selections after Gboard Shift input.~~
 
 ### Quality and accessibility
 

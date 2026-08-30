@@ -96,11 +96,14 @@ class EventScheduleFields extends StatelessWidget {
             ),
           ],
         ),
-        CheckboxListTile(
-          title: const Text('All day'),
-          value: isAllDay,
-          checkColor: Theme.of(context).colorScheme.onPrimary,
-          onChanged: (value) => onAllDayChanged(value ?? false),
+        Material(
+          color: Colors.transparent,
+          child: CheckboxListTile(
+            title: const Text('All day'),
+            value: isAllDay,
+            checkColor: Theme.of(context).colorScheme.onPrimary,
+            onChanged: (value) => onAllDayChanged(value ?? false),
+          ),
         ),
         EventReminderField(reminder: reminder, onChanged: onReminderChanged),
       ],
