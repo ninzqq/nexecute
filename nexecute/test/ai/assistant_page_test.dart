@@ -10,7 +10,7 @@ import '../support/fake_ai_dependencies.dart';
 
 void main() {
   for (final preset in AppThemePreset.values) {
-    testWidgets('renders the empty chat under the ${preset.name} theme', (
+    testWidgets('renders context fallback under the ${preset.name} theme', (
       tester,
     ) async {
       final profile = AiConnectionProfile(
@@ -25,14 +25,31 @@ void main() {
         activeProfileId: profile.id,
       );
       final conversationStore = FakeAiConversationStore();
+      final assistantRepository = FakeAiAssistantRepository();
+      final contextService = FakeAiApplicationContextReadService();
+      contextService.tasksContext = AiApplicationContextEnvelope(
+        generatedAt: DateTime.utc(2026, 8, 30),
+        attachments: [
+          AiActiveTasksContextAttachment(
+            tasks: const [
+              AiTaskContextItem(
+                title: 'Theme-safe attached task',
+                isCompleted: false,
+              ),
+            ],
+            omittedCount: 0,
+          ),
+        ],
+      );
       addTearDown(profileStore.dispose);
       addTearDown(conversationStore.dispose);
 
       await tester.pumpWidget(
         _app(
-          assistantRepository: FakeAiAssistantRepository(),
+          assistantRepository: assistantRepository,
           profileStore: profileStore,
           conversationStore: conversationStore,
+          contextReadService: contextService,
           theme: AppThemes.forPreset(preset),
         ),
       );
@@ -44,6 +61,44 @@ void main() {
             .widget<TextField>(find.byKey(const Key('assistant-composer')))
             .textCapitalization,
         TextCapitalization.sentences,
+      );
+
+      await tester.tap(find.byKey(const Key('assistant-attach-context')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Unfinished tasks'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('assistant-task-context')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('assistant-preview-context')));
+      await tester.pumpAndSettle();
+      final preview =
+          tester
+              .widget<SelectableText>(
+                find.byKey(const Key('assistant-context-preview-json')),
+              )
+              .data!;
+      expect(preview, contains('Theme-safe attached task'));
+      expect(
+        preview,
+        contains('"dataClassification":"untrustedApplicationData"'),
+      );
+      await tester.tap(find.text('Close'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('assistant-composer')),
+        'Use the attached task',
+      );
+      await tester.tap(find.byKey(const Key('assistant-send')));
+      await tester.pumpAndSettle();
+
+      final request = assistantRepository.startedRequests.single;
+      expect(request.applicationContext!.encode(), preview);
+      expect(request.toolDefinitions, isEmpty);
+      final saved = (await conversationStore.getConversations()).single;
+      expect(
+        saved.messages.any((message) => message.content.contains('Theme-safe')),
+        isFalse,
       );
       expect(tester.takeException(), isNull);
     });

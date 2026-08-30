@@ -497,16 +497,16 @@ workflow.
 - [x] Record results by model and model version so hosted providers can later be
   compared against the same cases.
 
-The version 1 suite contains 24 synthetic bilingual cases. The command-line
-runner uses the production chat prompt, note-task prompt builder, endpoint
-adapter, and strict proposal parser. Reports record the suite, exact model and
-model version/tag/digest, generation settings, prompts, output, usage, and one
-of four outcomes: passed, transport failure, application failure, or quality
-failure. Generated reports remain local and ignored until reviewed and
-deliberately selected as safe comparison baselines. The suite can be validated
-without endpoint access, and real model runs remain opt-in.
+The version 1 suite contains 30 synthetic bilingual and deterministic cases.
+The command-line runner uses the production chat prompt, note-task prompt
+builder, endpoint adapter, and strict proposal parser. Reports record the suite,
+exact model and model version/tag/digest, generation settings, prompts, output,
+usage, and one of four outcomes: passed, transport failure, application
+failure, or quality failure. Generated reports remain local and ignored until
+reviewed and deliberately selected as safe comparison baselines. The suite can
+be validated without endpoint access, and real model runs remain opt-in.
 
-#### Step 9: optional application context and narrow reads 🚧
+#### Step 9: optional application context and narrow reads ✅
 
 Ship explicit, request-scoped context attachments before model-requested read
 tools. Attachments must work with models that have no tool capability. Context
@@ -617,15 +617,31 @@ stops the active model response and prevents further continuations. Explicit
 Step 9C task, event-range, and selected-note attachments grant only equivalent
 request-scoped reads, and neither calls nor results enter conversation storage.
 
-##### Step 9F: completed workflow verification
+##### Step 9F: completed workflow verification ✅
 
-- [ ] Cover exact preview/request equality, opt-in behavior, persistence
+- [x] Cover exact preview/request equality, opt-in behavior, persistence
   exclusion, offline and failure states, capability fallback, all limits, and
   every application theme.
-- [ ] Extend the repeatable quality suite with attached-context questions and
+- [x] Extend the repeatable quality suite with attached-context questions and
   malformed, excessive, unknown, and unauthorized tool-call cases.
-- [ ] Verify that no request contains Firebase credentials, document paths, or
+- [x] Verify that no request contains Firebase credentials, document paths, or
   application data outside the user's explicit scope.
+
+The completed workflow is covered from repository mapping through the exact
+wire request. Widget tests exercise the canonical preview/request equality,
+one-message persistence exclusion, explicit opt-in, offline retention, and
+non-tool fallback under all four application themes. Boundary and coordinator
+tests cover every context and tool-session limit plus normalized read,
+transport, timeout, cancellation, and capability failure states. A wire-level
+privacy assertion builds context from application records containing synthetic
+document paths, IDs, credential-like metadata, and an out-of-scope completed
+task, then verifies that none reaches the provider request.
+
+Quality-suite version 1.1.0 adds bilingual attached-task questions and four
+deterministic production-coordinator fixtures for malformed, excessive,
+unknown, and unauthorized tool calls. The guardrail fixtures run locally,
+perform zero endpoint requests and zero application reads, and fail the suite
+if a rejected call crosses the authorization boundary.
 
 #### Firebase data and AI tool boundary
 

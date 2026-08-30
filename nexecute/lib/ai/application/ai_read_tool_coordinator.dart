@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:nexecute/ai/application/ai_application_context_read_service.dart';
+import 'package:nexecute/ai/application/ai_application_context_read_contract.dart';
 import 'package:nexecute/ai/domain/ai_application_context.dart';
 import 'package:nexecute/ai/domain/ai_chat_request.dart';
 import 'package:nexecute/ai/domain/ai_stream_event.dart';

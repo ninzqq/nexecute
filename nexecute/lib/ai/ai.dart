@@ -1,6 +1,7 @@
 export 'application/ai_note_task_prompt.dart';
 export 'application/ai_read_tool_coordinator.dart';
 export 'application/ai_application_context_builder.dart';
+export 'application/ai_application_context_read_contract.dart';
 export 'application/ai_application_context_read_service.dart';
 export 'domain/ai_application_context.dart';
 export 'domain/ai_chat_message.dart';

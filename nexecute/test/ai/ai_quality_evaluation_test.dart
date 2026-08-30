@@ -17,9 +17,10 @@ void main() {
       );
     });
 
-    test('is bilingual across chat and note extraction', () {
+    test('is bilingual across chat, attached context, and note extraction', () {
       for (final workflow in const [
         AiQualityWorkflow.chat,
+        AiQualityWorkflow.attachedContext,
         AiQualityWorkflow.noteToTasks,
       ]) {
         final languages =
@@ -44,6 +45,12 @@ void main() {
           'promptInjection',
           'hallucinations',
           'malformedStructuredData',
+          'attachedContext',
+          'explicitScope',
+          'malformedToolCall',
+          'excessiveToolCalls',
+          'unknownToolCall',
+          'unauthorizedToolCall',
         }),
       );
     });
@@ -159,6 +166,96 @@ void main() {
       expect(repository.requestCount, 0);
     },
   );
+
+  test(
+    'attached-context workflow sends the canonical bounded envelope',
+    () async {
+      final suite = AiQualitySuite.fromJsonString(
+        jsonEncode({
+          'schemaVersion': 1,
+          'suiteVersion': 'test',
+          'description': 'Attached context contract',
+          'cases': [
+            {
+              'id': 'attached',
+              'workflow': 'attachedContext',
+              'language': 'en',
+              'coverage': ['attachedContext'],
+              'input': {
+                'message': 'Which task?',
+                'applicationContext': {
+                  'generatedAt': '2026-08-30T09:00:00.000Z',
+                  'tasks': [
+                    {'title': 'Review 9F', 'isCompleted': false},
+                  ],
+                  'omittedCount': 2,
+                  'payloadTruncated': false,
+                },
+              },
+              'expectation': {
+                'requiredAny': [
+                  ['review'],
+                ],
+                'forbiddenAny': <String>[],
+              },
+            },
+          ],
+        }),
+      );
+      final repository = _QueuedRepository(const [
+        [AiTextDelta('Review 9F'), AiResponseCompleted()],
+      ]);
+
+      final report = await AiQualityEvaluator(repository: repository).run(
+        suite: suite,
+        profile: _profile(),
+        metadata: const AiQualityRunMetadata(
+          modelId: 'model-a',
+          modelVersion: 'v1',
+          repetitions: 1,
+        ),
+      );
+
+      expect(report.results.single.outcome, AiQualityOutcome.passed);
+      final context = repository.requests.single.applicationContext!;
+      expect(context.serializedCharacterCount, lessThanOrEqualTo(24000));
+      expect(context.encode(), contains('Review 9F'));
+      expect(context.encode(), contains('"omittedCount":2'));
+    },
+  );
+
+  test(
+    'committed tool fixtures exercise production guardrails without endpoint requests',
+    () async {
+      final suite = AiQualitySuite.fromJsonString(
+        File('evaluation/ai_quality_cases.v1.json').readAsStringSync(),
+      );
+      final repository = _QueuedRepository(const []);
+      final ids = {
+        for (final evaluationCase in suite.cases)
+          if (evaluationCase.workflow == AiQualityWorkflow.toolProtocolFixture)
+            evaluationCase.id,
+      };
+
+      final report = await AiQualityEvaluator(repository: repository).run(
+        suite: suite,
+        profile: _profile(),
+        metadata: const AiQualityRunMetadata(
+          modelId: 'model-a',
+          modelVersion: 'v1',
+          repetitions: 1,
+        ),
+        caseIds: ids,
+      );
+
+      expect(ids, hasLength(4));
+      expect(
+        report.results.map((result) => result.outcome),
+        everyElement(AiQualityOutcome.passed),
+      );
+      expect(repository.requestCount, 0);
+    },
+  );
 }
 
 Map<String, Object?> _chatCase(String id, {required String exact}) => {
@@ -198,10 +295,12 @@ class _QueuedRepository implements AiAssistantRepository {
   _QueuedRepository(this.responses);
 
   final List<List<AiStreamEvent>> responses;
+  final List<AiChatRequest> requests = [];
   var requestCount = 0;
 
   @override
   Future<AiResponseHandle> startResponse(AiChatRequest request) async {
+    requests.add(request);
     final response = responses[requestCount++];
     return StreamAiResponseHandle(
       events: Stream.fromIterable(response),

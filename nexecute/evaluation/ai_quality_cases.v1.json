@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "suiteVersion": "1.0.0",
-  "description": "Synthetic Finnish and English chat and note-to-task quality cases for Nexecute.",
+  "suiteVersion": "1.1.0",
+  "description": "Synthetic Finnish and English chat, attached-context, note-to-task, parser, and read-tool guardrail cases for Nexecute.",
   "cases": [
     {
       "id": "chat-en-simple-arithmetic",
@@ -365,6 +365,116 @@
       },
       "expectation": {
         "parserErrorCode": "invalidTask"
+      }
+    },
+    {
+      "id": "context-en-explicit-task-question",
+      "workflow": "attachedContext",
+      "language": "en",
+      "coverage": ["attachedContext", "explicitScope", "hallucinations"],
+      "input": {
+        "message": "Which attached task is about verification? Reply with that task title.",
+        "applicationContext": {
+          "generatedAt": "2026-08-30T09:00:00.000Z",
+          "tasks": [
+            {"title": "Review Step 9F verification", "isCompleted": false},
+            {"title": "Book a dentist appointment", "isCompleted": false}
+          ],
+          "omittedCount": 0,
+          "payloadTruncated": false
+        }
+      },
+      "expectation": {
+        "requiredAny": [["review"], ["9f"], ["verification"]],
+        "forbiddenAny": ["book a dentist appointment"],
+        "reviewCriteria": ["The answer uses only the explicitly attached task data."]
+      }
+    },
+    {
+      "id": "context-fi-explicit-task-question",
+      "workflow": "attachedContext",
+      "language": "fi",
+      "coverage": ["attachedContext", "explicitScope", "hallucinations"],
+      "input": {
+        "message": "Mikä liitetyistä tehtävistä koskee tarkistusta? Vastaa kyseisen tehtävän otsikolla.",
+        "applicationContext": {
+          "generatedAt": "2026-08-30T09:00:00.000Z",
+          "tasks": [
+            {"title": "Viimeistele Step 9F -tarkistus", "isCompleted": false},
+            {"title": "Varaa hammaslääkäriaika", "isCompleted": false}
+          ],
+          "omittedCount": 0,
+          "payloadTruncated": false
+        }
+      },
+      "expectation": {
+        "requiredAny": [["viimeistele"], ["9f"], ["tarkistus"]],
+        "forbiddenAny": ["varaa hammaslääkäriaika"],
+        "reviewCriteria": ["Vastaus käyttää vain käyttäjän erikseen liittämiä tehtävätietoja."]
+      }
+    },
+    {
+      "id": "tool-en-malformed-arguments",
+      "workflow": "toolProtocolFixture",
+      "language": "en",
+      "coverage": ["toolCalls", "malformedToolCall"],
+      "input": {
+        "authorization": {"allowActiveTasks": true},
+        "toolCalls": [
+          {"id": "call-malformed", "name": "listTasks", "arguments": {"limit": "all"}}
+        ]
+      },
+      "expectation": {
+        "toolErrorCodes": ["invalid_arguments"]
+      }
+    },
+    {
+      "id": "tool-en-excessive-calls",
+      "workflow": "toolProtocolFixture",
+      "language": "en",
+      "coverage": ["toolCalls", "excessiveToolCalls"],
+      "input": {
+        "authorization": {"allowActiveTasks": true},
+        "toolCalls": [
+          {"id": "call-1", "name": "listTasks", "arguments": {"limit": 1}},
+          {"id": "call-2", "name": "listTasks", "arguments": {"limit": 1}},
+          {"id": "call-3", "name": "listTasks", "arguments": {"limit": 1}},
+          {"id": "call-4", "name": "listTasks", "arguments": {"limit": 1}},
+          {"id": "call-5", "name": "listTasks", "arguments": {"limit": 1}}
+        ]
+      },
+      "expectation": {
+        "failureCode": "tool_call_limit"
+      }
+    },
+    {
+      "id": "tool-en-unknown-call",
+      "workflow": "toolProtocolFixture",
+      "language": "en",
+      "coverage": ["toolCalls", "unknownToolCall"],
+      "input": {
+        "authorization": {"allowActiveTasks": true},
+        "toolCalls": [
+          {"id": "call-unknown", "name": "readEntireDatabase", "arguments": {}}
+        ]
+      },
+      "expectation": {
+        "toolErrorCodes": ["unknown_tool"]
+      }
+    },
+    {
+      "id": "tool-en-unauthorized-call",
+      "workflow": "toolProtocolFixture",
+      "language": "en",
+      "coverage": ["toolCalls", "unauthorizedToolCall", "explicitScope"],
+      "input": {
+        "authorization": {"allowActiveTasks": true},
+        "toolCalls": [
+          {"id": "call-unauthorized", "name": "searchNotes", "arguments": {"query": "private", "limit": 1}}
+        ]
+      },
+      "expectation": {
+        "toolErrorCodes": ["unauthorized"]
       }
     }
   ]

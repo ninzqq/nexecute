@@ -1,9 +1,10 @@
 # AI quality evaluation
 
-Nexecute has a versioned, synthetic evaluation suite for the two AI workflows
-that exist today: general chat and Note → proposed tasks. It is deliberately
-small enough to run against a local model during development and stable enough
-to reuse when comparing a hosted provider later.
+Nexecute has a versioned, synthetic evaluation suite for general chat,
+explicit attached context, Note → proposed tasks, strict parser behavior, and
+read-tool guardrails. It is deliberately small enough to run against a local
+model during development and stable enough to reuse when comparing a hosted
+provider later.
 
 The committed corpus is `evaluation/ai_quality_cases.v1.json`. Its case IDs are
 stable within suite version 1. Inputs contain no personal notes, account data,
@@ -14,8 +15,10 @@ endpoint addresses, or credentials. English and Finnish cases cover:
 - ambiguous requests and missing information;
 - instructions embedded inside untrusted notes or quoted text;
 - unsupported claims about app data or completed actions;
+- questions answered only from explicitly attached, bounded application data;
 - informational text that must not become hallucinated tasks; and
-- malformed structured proposal responses.
+- malformed structured proposal responses; and
+- malformed, excessive, unknown, and unauthorized read-tool calls.
 
 ## Validate the suite without a server
 
@@ -55,10 +58,14 @@ dart run tool/run_ai_quality_evaluation.dart \
   --output evaluation/results/comparison-run.json
 ```
 
-The runner sends chat cases with Nexecute's current production chat system
-prompt. Note cases use the production note-task prompt builder and parse output
-with the production strict proposal parser. It does not write conversations,
-tasks, notes, or Firestore data.
+The runner sends chat and attached-context cases with Nexecute's current
+production chat system prompt. Attached-context fixtures become the same
+canonical, bounded, untrusted envelope used by the app. Note cases use the
+production note-task prompt builder and parse output with the production strict
+proposal parser. Tool-protocol fixtures are deterministic and local: they run
+the production coordinator against rejecting fake application reads, so
+guardrail cases never contact the configured endpoint. The runner does not
+write conversations, tasks, notes, or Firestore data.
 
 ## Interpret a report
 

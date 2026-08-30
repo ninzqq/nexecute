@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:nexecute/ai/ai.dart';
+import 'package:nexecute/models/quicxec.dart';
+import 'package:nexecute/models/todo_item.dart';
 
 void main() {
   late AiConnectionProfile profile;
@@ -236,14 +238,33 @@ void main() {
           );
         }),
       );
-      final applicationContext = AiApplicationContextEnvelope(
+      final applicationContext = AiApplicationContextBuilder.build(
         generatedAt: DateTime.utc(2026, 8, 29),
-        attachments: [
-          AiActiveTasksContextAttachment(
-            tasks: const [
-              AiTaskContextItem(title: 'One task', isCompleted: false),
-            ],
-            omittedCount: 0,
+        selectedNotes: [
+          Quicxec(
+            id: 'users/private-user/notes/private-document',
+            title: 'Visible note',
+            text: 'Visible note content.',
+            tags: const ['firebase-api-key-secret'],
+            folderId: 'service-account-secret',
+            created: DateTime.utc(2026),
+          ),
+        ],
+        includeActiveTasks: true,
+        tasks: [
+          TodoItem(
+            id: 'private-task-document-id',
+            title: 'One task',
+            isCompleted: false,
+            createdAt: DateTime.utc(2026),
+            updatedAt: DateTime.utc(2026),
+          ),
+          TodoItem(
+            id: 'out-of-scope-document-id',
+            title: 'Out-of-scope completed task',
+            isCompleted: true,
+            createdAt: DateTime.utc(2026),
+            updatedAt: DateTime.utc(2026),
           ),
         ],
       );
@@ -282,6 +303,18 @@ void main() {
       );
       expect(messages[1]['content'], endsWith(applicationContext.encode()));
       expect(messages.last['content'], 'Plan my work');
+      expect(sentRequest.body, contains('Visible note content'));
+      expect(sentRequest.body, contains('One task'));
+      for (final excluded in const [
+        'users/private-user/notes/private-document',
+        'private-task-document-id',
+        'out-of-scope-document-id',
+        'Out-of-scope completed task',
+        'firebase-api-key-secret',
+        'service-account-secret',
+      ]) {
+        expect(sentRequest.body, isNot(contains(excluded)));
+      }
     },
   );
 

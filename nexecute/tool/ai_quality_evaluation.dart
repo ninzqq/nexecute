@@ -1,16 +1,31 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:nexecute/ai/application/ai_application_context_read_contract.dart';
 import 'package:nexecute/ai/application/ai_note_task_prompt.dart';
+import 'package:nexecute/ai/application/ai_read_tool_coordinator.dart';
+import 'package:nexecute/ai/domain/ai_application_context.dart';
 import 'package:nexecute/ai/domain/ai_chat_message.dart';
 import 'package:nexecute/ai/domain/ai_chat_request.dart';
 import 'package:nexecute/ai/domain/ai_connection_profile.dart';
+import 'package:nexecute/ai/domain/ai_connection_result.dart';
+import 'package:nexecute/ai/domain/ai_model_info.dart';
+import 'package:nexecute/ai/domain/ai_protocol.dart';
 import 'package:nexecute/ai/domain/ai_stream_event.dart';
 import 'package:nexecute/ai/domain/ai_task_proposal.dart';
+import 'package:nexecute/ai/domain/ai_tool.dart';
 import 'package:nexecute/ai/infrastructure/ai_task_proposal_parser.dart';
 import 'package:nexecute/ai/repositories/ai_assistant_repository.dart';
+import 'package:nexecute/ai/repositories/ai_response_handle.dart';
+import 'package:nexecute/domain/calendar/calendar_query_range.dart';
 
-enum AiQualityWorkflow { chat, noteToTasks, parserFixture }
+enum AiQualityWorkflow {
+  chat,
+  attachedContext,
+  noteToTasks,
+  parserFixture,
+  toolProtocolFixture,
+}
 
 enum AiQualityOutcome {
   passed,
@@ -140,6 +155,10 @@ class AiQualityCase {
       case AiQualityWorkflow.chat:
         _nonEmptyString(input, 'message');
         _validateTextChecks(expectation);
+      case AiQualityWorkflow.attachedContext:
+        _nonEmptyString(input, 'message');
+        _attachedContextFrom(input);
+        _validateTextChecks(expectation);
       case AiQualityWorkflow.noteToTasks:
         _string(input, 'noteTitle');
         _string(input, 'noteContent');
@@ -160,6 +179,30 @@ class AiQualityCase {
           throw FormatException(
             'Unsupported parser error code: $expectedCode.',
           );
+        }
+      case AiQualityWorkflow.toolProtocolFixture:
+        _toolCallsFrom(input);
+        final authorization = _object(
+          input['authorization'],
+          'Tool fixture authorization must be an object.',
+        );
+        final allowActiveTasks = authorization['allowActiveTasks'];
+        if (allowActiveTasks is! bool) {
+          throw const FormatException('allowActiveTasks must be a boolean.');
+        }
+        final expectedErrors = _strings(
+          expectation['toolErrorCodes'],
+          'toolErrorCodes',
+        );
+        final failureCode = expectation['failureCode'];
+        if ((expectedErrors.isEmpty) == (failureCode == null)) {
+          throw const FormatException(
+            'Tool fixtures require exactly one of toolErrorCodes or failureCode.',
+          );
+        }
+        if (failureCode != null &&
+            (failureCode is! String || failureCode.trim().isEmpty)) {
+          throw const FormatException('failureCode must be non-empty text.');
         }
     }
   }
@@ -364,6 +407,14 @@ class AiQualityEvaluator {
     if (evaluationCase.workflow == AiQualityWorkflow.parserFixture) {
       return _runParserFixture(evaluationCase, repetition, stopwatch);
     }
+    if (evaluationCase.workflow == AiQualityWorkflow.toolProtocolFixture) {
+      return _runToolProtocolFixture(
+        evaluationCase,
+        profile,
+        repetition,
+        stopwatch,
+      );
+    }
 
     final request = _requestFor(evaluationCase, profile, repetition);
     final collected = await _collect(request);
@@ -512,6 +563,120 @@ class AiQualityEvaluator {
     }
   }
 
+  Future<AiQualityCaseResult> _runToolProtocolFixture(
+    AiQualityCase evaluationCase,
+    AiConnectionProfile profile,
+    int repetition,
+    Stopwatch stopwatch,
+  ) async {
+    final calls = _toolCallsFrom(evaluationCase.input);
+    final rawAuthorization = _object(
+      evaluationCase.input['authorization'],
+      'Tool fixture authorization must be an object.',
+    );
+    final authorization = AiReadToolAuthorization(
+      allowActiveTasks: rawAuthorization['allowActiveTasks'] as bool,
+    );
+    final repository = _ToolFixtureRepository(calls);
+    final readService = _RejectingFixtureReadService();
+    final toolProfile = profile.copyWith(
+      capabilityOverrides: {
+        ...profile.capabilityOverrides,
+        AiCapability.tools: true,
+      },
+    );
+    final coordinator = AiReadToolCoordinator(
+      assistantRepository: repository,
+      readService: readService,
+    );
+
+    try {
+      final handle = await coordinator.startResponse(
+        AiChatRequest(
+          connectionProfile: toolProfile,
+          conversationId: 'quality:${evaluationCase.id}:$repetition',
+          messages: [
+            AiChatMessage(
+              id: 'quality:${evaluationCase.id}:$repetition:user',
+              role: AiMessageRole.user,
+              content: 'Exercise the committed tool-protocol fixture.',
+              createdAt: DateTime.utc(2000),
+            ),
+          ],
+          readToolAuthorization: authorization,
+        ),
+        scope: AiReadToolExecutionScope(authorization: authorization),
+      );
+      final events = await handle.events.toList();
+      stopwatch.stop();
+      final failureCodes =
+          [
+            for (final event in events)
+              if (event is AiResponseFailed) event.code,
+          ].whereType<String>().toList();
+      final toolErrorCodes =
+          [
+            for (final request in repository.requests)
+              for (final message in request.continuationMessages)
+                if (message is AiToolResultMessage && message.isError)
+                  message.result['code']?.toString(),
+          ].whereType<String>().toList();
+      final expectedFailure = evaluationCase.expectation['failureCode'];
+      final expectedToolErrors = _strings(
+        evaluationCase.expectation['toolErrorCodes'],
+        'toolErrorCodes',
+      );
+      final diagnostics = <String>[];
+      if (expectedFailure is String) {
+        if (failureCodes.length != 1 ||
+            failureCodes.single != expectedFailure) {
+          diagnostics.add(
+            'Expected session failure $expectedFailure, got '
+            '${failureCodes.isEmpty ? 'none' : failureCodes.join(', ')}.',
+          );
+        }
+      } else if (!_sameStrings(toolErrorCodes, expectedToolErrors)) {
+        diagnostics.add(
+          'Expected tool errors ${expectedToolErrors.join(', ')}, got '
+          '${toolErrorCodes.isEmpty ? 'none' : toolErrorCodes.join(', ')}.',
+        );
+      }
+      if (readService.readCount != 0) {
+        diagnostics.add(
+          'Rejected calls reached the application read service '
+          '${readService.readCount} time(s).',
+        );
+      }
+      return _result(
+        evaluationCase,
+        repetition,
+        stopwatch.elapsed,
+        outcome:
+            diagnostics.isEmpty
+                ? AiQualityOutcome.passed
+                : AiQualityOutcome.applicationFailure,
+        output: jsonEncode({
+          'failureCodes': failureCodes,
+          'toolErrorCodes': toolErrorCodes,
+          'applicationReads': readService.readCount,
+        }),
+        failureCode:
+            diagnostics.isEmpty ? null : 'tool_protocol_guardrail_regression',
+        diagnostics: diagnostics,
+      );
+    } catch (error) {
+      stopwatch.stop();
+      return _result(
+        evaluationCase,
+        repetition,
+        stopwatch.elapsed,
+        outcome: AiQualityOutcome.applicationFailure,
+        failureCode: 'tool_fixture_exception',
+        diagnostics: ['Could not execute the tool fixture: $error'],
+      );
+    }
+  }
+
   AiChatRequest _requestFor(
     AiQualityCase evaluationCase,
     AiConnectionProfile profile,
@@ -519,6 +684,7 @@ class AiQualityEvaluator {
   ) {
     late final String systemInstruction;
     late final String userMessage;
+    final AiApplicationContextEnvelope? applicationContext;
     if (evaluationCase.workflow == AiQualityWorkflow.noteToTasks) {
       final prompt = AiNoteTaskPromptBuilder.build(
         noteTitle: evaluationCase.input['noteTitle'] as String,
@@ -526,15 +692,21 @@ class AiQualityEvaluator {
       );
       systemInstruction = prompt.systemInstruction;
       userMessage = prompt.userMessage;
+      applicationContext = null;
     } else {
       systemInstruction = profile.systemPrompt;
       userMessage = evaluationCase.input['message'] as String;
+      applicationContext =
+          evaluationCase.workflow == AiQualityWorkflow.attachedContext
+              ? _attachedContextFrom(evaluationCase.input)
+              : null;
     }
     return AiChatRequest(
       connectionProfile: profile,
       conversationId: 'quality:${evaluationCase.id}:$repetition',
       systemInstruction:
           systemInstruction.trim().isEmpty ? null : systemInstruction.trim(),
+      applicationContext: applicationContext,
       messages: [
         AiChatMessage(
           id: 'quality:${evaluationCase.id}:$repetition:user',
@@ -696,6 +868,181 @@ class _CollectedResponse {
   final bool completed;
   final bool toolCallReceived;
   final AiTokenUsage? usage;
+}
+
+AiApplicationContextEnvelope _attachedContextFrom(Map<String, Object?> input) {
+  final fixture = _object(
+    input['applicationContext'],
+    'Attached-context input must contain an applicationContext object.',
+  );
+  _requireExactKeys(fixture, const {
+    'generatedAt',
+    'tasks',
+    'omittedCount',
+    'payloadTruncated',
+  });
+  final generatedAt = DateTime.tryParse(
+    _nonEmptyString(fixture, 'generatedAt'),
+  );
+  if (generatedAt == null || !generatedAt.isUtc) {
+    throw const FormatException('generatedAt must be a UTC RFC 3339 value.');
+  }
+  final omittedCount = _integer(fixture, 'omittedCount');
+  if (omittedCount < 0) {
+    throw const FormatException('omittedCount must not be negative.');
+  }
+  final payloadTruncated = fixture['payloadTruncated'];
+  if (payloadTruncated is! bool) {
+    throw const FormatException('payloadTruncated must be a boolean.');
+  }
+  final rawTasks = fixture['tasks'];
+  if (rawTasks is! List || rawTasks.isEmpty) {
+    throw const FormatException(
+      'Attached-context fixtures need at least one task.',
+    );
+  }
+  if (rawTasks.length > AiApplicationContextLimits.maxActiveTasks) {
+    throw const FormatException(
+      'Attached-context fixture exceeds the active-task limit.',
+    );
+  }
+  final tasks = <AiTaskContextItem>[];
+  for (final rawTask in rawTasks) {
+    final task = _object(rawTask, 'Every attached task must be an object.');
+    _requireExactKeys(task, const {'title', 'isCompleted'});
+    final title = _nonEmptyString(task, 'title');
+    if (title.length > AiApplicationContextLimits.maxTaskTitleCharacters) {
+      throw const FormatException('An attached task title is too long.');
+    }
+    final isCompleted = task['isCompleted'];
+    if (isCompleted is! bool) {
+      throw const FormatException('isCompleted must be a boolean.');
+    }
+    tasks.add(AiTaskContextItem(title: title, isCompleted: isCompleted));
+  }
+  final envelope = AiApplicationContextEnvelope(
+    generatedAt: generatedAt,
+    attachments: [
+      AiActiveTasksContextAttachment(tasks: tasks, omittedCount: omittedCount),
+    ],
+    payloadTruncated: payloadTruncated,
+  );
+  if (envelope.serializedCharacterCount >
+      AiApplicationContextLimits.maxPayloadCharacters) {
+    throw const FormatException(
+      'Attached-context fixture exceeds the payload limit.',
+    );
+  }
+  return envelope;
+}
+
+List<AiToolCall> _toolCallsFrom(Map<String, Object?> input) {
+  final rawCalls = input['toolCalls'];
+  if (rawCalls is! List || rawCalls.isEmpty) {
+    throw const FormatException('Tool fixtures need at least one tool call.');
+  }
+  return [
+    for (final rawCall in rawCalls)
+      () {
+        final call = _object(rawCall, 'Every tool call must be an object.');
+        _requireExactKeys(call, const {'id', 'name', 'arguments'});
+        return AiToolCall(
+          id: _nonEmptyString(call, 'id'),
+          name: _nonEmptyString(call, 'name'),
+          arguments: _object(
+            call['arguments'],
+            'Tool-call arguments must be an object.',
+          ),
+        );
+      }(),
+  ];
+}
+
+bool _sameStrings(List<String> actual, List<String> expected) {
+  if (actual.length != expected.length) return false;
+  for (var index = 0; index < actual.length; index++) {
+    if (actual[index] != expected[index]) return false;
+  }
+  return true;
+}
+
+void _requireExactKeys(Map<String, Object?> value, Set<String> expected) {
+  final keys = value.keys.toSet();
+  if (keys.length != expected.length || !keys.containsAll(expected)) {
+    throw FormatException(
+      'Expected exactly these keys: ${expected.join(', ')}.',
+    );
+  }
+}
+
+class _ToolFixtureRepository implements AiAssistantRepository {
+  _ToolFixtureRepository(this.calls);
+
+  final List<AiToolCall> calls;
+  final List<AiChatRequest> requests = [];
+
+  @override
+  Future<AiResponseHandle> startResponse(AiChatRequest request) async {
+    requests.add(request);
+    final events =
+        requests.length == 1
+            ? <AiStreamEvent>[
+              for (final call in calls) AiToolCallRequested.fromCall(call),
+              const AiResponseCompleted(finishReason: 'tool_calls'),
+            ]
+            : const <AiStreamEvent>[
+              AiTextDelta('Tool fixture completed.'),
+              AiResponseCompleted(finishReason: 'stop'),
+            ];
+    return StreamAiResponseHandle(
+      events: Stream.fromIterable(events),
+      onCancel: () async {},
+    );
+  }
+
+  @override
+  Future<List<AiModelInfo>> listModels(AiConnectionProfile profile) async =>
+      const [];
+
+  @override
+  Future<AiConnectionResult> testConnection(
+    AiConnectionProfile profile,
+  ) async => const AiConnectionResult.connected();
+}
+
+class _RejectingFixtureReadService implements AiApplicationContextReadService {
+  var readCount = 0;
+
+  Never _unexpectedRead() {
+    readCount++;
+    throw StateError('A rejected quality fixture reached application data.');
+  }
+
+  @override
+  Future<AiApplicationContextEnvelope> eventsForDateRange({
+    required AiApplicationReadScope scope,
+    required CalendarQueryRange range,
+    int limit = AiApplicationContextLimits.maxEvents,
+  }) async => _unexpectedRead();
+
+  @override
+  Future<AiApplicationContextEnvelope> getNote({
+    required AiApplicationReadScope scope,
+    required String noteId,
+  }) async => _unexpectedRead();
+
+  @override
+  Future<AiApplicationContextEnvelope> listTasks({
+    required AiApplicationReadScope scope,
+    int limit = AiApplicationContextLimits.maxActiveTasks,
+  }) async => _unexpectedRead();
+
+  @override
+  Future<AiNoteSearchContextResult> searchNotes({
+    required AiApplicationReadScope scope,
+    required String query,
+    int limit = AiApplicationContextReadLimits.maxSearchResults,
+  }) async => _unexpectedRead();
 }
 
 Map<String, Object?> _object(Object? value, String message) {
