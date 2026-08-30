@@ -77,15 +77,12 @@ class AiChatController extends ChangeNotifier {
   Future<void> initialize() async {
     try {
       activeProfile = await _connectionProfileStore.getActiveProfile();
-      conversations = await _conversationStore.getConversations();
-      if (conversations.isNotEmpty) {
-        final latestConversationId = conversations.first.id;
-        conversation = await _conversationStore.getConversation(
-          latestConversationId,
-        );
-        if (conversation != null) {
-          await _watchCurrentConversation(latestConversationId);
-        }
+      final initialConversations =
+          await _conversationStore.watchConversations().first;
+      conversations = initialConversations;
+      if (initialConversations.isNotEmpty) {
+        final latestConversationId = initialConversations.first.id;
+        await _watchCurrentConversation(latestConversationId);
       }
     } catch (error) {
       errorMessage = 'Could not load AI conversations: $error';
@@ -121,20 +118,7 @@ class AiChatController extends ChangeNotifier {
     await _conversationSubscription?.cancel();
     _draftAssistant = null;
     errorMessage = null;
-    conversation = await _conversationStore.getConversation(conversationId);
-    _notify();
-    _conversationSubscription = _conversationStore
-        .watchConversation(conversationId)
-        .listen(
-          (value) {
-            if (value != null) conversation = value;
-            _notify();
-          },
-          onError: (Object error) {
-            errorMessage = 'Could not synchronize this conversation: $error';
-            _notify();
-          },
-        );
+    await _watchCurrentConversation(conversationId);
   }
 
   Future<void> startNewConversation() async {
@@ -421,12 +405,22 @@ class AiChatController extends ChangeNotifier {
 
   Future<void> _watchCurrentConversation(String conversationId) async {
     await _conversationSubscription?.cancel();
+    final completer = Completer<void>();
     _conversationSubscription = _conversationStore
         .watchConversation(conversationId)
-        .listen((value) {
-          if (value != null) conversation = value;
-          _notify();
-        });
+        .listen(
+          (value) {
+            if (value != null) conversation = value;
+            _notify();
+            if (!completer.isCompleted) completer.complete();
+          },
+          onError: (Object error) {
+            errorMessage = 'Could not synchronize this conversation: $error';
+            _notify();
+            if (!completer.isCompleted) completer.complete();
+          },
+        );
+    await completer.future;
   }
 
   DateTime _nextMessageTime() {

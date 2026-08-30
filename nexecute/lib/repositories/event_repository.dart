@@ -110,10 +110,7 @@ class FirestoreEventRepository implements EventRepository {
     if (event.id.isEmpty) throw StateError('Event has no ID');
 
     try {
-      final ref = _eventsCollection().doc(event.id);
-      final snapshot = await ref.get();
-      if (!snapshot.exists) throw StateError('Event not found');
-      await ref.delete();
+      await _eventsCollection().doc(event.id).delete();
     } on FirebaseException catch (error) {
       throw Exception('Error deleting event: ${error.message}');
     }

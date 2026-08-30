@@ -12,6 +12,7 @@ abstract final class AiConversationDocumentMapper {
         'modelId': conversation.modelId,
         'createdAt': conversation.createdAt,
         'updatedAt': conversation.updatedAt,
+        'messages': conversation.messages.map(messageToMap).toList(),
       });
 
   static AiConversation fromDocument(
@@ -25,6 +26,20 @@ abstract final class AiConversationDocumentMapper {
     List<AiChatMessage> messages = const [],
   }) {
     final createdAt = _date(data['createdAt']) ?? DateTime.now();
+    final rawMessages = data['messages'];
+    final parsedMessages =
+        rawMessages is List
+            ? rawMessages
+                .whereType<Map>()
+                .map(
+                  (item) => messageFromMap(
+                    item['id']?.toString() ?? '',
+                    Map<String, dynamic>.from(item),
+                  ),
+                )
+                .toList()
+            : messages;
+
     return AiConversation(
       id: id,
       title: data['title']?.toString() ?? 'New conversation',
@@ -32,7 +47,7 @@ abstract final class AiConversationDocumentMapper {
       modelId: data['modelId']?.toString() ?? '',
       createdAt: createdAt,
       updatedAt: _date(data['updatedAt']) ?? createdAt,
-      messages: messages,
+      messages: parsedMessages,
     );
   }
 

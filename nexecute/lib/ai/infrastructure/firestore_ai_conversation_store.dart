@@ -42,45 +42,22 @@ class FirestoreAiConversationStore implements AiConversationStore {
 
   @override
   Future<AiConversation?> getConversation(String conversationId) async {
-    final reference = _collection().doc(conversationId);
-    final results = await Future.wait([
-      reference.get(),
-      reference.collection('messages').orderBy('createdAt').get(),
-    ]);
-    final document = results[0] as DocumentSnapshot<Map<String, dynamic>>;
+    final document = await _collection().doc(conversationId).get();
     if (!document.exists) return null;
-    final messages = results[1] as QuerySnapshot<Map<String, dynamic>>;
-    return AiConversationDocumentMapper.fromDocument(
-      document,
-      messages:
-          messages.docs
-              .map(AiConversationDocumentMapper.messageFromDocument)
-              .toList(),
-    );
+    return AiConversationDocumentMapper.fromDocument(document);
   }
 
   @override
   Stream<AiConversation?> watchConversation(String conversationId) {
     return _authService.userStream.switchMap((user) {
       if (user == null) return Stream.value(null);
-      final reference = _collectionFor(user.uid).doc(conversationId);
-      return Rx.combineLatest2(
-        reference.snapshots(),
-        reference.collection('messages').orderBy('createdAt').snapshots(),
-        (
-          DocumentSnapshot<Map<String, dynamic>> document,
-          QuerySnapshot<Map<String, dynamic>> messages,
-        ) {
-          if (!document.exists) return null;
-          return AiConversationDocumentMapper.fromDocument(
-            document,
-            messages:
-                messages.docs
-                    .map(AiConversationDocumentMapper.messageFromDocument)
-                    .toList(),
-          );
-        },
-      );
+      return _collectionFor(user.uid)
+          .doc(conversationId)
+          .snapshots()
+          .map((document) {
+            if (!document.exists) return null;
+            return AiConversationDocumentMapper.fromDocument(document);
+          });
     });
   }
 
@@ -91,56 +68,64 @@ class FirestoreAiConversationStore implements AiConversationStore {
       AiConversationDocumentMapper.toMap(conversation),
       SetOptions(merge: true),
     );
-    for (var offset = 0; offset < conversation.messages.length; offset += 400) {
-      final batch = _db.batch();
-      final end =
-          offset + 400 < conversation.messages.length
-              ? offset + 400
-              : conversation.messages.length;
-      for (final message in conversation.messages.sublist(offset, end)) {
-        batch.set(
-          reference.collection('messages').doc(message.id),
-          AiConversationDocumentMapper.messageToMap(message),
-        );
-      }
-      await batch.commit();
-    }
   }
 
   @override
   Future<void> saveMessage(String conversationId, AiChatMessage message) async {
     final reference = _collection().doc(conversationId);
-    final batch = _db.batch();
-    batch.set(
-      reference.collection('messages').doc(message.id),
-      AiConversationDocumentMapper.messageToMap(message),
-    );
-    batch.update(reference, {'updatedAt': message.createdAt});
-    await batch.commit();
+    await _db.runTransaction((transaction) async {
+      final snapshot = await transaction.get(reference);
+      if (!snapshot.exists) {
+        throw StateError('AI conversation not found: $conversationId');
+      }
+      final conversation = AiConversationDocumentMapper.fromDocument(snapshot);
+      final messages = [...conversation.messages];
+      final index = messages.indexWhere(
+        (candidate) => candidate.id == message.id,
+      );
+      if (index == -1) {
+        messages.add(message);
+      } else {
+        messages[index] = message;
+      }
+      final updated = conversation.copyWith(
+        updatedAt:
+            message.createdAt.isAfter(conversation.updatedAt)
+                ? message.createdAt
+                : conversation.updatedAt,
+        messages: messages,
+      );
+      transaction.set(
+        reference,
+        AiConversationDocumentMapper.toMap(updated),
+        SetOptions(merge: true),
+      );
+    });
   }
 
   @override
   Future<void> deleteMessage(String conversationId, String messageId) async {
     final reference = _collection().doc(conversationId);
-    final batch = _db.batch();
-    batch.delete(reference.collection('messages').doc(messageId));
-    batch.update(reference, {'updatedAt': DateTime.now()});
-    await batch.commit();
+    await _db.runTransaction((transaction) async {
+      final snapshot = await transaction.get(reference);
+      if (!snapshot.exists) return;
+      final conversation = AiConversationDocumentMapper.fromDocument(snapshot);
+      final messages =
+          conversation.messages
+              .where((message) => message.id != messageId)
+              .toList();
+      final updated = conversation.copyWith(messages: messages);
+      transaction.set(
+        reference,
+        AiConversationDocumentMapper.toMap(updated),
+        SetOptions(merge: true),
+      );
+    });
   }
 
   @override
   Future<void> deleteConversation(String conversationId) async {
-    final reference = _collection().doc(conversationId);
-    while (true) {
-      final snapshot = await reference.collection('messages').limit(400).get();
-      if (snapshot.docs.isEmpty) break;
-      final batch = _db.batch();
-      for (final document in snapshot.docs) {
-        batch.delete(document.reference);
-      }
-      await batch.commit();
-    }
-    await reference.delete();
+    await _collection().doc(conversationId).delete();
   }
 
   CollectionReference<Map<String, dynamic>> _collection() {
