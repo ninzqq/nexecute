@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:nexecute/ai/presentation/ai_note_event_extraction_sheet.dart';
 import 'package:nexecute/ai/presentation/ai_note_task_extraction_sheet.dart';
 import 'package:nexecute/home/bottomsheets/item_editor.dart';
 import 'package:nexecute/home/widgets/note_actions_sheet.dart';
@@ -38,6 +39,13 @@ class QuicxecItem extends StatelessWidget {
             child: NoteActionsSheet(
               note: quicxec,
               folderName: currentFolderName,
+              onExtractEvent:
+                  quicxec.trashed
+                      ? null
+                      : () {
+                        Navigator.of(sheetContext).pop();
+                        unawaited(_extractEvent(context));
+                      },
               onExtractTasks:
                   quicxec.trashed
                       ? null
@@ -56,6 +64,17 @@ class QuicxecItem extends StatelessWidget {
                       : null,
             ),
           ),
+    );
+  }
+
+  Future<void> _extractEvent(BuildContext context) async {
+    final reviewedDraft = await showAiNoteEventExtractionPreview(
+      context,
+      note: quicxec,
+    );
+    if (reviewedDraft == null || !context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Proposal reviewed. No event was created.')),
     );
   }
 

@@ -8,6 +8,7 @@ class NoteActionsSheet extends StatelessWidget {
     required this.note,
     required this.onToggleTrash,
     this.folderName,
+    this.onExtractEvent,
     this.onExtractTasks,
     this.onMove,
     this.onDelete,
@@ -16,6 +17,7 @@ class NoteActionsSheet extends StatelessWidget {
   final Quicxec note;
   final VoidCallback onToggleTrash;
   final String? folderName;
+  final VoidCallback? onExtractEvent;
   final VoidCallback? onExtractTasks;
   final VoidCallback? onMove;
   final VoidCallback? onDelete;
@@ -71,6 +73,16 @@ class NoteActionsSheet extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
+          if (onExtractEvent case final onExtractEvent?) ...[
+            _NoteActionTile(
+              icon: Icons.event_available_outlined,
+              label: 'Propose event with AI',
+              description: 'Preview this note before sending it',
+              color: palette.primary,
+              onTap: onExtractEvent,
+            ),
+            const SizedBox(height: 10),
+          ],
           if (onExtractTasks case final onExtractTasks?) ...[
             _NoteActionTile(
               icon: Icons.auto_awesome_outlined,

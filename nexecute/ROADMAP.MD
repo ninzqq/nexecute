@@ -711,19 +711,20 @@ edit, move, complete, or delete existing application data.
 
 ##### Step 10B: explicit selection and editable review
 
-- [ ] Add a Note action that previews exactly what will be sent and identifies
+- [x] Add a Note action that previews exactly what will be sent and identifies
   the active connection and model before starting the proposal request.
-- [ ] Present the result in an event-specific review sheet using the application's
+- [x] Present the result in an event-specific review sheet using the application's
   trusted date, time, all-day, tag, and reminder controls.
-- [ ] Highlight missing or assumed scheduling values and require the user to
-  resolve every required field before Create becomes available.
-- [ ] Provide Create, Edit, Retry, and Discard states while keeping the proposal
-  local and out of chat history and Firestore until confirmation.
+- [x] Highlight missing or AI-suggested scheduling values and require the user
+  to resolve every required field before the draft is ready for confirmation.
+- [x] Provide Edit, Retry, Discard, and review-ready states while keeping the
+  proposal local and out of chat history and Firestore.
 
 ##### Step 10C: confirmed and idempotent event creation
 
-- [ ] Introduce a validated create-event command with a stable creation ID,
-  source note ID, frozen reviewed values, and creation timestamp.
+- [ ] Turn the review-ready handoff into the final Create confirmation and
+  introduce a validated create-event command with a stable creation ID, source
+  note ID, frozen reviewed values, and creation timestamp.
 - [ ] Use a deterministic event document ID so retrying the exact confirmed
   command cannot create a duplicate after an uncertain write result.
 - [ ] Execute the frozen command through the normal `EventRepository` and event

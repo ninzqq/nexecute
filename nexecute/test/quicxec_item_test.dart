@@ -43,6 +43,8 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Meeting notes'), findsWidgets);
     expect(find.text('Note actions'), findsOneWidget);
+    expect(find.text('Propose event with AI'), findsOneWidget);
+    expect(find.text('Propose tasks with AI'), findsOneWidget);
     expect(find.text('Move to folder'), findsOneWidget);
     expect(find.text('Quick Notes'), findsOneWidget);
     expect(find.text('Move note to trash'), findsOneWidget);
@@ -82,6 +84,8 @@ void main() {
 
     expect(find.text('Restore note'), findsOneWidget);
     expect(find.text('Delete permanently'), findsOneWidget);
+    expect(find.text('Propose event with AI'), findsNothing);
+    expect(find.text('Propose tasks with AI'), findsNothing);
     expect(find.text('This action cannot be undone'), findsOneWidget);
     expect(find.byIcon(Icons.restore_from_trash_rounded), findsOneWidget);
     expect(find.byIcon(Icons.delete_forever_rounded), findsOneWidget);
