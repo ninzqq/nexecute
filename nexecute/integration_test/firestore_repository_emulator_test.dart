@@ -156,6 +156,42 @@ void main() {
       (await addedNote.reference.get()).data(),
       sourceNoteBeforeTaskCreation,
     );
+    final aiEventCommand = CreateEventCommand(
+      creationId: 'event-proposal-1',
+      sourceNoteId: addedNote.id,
+      title: 'Dentist',
+      description: 'Check-up',
+      startTime: DateTime(2026, 9, 3, 14),
+      endTime: DateTime(2026, 9, 3, 15),
+      isAllDay: false,
+      tags: const ['Personal'],
+      reminder: EventReminder.fifteenMinutesBefore,
+      createdAt: DateTime.utc(2026, 8, 30, 12),
+    );
+    await events.createEvent(aiEventCommand);
+    await events.createEvent(aiEventCommand);
+    final aiEventDocuments = await user.collection('events').get();
+    expect(aiEventDocuments.docs, hasLength(1));
+    final aiEventDocument =
+        await user.collection('events').doc(aiEventCommand.eventId).get();
+    expect(aiEventDocument.data(), containsPair('title', 'Dentist'));
+    expect(
+      aiEventDocument.data(),
+      containsPair('creationId', 'event-proposal-1'),
+    );
+    expect(aiEventDocument.data(), containsPair('sourceNoteId', addedNote.id));
+    expect(
+      aiEventDocument.data(),
+      containsPair('creationSource', 'aiNoteEventProposal'),
+    );
+    expect(aiEventDocument.data(), containsPair('reminderMinutesBefore', 15));
+    expect(
+      (await addedNote.reference.get()).data(),
+      sourceNoteBeforeTaskCreation,
+    );
+    await events.deleteEvent(aiEventCommand.toEvent());
+    expect((await user.collection('events').get()).docs, isEmpty);
+
     await noteFolders.deleteFolder(addedFolder.id);
     expect((await user.collection('noteFolders').get()).docs, isEmpty);
     final unfiledNote = NoteDocumentMapper.fromDocument(

@@ -207,6 +207,48 @@ void main() {
       expect(cancellableRepository.cancellationCount, 1);
     },
   );
+
+  test(
+    'freezes the preview reference even when the local clock changes',
+    () async {
+      var clockCalls = 0;
+      final times = [DateTime(2026, 3, 29, 1, 55), DateTime(2026, 3, 29, 4, 5)];
+      final repository = FakeAiAssistantRepository(
+        responseEvents: const [
+          AiTextDelta('{"schemaVersion":1,"event":null}'),
+          AiResponseCompleted(),
+        ],
+      );
+      final controller = AiNoteEventExtractionController(
+        assistantRepository: repository,
+        connectionProfileStore: profileStore,
+        clock: () => times[clockCalls++],
+      );
+      addTearDown(controller.dispose);
+
+      await controller.initialize();
+      final preview = controller.buildPrompt(
+        noteTitle: 'Clock change',
+        noteContent: 'Tomorrow.',
+      );
+      await controller.start(
+        noteId: 'note-clock',
+        noteTitle: 'Clock change',
+        noteContent: 'Tomorrow.',
+      );
+      await _flushEvents();
+
+      expect(
+        repository.startedRequests.single.messages.single.content,
+        preview.userMessage,
+      );
+      expect(preview.userMessage, contains('"localTime":"01:55"'));
+      expect(
+        repository.startedRequests.single.messages.single.createdAt,
+        times[1],
+      );
+    },
+  );
 }
 
 Future<void> _flushEvents() async {

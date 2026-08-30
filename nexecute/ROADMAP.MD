@@ -735,15 +735,22 @@ edit, move, complete, or delete existing application data.
 
 ##### Step 10D: verification and rollout
 
-- [ ] Cover strict parsing, prompt injection, Finnish and English date phrases,
+- [x] Cover strict parsing, prompt injection, Finnish and English date phrases,
   missing information, invalid and overnight ranges, all-day events, local time
   changes, and oversized output with deterministic tests.
-- [ ] Add controller and widget tests for preview, editing, confirmation,
+- [x] Add controller and widget tests for preview, editing, confirmation,
   cancellation, retry, and no-write-before-confirmation behavior.
-- [ ] Add repository-contract and Firestore Emulator tests for deterministic
+- [x] Add repository-contract and Firestore Emulator tests for deterministic
   creation, duplicate retries, source-note preservation, and reminder handoff.
 - [ ] Validate the bounded workflow against the owner's real Ollama model and
   record quality results before expanding the action set.
+
+Verification on 2026-08-30: `flutter analyze` completed without issues; all 281
+deterministic tests passed with the opt-in Ollama smoke test skipped; the Android
+repository integration test passed against local Auth and Firestore emulators;
+and quality-suite version 1.2.0 validated 37 cases in dry-run mode. The live
+Note → Event Ollama run remains intentionally open until an endpoint, model ID,
+and immutable model version or digest are supplied to the quality runner.
 
 ##### Later Step 10 scopes
 

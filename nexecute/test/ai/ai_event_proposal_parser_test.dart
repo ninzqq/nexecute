@@ -67,6 +67,22 @@ void main() {
     expect(proposal.event?.hasCompleteSchedule, isTrue);
   });
 
+  test('accepts an explicit overnight timed range', () {
+    final proposal = AiEventProposalParser.parse(
+      _proposalJson(
+        startDate: '2026-09-03',
+        startTime: '23:00',
+        endDate: '2026-09-04',
+        endTime: '01:00',
+        isAllDay: false,
+      ),
+    );
+
+    expect(proposal.event?.startDate, '2026-09-03');
+    expect(proposal.event?.endDate, '2026-09-04');
+    expect(proposal.event?.hasCompleteSchedule, isTrue);
+  });
+
   test('rejects prose, unknown fields, and unsupported versions', () {
     expect(
       () =>
@@ -132,6 +148,18 @@ void main() {
           startTime: '10:00',
           endDate: '2026-09-14',
           endTime: '09:00',
+          isAllDay: false,
+        ),
+      ),
+      _throwsCode(AiEventProposalErrorCode.invalidRange),
+    );
+    expect(
+      () => AiEventProposalParser.parse(
+        _proposalJson(
+          startDate: '2026-09-14',
+          startTime: '23:00',
+          endDate: '2026-09-13',
+          endTime: '01:00',
           isAllDay: false,
         ),
       ),

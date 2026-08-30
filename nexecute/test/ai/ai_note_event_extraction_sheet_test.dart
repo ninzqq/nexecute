@@ -60,6 +60,12 @@ void main() {
     expect(find.byType(EditorTagSelector), findsOneWidget);
     expect(find.byType(EventReminderField), findsOneWidget);
 
+    await tester.enterText(
+      find.byKey(const Key('ai-note-event-title')),
+      'Dental check-up',
+    );
+    await tester.pump();
+
     await tester.ensureVisible(find.byKey(const Key('ai-note-event-create')));
     final createButton = tester.widget<FilledButton>(
       find.byKey(const Key('ai-note-event-create')),
@@ -70,7 +76,7 @@ void main() {
     await tester.tap(find.byKey(const Key('ai-note-event-create')));
     await tester.pumpAndSettle();
     expect(find.text('Create this event?'), findsOneWidget);
-    expect(find.text('Dentist'), findsWidgets);
+    expect(find.text('Dental check-up'), findsWidgets);
     expect(
       find.byKey(const Key('ai-note-event-confirm-schedule')),
       findsOneWidget,
@@ -83,10 +89,11 @@ void main() {
     expect(dependencies.commands, hasLength(1));
     expect(dependencies.commands.single.sourceNoteId, 'note-1');
     expect(dependencies.commands.single.eventId, 'ai-event-creation-1');
+    expect(dependencies.commands.single.title, 'Dental check-up');
 
     await tester.tap(find.widgetWithText(TextButton, 'Close'));
     await tester.pumpAndSettle();
-    expect(dependencies.createdEvent?.title, 'Dentist');
+    expect(dependencies.createdEvent?.title, 'Dental check-up');
   });
 
   testWidgets('highlights missing schedule fields and keeps continue disabled', (

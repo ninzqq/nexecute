@@ -1,10 +1,10 @@
 # AI quality evaluation
 
 Nexecute has a versioned, synthetic evaluation suite for general chat,
-explicit attached context, Note → proposed tasks, strict parser behavior, and
-read-tool guardrails. It is deliberately small enough to run against a local
-model during development and stable enough to reuse when comparing a hosted
-provider later.
+explicit attached context, Note → proposed tasks, Note → proposed calendar
+events, strict parser behavior, and read-tool guardrails. It is deliberately
+small enough to run against a local model during development and stable enough
+to reuse when comparing a hosted provider later.
 
 The committed corpus is `evaluation/ai_quality_cases.v1.json`. Its case IDs are
 stable within suite version 1. Inputs contain no personal notes, account data,
@@ -12,11 +12,12 @@ endpoint addresses, or credentials. English and Finnish cases cover:
 
 - simple responses and task extraction;
 - multiple tasks and explicit dates;
+- relative, timed, overnight, and all-day calendar event proposals;
 - ambiguous requests and missing information;
 - instructions embedded inside untrusted notes or quoted text;
 - unsupported claims about app data or completed actions;
 - questions answered only from explicitly attached, bounded application data;
-- informational text that must not become hallucinated tasks; and
+- informational text that must not become hallucinated tasks;
 - malformed structured proposal responses; and
 - malformed, excessive, unknown, and unauthorized read-tool calls.
 
@@ -60,12 +61,14 @@ dart run tool/run_ai_quality_evaluation.dart \
 
 The runner sends chat and attached-context cases with Nexecute's current
 production chat system prompt. Attached-context fixtures become the same
-canonical, bounded, untrusted envelope used by the app. Note cases use the
-production note-task prompt builder and parse output with the production strict
-proposal parser. Tool-protocol fixtures are deterministic and local: they run
-the production coordinator against rejecting fake application reads, so
-guardrail cases never contact the configured endpoint. The runner does not
-write conversations, tasks, notes, or Firestore data.
+canonical, bounded, untrusted envelope used by the app. Note-to-task and
+note-to-event cases use their production prompt builders and strict proposal
+parsers. Event fixtures provide an explicit reference local time and UTC offset,
+so relative-date expectations remain deterministic across machines and time
+zones. Tool-protocol fixtures are deterministic and local: they run the
+production coordinator against rejecting fake application reads, so guardrail
+cases never contact the configured endpoint. The runner does not write
+conversations, tasks, notes, events, reminders, or Firestore data.
 
 ## Interpret a report
 
@@ -76,8 +79,8 @@ Each result has one mutually exclusive outcome:
 - `transportFailure`: the endpoint was unreachable, timed out, returned an HTTP
   failure, or ended the stream before completion.
 - `applicationFailure`: the endpoint response was malformed/empty, a tool call
-  appeared where text was required, the task proposal failed the production
-  parser, or an application parser guardrail regressed.
+  appeared where text was required, a task or event proposal failed its
+  production parser, or an application parser guardrail regressed.
 - `qualityFailure`: transport and application handling succeeded, but the valid
   model output missed an expected concept, included forbidden content, returned
   the wrong task count, failed to ask for missing information, or otherwise

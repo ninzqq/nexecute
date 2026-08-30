@@ -22,6 +22,7 @@ void main() {
         AiQualityWorkflow.chat,
         AiQualityWorkflow.attachedContext,
         AiQualityWorkflow.noteToTasks,
+        AiQualityWorkflow.noteToEvent,
       ]) {
         final languages =
             suite.cases
@@ -51,6 +52,10 @@ void main() {
           'excessiveToolCalls',
           'unknownToolCall',
           'unauthorizedToolCall',
+          'relativeDate',
+          'localTime',
+          'allDay',
+          'overnightRange',
         }),
       );
     });
@@ -221,6 +226,75 @@ void main() {
       expect(context.serializedCharacterCount, lessThanOrEqualTo(24000));
       expect(context.encode(), contains('Review 9F'));
       expect(context.encode(), contains('"omittedCount":2'));
+    },
+  );
+
+  test(
+    'note-event quality cases use the production prompt and strict parser',
+    () async {
+      final suite = AiQualitySuite.fromJsonString(
+        File('evaluation/ai_quality_cases.v1.json').readAsStringSync(),
+      );
+      final repository = _QueuedRepository(const [
+        [
+          AiTextDelta(
+            '{"schemaVersion":1,"event":{"title":"Dentist","description":"","startDate":"2026-08-31","startTime":"14:00","endDate":"2026-08-31","endTime":"15:00","isAllDay":false}}',
+          ),
+          AiResponseCompleted(),
+        ],
+        [
+          AiTextDelta(
+            '{"schemaVersion":1,"event":{"title":"Hammaslääkäri","description":"","startDate":"2026-08-31","startTime":"14:00","endDate":"2026-08-31","endTime":"15:00","isAllDay":false}}',
+          ),
+          AiResponseCompleted(),
+        ],
+        [
+          AiTextDelta(
+            '{"schemaVersion":1,"event":{"title":"Dentist appointment","description":"","startDate":"2026-09-03","startTime":null,"endDate":null,"endTime":null,"isAllDay":null}}',
+          ),
+          AiResponseCompleted(),
+        ],
+      ]);
+      final evaluator = AiQualityEvaluator(repository: repository);
+
+      final report = await evaluator.run(
+        suite: suite,
+        profile: _profile(),
+        metadata: const AiQualityRunMetadata(
+          modelId: 'model-a',
+          modelVersion: 'v1',
+          repetitions: 1,
+        ),
+        caseIds: const {
+          'event-en-relative-timed',
+          'event-fi-relative-timed',
+          'event-en-missing-time',
+        },
+      );
+
+      expect(
+        report.results.map((result) => result.outcome),
+        everyElement(AiQualityOutcome.passed),
+      );
+      expect(repository.requests, hasLength(3));
+      for (final request in repository.requests) {
+        expect(
+          request.systemInstruction,
+          AiNoteEventPromptBuilder.systemInstruction,
+        );
+        expect(
+          request.messages.single.content,
+          contains('"utcOffset":"+03:00"'),
+        );
+      }
+      expect(
+        repository.requests.first.messages.single.content,
+        contains('Dentist tomorrow from 14:00 to 15:00.'),
+      );
+      expect(
+        repository.requests[1].messages.single.content,
+        contains('Hammaslääkäri huomenna klo 14.00–15.00.'),
+      );
     },
   );
 

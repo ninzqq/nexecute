@@ -49,8 +49,8 @@ belongs to the device where the event was created or edited.
 
 ## Local AI quality evaluation
 
-The versioned Finnish and English suite for chat and Note → proposed tasks can
-be validated without contacting a server:
+The versioned Finnish and English suite for chat, Note → proposed tasks, and
+Note → proposed calendar events can be validated without contacting a server:
 
 ```sh
 dart run tool/run_ai_quality_evaluation.dart --dry-run

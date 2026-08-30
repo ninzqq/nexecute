@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:nexecute/ai/application/ai_application_context_read_contract.dart';
+import 'package:nexecute/ai/application/ai_note_event_prompt.dart';
 import 'package:nexecute/ai/application/ai_note_task_prompt.dart';
 import 'package:nexecute/ai/application/ai_read_tool_coordinator.dart';
 import 'package:nexecute/ai/domain/ai_application_context.dart';
@@ -9,12 +10,14 @@ import 'package:nexecute/ai/domain/ai_chat_message.dart';
 import 'package:nexecute/ai/domain/ai_chat_request.dart';
 import 'package:nexecute/ai/domain/ai_connection_profile.dart';
 import 'package:nexecute/ai/domain/ai_connection_result.dart';
+import 'package:nexecute/ai/domain/ai_event_proposal.dart';
 import 'package:nexecute/ai/domain/ai_model_info.dart';
 import 'package:nexecute/ai/domain/ai_protocol.dart';
 import 'package:nexecute/ai/domain/ai_stream_event.dart';
 import 'package:nexecute/ai/domain/ai_task_proposal.dart';
 import 'package:nexecute/ai/domain/ai_tool.dart';
 import 'package:nexecute/ai/infrastructure/ai_task_proposal_parser.dart';
+import 'package:nexecute/ai/infrastructure/ai_event_proposal_parser.dart';
 import 'package:nexecute/ai/repositories/ai_assistant_repository.dart';
 import 'package:nexecute/ai/repositories/ai_response_handle.dart';
 import 'package:nexecute/domain/calendar/calendar_query_range.dart';
@@ -23,6 +26,7 @@ enum AiQualityWorkflow {
   chat,
   attachedContext,
   noteToTasks,
+  noteToEvent,
   parserFixture,
   toolProtocolFixture,
 }
@@ -168,6 +172,38 @@ class AiQualityCase {
             (expectation['maxTasks'] as int) <
                 (expectation['minTasks'] as int)) {
           throw const FormatException('Task-count bounds are invalid.');
+        }
+        _validateTextChecks(expectation);
+      case AiQualityWorkflow.noteToEvent:
+        _string(input, 'noteTitle');
+        _string(input, 'noteContent');
+        _eventReferenceFrom(input);
+        final expectedEvent = expectation['expectedEvent'];
+        if (expectedEvent is! bool) {
+          throw const FormatException('expectedEvent must be a boolean.');
+        }
+        for (final field in const [
+          'startDate',
+          'startTime',
+          'endDate',
+          'endTime',
+        ]) {
+          final value = expectation[field];
+          if (expectation.containsKey(field) &&
+              value != null &&
+              value is! String) {
+            throw FormatException('$field must be text or null.');
+          }
+        }
+        final isAllDay = expectation['isAllDay'];
+        if (expectation.containsKey('isAllDay') &&
+            isAllDay != null &&
+            isAllDay is! bool) {
+          throw const FormatException('isAllDay must be a boolean or null.');
+        }
+        final completeSchedule = expectation['hasCompleteSchedule'];
+        if (completeSchedule != null && completeSchedule is! bool) {
+          throw const FormatException('hasCompleteSchedule must be a boolean.');
         }
         _validateTextChecks(expectation);
       case AiQualityWorkflow.parserFixture:
@@ -334,6 +370,8 @@ class AiQualityReport {
           'chatSystemInstruction': profile.systemPrompt,
           'noteToTasksSystemInstruction':
               AiNoteTaskPromptBuilder.systemInstruction,
+          'noteToEventSystemInstruction':
+              AiNoteEventPromptBuilder.systemInstruction,
         },
       },
       'summary': {'total': results.length, ...counts},
@@ -482,6 +520,36 @@ class AiQualityEvaluator {
         );
       }
       final diagnostics = _taskDiagnostics(evaluationCase, proposal);
+      return _result(
+        evaluationCase,
+        repetition,
+        stopwatch.elapsed,
+        outcome:
+            diagnostics.isEmpty
+                ? AiQualityOutcome.passed
+                : AiQualityOutcome.qualityFailure,
+        output: output,
+        diagnostics: diagnostics,
+        usage: collected.usage,
+      );
+    }
+    if (evaluationCase.workflow == AiQualityWorkflow.noteToEvent) {
+      final AiEventProposal proposal;
+      try {
+        proposal = AiEventProposalParser.parse(output);
+      } on AiEventProposalFormatException catch (error) {
+        return _result(
+          evaluationCase,
+          repetition,
+          stopwatch.elapsed,
+          outcome: AiQualityOutcome.applicationFailure,
+          output: output,
+          failureCode: 'event_proposal_${error.code.name}',
+          diagnostics: [error.message],
+          usage: collected.usage,
+        );
+      }
+      final diagnostics = _eventDiagnostics(evaluationCase, proposal);
       return _result(
         evaluationCase,
         repetition,
@@ -693,6 +761,17 @@ class AiQualityEvaluator {
       systemInstruction = prompt.systemInstruction;
       userMessage = prompt.userMessage;
       applicationContext = null;
+    } else if (evaluationCase.workflow == AiQualityWorkflow.noteToEvent) {
+      final reference = _eventReferenceFrom(evaluationCase.input);
+      final prompt = AiNoteEventPromptBuilder.build(
+        noteTitle: evaluationCase.input['noteTitle'] as String,
+        noteContent: evaluationCase.input['noteContent'] as String,
+        referenceLocalDateTime: reference.localDateTime,
+        utcOffset: reference.utcOffset,
+      );
+      systemInstruction = prompt.systemInstruction;
+      userMessage = prompt.userMessage;
+      applicationContext = null;
     } else {
       systemInstruction = profile.systemPrompt;
       userMessage = evaluationCase.input['message'] as String;
@@ -785,6 +864,47 @@ class AiQualityEvaluator {
     return diagnostics;
   }
 
+  static List<String> _eventDiagnostics(
+    AiQualityCase evaluationCase,
+    AiEventProposal proposal,
+  ) {
+    final expectation = evaluationCase.expectation;
+    final diagnostics = <String>[];
+    final expectsEvent = expectation['expectedEvent'] as bool;
+    final event = proposal.event;
+    if ((event != null) != expectsEvent) {
+      diagnostics.add(
+        expectsEvent
+            ? 'Expected one event proposal, got none.'
+            : 'Expected no event proposal, got one.',
+      );
+      return diagnostics;
+    }
+    if (event == null) return diagnostics;
+
+    final actualFields = <String, Object?>{
+      'startDate': event.startDate,
+      'startTime': event.startTime,
+      'endDate': event.endDate,
+      'endTime': event.endTime,
+      'isAllDay': event.isAllDay,
+      'hasCompleteSchedule': event.hasCompleteSchedule,
+    };
+    for (final entry in actualFields.entries) {
+      if (expectation.containsKey(entry.key) &&
+          expectation[entry.key] != entry.value) {
+        diagnostics.add(
+          'Expected ${entry.key}=${expectation[entry.key]}, '
+          'got ${entry.value}.',
+        );
+      }
+    }
+    diagnostics.addAll(
+      _textDiagnostics(expectation, '${event.title}\n${event.description}'),
+    );
+    return diagnostics;
+  }
+
   static List<String> _textDiagnostics(
     Map<String, Object?> expectation,
     String output,
@@ -868,6 +988,28 @@ class _CollectedResponse {
   final bool completed;
   final bool toolCallReceived;
   final AiTokenUsage? usage;
+}
+
+({DateTime localDateTime, Duration utcOffset}) _eventReferenceFrom(
+  Map<String, Object?> input,
+) {
+  final source = _nonEmptyString(input, 'referenceLocalDateTime');
+  final localDateTime = DateTime.tryParse(source);
+  if (localDateTime == null || localDateTime.isUtc) {
+    throw const FormatException(
+      'referenceLocalDateTime must be a local ISO 8601 value without an offset.',
+    );
+  }
+  final offsetMinutes = _integer(input, 'utcOffsetMinutes');
+  if (offsetMinutes.abs() > 14 * 60) {
+    throw const FormatException(
+      'utcOffsetMinutes must be between -840 and 840.',
+    );
+  }
+  return (
+    localDateTime: localDateTime,
+    utcOffset: Duration(minutes: offsetMinutes),
+  );
 }
 
 AiApplicationContextEnvelope _attachedContextFrom(Map<String, Object?> input) {
