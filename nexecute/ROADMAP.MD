@@ -337,13 +337,13 @@ nexecuteGateway
 - [x] ~~Show the active connection and model in the conversation view.~~
 - [x] ~~Verify offline/error behavior and all application themes.~~
 
-Conversation metadata is stored at
-`users/{userId}/aiConversations/{conversationId}` and each message at
-`users/{userId}/aiConversations/{conversationId}/messages/{messageId}`. API
-credentials and provider-internal reasoning are never written to these
-documents. User messages are stored before generation; assistant messages are
-stored once they complete, fail, or are stopped so partial output can sync
-without writing every streamed token.
+Conversation documents are stored at
+`users/{userId}/aiConversations/{conversationId}` with messages embedded
+directly inside the conversation document to minimize Firestore read, write,
+and delete operations. API credentials and provider-internal reasoning are
+never written to these documents. User messages are stored before generation;
+assistant messages are stored once they complete, fail, or are stopped so
+partial output can sync without writing every streamed token.
 
 #### Step 5: local phase 1 — validate real chat 🚧
 
@@ -896,6 +896,12 @@ These improvements should be considered before or alongside larger features.
   ~~notes, tags, trash, count, and editor surfaces render those states explicitly.~~
 - [x] ~~Initialize Firebase through one clearly owned application startup path.~~
 - [x] ~~Add Firestore Emulator tests for repository behavior and security rules.~~
+- [x] ~~Optimize Firestore read, write, and deletion costs across AI chats and~~
+  ~~calendar events. AI conversations embed messages directly in~~
+  ~~`users/{userId}/aiConversations/{conversationId}` to reduce conversation~~
+  ~~reads from O(N) to O(1) and eliminate N+1 reads on deletion. Redundant~~
+  ~~duplicate reads in AI chat initialization and unnecessary `get()` queries~~
+  ~~prior to calendar event deletions have been removed.~~
 
 ### Maintainability cleanup
 
