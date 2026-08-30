@@ -8,10 +8,12 @@ void main() {
     final store = FakeAiConnectionProfileStore();
     addTearDown(store.dispose);
     final repository = FakeAiAssistantRepository();
+    final credentialStore = FakeAiCredentialStore();
     final ids = ['copy-id'].iterator;
     final controller = AiSettingsController(
       profileStore: store,
       assistantRepository: repository,
+      credentialStore: credentialStore,
       idFactory: () {
         ids.moveNext();
         return ids.current;
@@ -46,9 +48,11 @@ void main() {
       ),
       models: [AiModelInfo(id: 'qwen3:8b'), AiModelInfo(id: 'gemma4')],
     );
+    final credentialStore = FakeAiCredentialStore();
     final controller = AiSettingsController(
       profileStore: store,
       assistantRepository: repository,
+      credentialStore: credentialStore,
     );
     addTearDown(controller.dispose);
     await controller.initialize();
@@ -68,9 +72,11 @@ void main() {
     final store = FakeAiConnectionProfileStore();
     addTearDown(store.dispose);
     final repository = FakeAiAssistantRepository();
+    final credentialStore = FakeAiCredentialStore();
     final controller = AiSettingsController(
       profileStore: store,
       assistantRepository: repository,
+      credentialStore: credentialStore,
     );
     addTearDown(controller.dispose);
     await controller.initialize();
@@ -80,6 +86,81 @@ void main() {
 
     expect(result.status, AiConnectionStatus.invalidConfiguration);
     expect(repository.testedProfiles, isEmpty);
+  });
+
+  test('stores, replaces, and removes bearer tokens separately', () async {
+    final store = FakeAiConnectionProfileStore();
+    addTearDown(store.dispose);
+    final credentialStore = FakeAiCredentialStore();
+    final controller = AiSettingsController(
+      profileStore: store,
+      assistantRepository: FakeAiAssistantRepository(),
+      credentialStore: credentialStore,
+    );
+    addTearDown(controller.dispose);
+    await controller.initialize();
+    final bearerProfile = _profile().copyWith(
+      authenticationMode: AiAuthenticationMode.bearerToken,
+      clearCredentialReference: true,
+    );
+
+    await controller.saveProfile(bearerProfile, bearerToken: 'first-secret');
+    final firstSaved = controller.profiles.single;
+    final firstReference = firstSaved.credentialReference!;
+
+    expect(firstReference, startsWith('secure-storage:'));
+    expect(credentialStore.credentials[firstReference], 'first-secret');
+
+    await controller.saveProfile(firstSaved, bearerToken: 'second-secret');
+    final secondSaved = controller.profiles.single;
+    final secondReference = secondSaved.credentialReference!;
+
+    expect(secondReference, isNot(firstReference));
+    expect(credentialStore.credentials[firstReference], isNull);
+    expect(credentialStore.credentials[secondReference], 'second-secret');
+    expect(credentialStore.deletedReferences, contains(firstReference));
+
+    await controller.saveProfile(
+      secondSaved.copyWith(authenticationMode: AiAuthenticationMode.none),
+    );
+
+    expect(controller.profiles.single.credentialReference, isNull);
+    expect(credentialStore.credentials[secondReference], isNull);
+    expect(credentialStore.deletedReferences, contains(secondReference));
+  });
+
+  test('never copies a credential and deletes it with its profile', () async {
+    final credentialStore = FakeAiCredentialStore(
+      credentials: const {'secure-storage:original': 'private-token'},
+    );
+    final original = _profile().copyWith(
+      authenticationMode: AiAuthenticationMode.bearerToken,
+      credentialReference: 'secure-storage:original',
+    );
+    final store = FakeAiConnectionProfileStore(profiles: [original]);
+    addTearDown(store.dispose);
+    final controller = AiSettingsController(
+      profileStore: store,
+      assistantRepository: FakeAiAssistantRepository(),
+      credentialStore: credentialStore,
+      idFactory: () => 'copy-id',
+    );
+    addTearDown(controller.dispose);
+    await controller.initialize();
+
+    final duplicate = await controller.duplicateProfile(original);
+
+    expect(duplicate.authenticationMode, AiAuthenticationMode.bearerToken);
+    expect(duplicate.credentialReference, isNull);
+    expect(credentialStore.credentials, hasLength(1));
+
+    await controller.deleteProfile(original.id);
+
+    expect(credentialStore.credentials, isEmpty);
+    expect(
+      credentialStore.deletedReferences,
+      contains('secure-storage:original'),
+    );
   });
 }
 

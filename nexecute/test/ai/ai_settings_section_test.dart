@@ -21,6 +21,7 @@ void main() {
       MultiProvider(
         providers: [
           Provider<AiConnectionProfileStore>.value(value: store),
+          Provider<AiCredentialStore>.value(value: FakeAiCredentialStore()),
           Provider<AiAssistantRepository>.value(value: repository),
         ],
         child: MaterialApp(
@@ -180,6 +181,7 @@ void main() {
       MultiProvider(
         providers: [
           Provider<AiConnectionProfileStore>.value(value: store),
+          Provider<AiCredentialStore>.value(value: FakeAiCredentialStore()),
           Provider<AiAssistantRepository>.value(value: repository),
         ],
         child: const MaterialApp(home: Scaffold(body: AiSettingsSection())),
@@ -209,5 +211,61 @@ void main() {
     await tester.pump();
 
     expect(find.text('Use a value from 1 to 131072.'), findsOneWidget);
+  });
+
+  testWidgets('saves a bearer token outside the connection profile', (
+    tester,
+  ) async {
+    final store = FakeAiConnectionProfileStore();
+    final credentialStore = FakeAiCredentialStore();
+    addTearDown(store.dispose);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<AiConnectionProfileStore>.value(value: store),
+          Provider<AiCredentialStore>.value(value: credentialStore),
+          Provider<AiAssistantRepository>.value(
+            value: FakeAiAssistantRepository(),
+          ),
+        ],
+        child: const MaterialApp(home: Scaffold(body: AiSettingsSection())),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('ai-add-profile')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('ai-profile-name-field')),
+      'Private gateway',
+    );
+    await tester.enterText(
+      find.byKey(const Key('ai-profile-url-field')),
+      'https://gateway.example.test/v1',
+    );
+    await tester.enterText(
+      find.byKey(const Key('ai-profile-model-field')),
+      'model-private',
+    );
+    final authField = find.byKey(const Key('ai-profile-auth-field'));
+    await tester.ensureVisible(authField);
+    await tester.tap(authField);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bearer token').last);
+    await tester.pumpAndSettle();
+
+    final tokenField = find.byKey(const Key('ai-profile-bearer-token-field'));
+    await tester.ensureVisible(tokenField);
+    await tester.enterText(tokenField, 'widget-private-token');
+    await tester.ensureVisible(find.byKey(const Key('ai-profile-save')));
+    await tester.tap(find.byKey(const Key('ai-profile-save')));
+    await tester.pumpAndSettle();
+
+    final profile = (await store.getProfiles()).single;
+    expect(profile.authenticationMode, AiAuthenticationMode.bearerToken);
+    expect(profile.credentialReference, startsWith('secure-storage:'));
+    expect(credentialStore.savedCredentials, ['widget-private-token']);
+    expect(find.text('widget-private-token'), findsNothing);
   });
 }

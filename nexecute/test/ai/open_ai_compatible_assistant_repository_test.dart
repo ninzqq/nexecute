@@ -80,6 +80,144 @@ void main() {
     expect(result.message, contains('ending in /v1'));
   });
 
+  test('uses a securely resolved bearer token for models and chat', () async {
+    const reference = 'secure-storage:home';
+    const token = 'private-bearer-token';
+    final credentialStore = _MemoryCredentialStore({reference: token});
+    final requests = <http.Request>[];
+    final repository = OpenAiCompatibleAssistantRepository(
+      credentialStore: credentialStore,
+      client: MockClient((request) async {
+        requests.add(request);
+        expect(request.headers['authorization'], 'Bearer $token');
+        if (request.method == 'GET') {
+          return http.Response(
+            jsonEncode({
+              'data': [
+                {'id': 'model-a'},
+              ],
+            }),
+            200,
+          );
+        }
+        return http.Response(
+          'data: ${jsonEncode({
+            'choices': [
+              {
+                'delta': {'content': 'Ready'},
+                'finish_reason': 'stop',
+              },
+            ],
+          })}\n\ndata: [DONE]\n\n',
+          200,
+          headers: {'content-type': 'text/event-stream'},
+        );
+      }),
+    );
+    final authenticatedProfile = profile.copyWith(
+      authenticationMode: AiAuthenticationMode.bearerToken,
+      credentialReference: reference,
+    );
+
+    await repository.listModels(authenticatedProfile);
+    final handle = await repository.startResponse(
+      AiChatRequest(
+        connectionProfile: authenticatedProfile,
+        conversationId: 'conversation-auth',
+        messages: [
+          AiChatMessage(
+            id: 'message-auth',
+            role: AiMessageRole.user,
+            content: 'Hello',
+            createdAt: DateTime.utc(2026, 8, 30),
+          ),
+        ],
+      ),
+    );
+    final events = await handle.events.toList();
+
+    expect(requests.map((request) => request.method), ['GET', 'POST']);
+    expect(credentialStore.readReferences, [reference, reference]);
+    expect(events.whereType<AiTextDelta>().single.text, 'Ready');
+    expect(events.last, isA<AiResponseCompleted>());
+  });
+
+  test('reports a missing bearer token without starting a request', () async {
+    var requestCount = 0;
+    final repository = OpenAiCompatibleAssistantRepository(
+      credentialStore: _MemoryCredentialStore(),
+      client: MockClient((_) async {
+        requestCount++;
+        return http.Response('{}', 200);
+      }),
+    );
+    final authenticatedProfile = profile.copyWith(
+      authenticationMode: AiAuthenticationMode.bearerToken,
+      credentialReference: 'secure-storage:missing',
+    );
+
+    final result = await repository.testConnection(authenticatedProfile);
+
+    expect(result.status, AiConnectionStatus.invalidConfiguration);
+    expect(result.message, contains('missing'));
+    expect(requestCount, 0);
+  });
+
+  test('redacts the bearer token from endpoint errors', () async {
+    const reference = 'secure-storage:home';
+    const token = 'secret-that-must-not-leak';
+    final repository = OpenAiCompatibleAssistantRepository(
+      credentialStore: _MemoryCredentialStore({reference: token}),
+      client: MockClient(
+        (_) async => http.Response(
+          jsonEncode({
+            'error': {'message': 'Rejected Bearer $token'},
+          }),
+          401,
+        ),
+      ),
+    );
+    final authenticatedProfile = profile.copyWith(
+      authenticationMode: AiAuthenticationMode.bearerToken,
+      credentialReference: reference,
+    );
+
+    final result = await repository.testConnection(authenticatedProfile);
+
+    expect(result.status, AiConnectionStatus.authenticationFailed);
+    expect(result.message, isNot(contains(token)));
+    expect(result.message, contains('[credential redacted]'));
+  });
+
+  test('redacts the bearer token from streamed endpoint errors', () async {
+    const reference = 'secure-storage:home';
+    const token = 'stream-secret-that-must-not-leak';
+    final repository = OpenAiCompatibleAssistantRepository(
+      credentialStore: _MemoryCredentialStore({reference: token}),
+      client: MockClient(
+        (_) async => http.Response(
+          'data: ${jsonEncode({
+            'error': {'message': 'Rejected token $token'},
+          })}\n\n',
+          200,
+          headers: {'content-type': 'text/event-stream'},
+        ),
+      ),
+    );
+    final authenticatedProfile = profile.copyWith(
+      authenticationMode: AiAuthenticationMode.bearerToken,
+      credentialReference: reference,
+    );
+
+    final handle = await repository.startResponse(
+      _request(authenticatedProfile),
+    );
+    final event = (await handle.events.toList()).single as AiResponseFailed;
+
+    expect(event.message, isNot(contains(token)));
+    expect(event.message, contains('[credential redacted]'));
+  });
+
   test('normalizes streamed chat completion deltas', () async {
     late http.Request sentRequest;
     final repository = OpenAiCompatibleAssistantRepository(
@@ -736,6 +874,33 @@ void main() {
       expect(result.status, AiConnectionStatus.unsupported);
     },
   );
+}
+
+class _MemoryCredentialStore implements AiCredentialStore {
+  _MemoryCredentialStore([Map<String, String> credentials = const {}])
+    : _credentials = Map.of(credentials);
+
+  final Map<String, String> _credentials;
+  final List<String> readReferences = [];
+
+  @override
+  bool get isAvailable => true;
+
+  @override
+  Future<String> saveCredential(String credential) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<String?> readCredential(String reference) async {
+    readReferences.add(reference);
+    return _credentials[reference];
+  }
+
+  @override
+  Future<void> deleteCredential(String reference) {
+    throw UnimplementedError();
+  }
 }
 
 AiChatRequest _request(AiConnectionProfile profile) => AiChatRequest(

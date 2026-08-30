@@ -52,6 +52,7 @@ void main() {
           ChangeNotifierProvider(create: (_) => AppThemeController()),
           ChangeNotifierProvider(create: (_) => CalendarSettingsController()),
           Provider<AiConnectionProfileStore>.value(value: profileStore),
+          Provider<AiCredentialStore>.value(value: FakeAiCredentialStore()),
           Provider<AiAssistantRepository>.value(
             value: FakeAiAssistantRepository(),
           ),

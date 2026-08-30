@@ -10,6 +10,7 @@ import 'package:nexecute/ai/presentation/ai_endpoint_validation.dart';
 import 'package:nexecute/ai/presentation/ai_settings_controller.dart';
 import 'package:nexecute/ai/repositories/ai_assistant_repository.dart';
 import 'package:nexecute/ai/repositories/ai_connection_profile_store.dart';
+import 'package:nexecute/ai/repositories/ai_credential_store.dart';
 import 'package:provider/provider.dart';
 
 class AiSettingsSection extends StatefulWidget {
@@ -30,6 +31,7 @@ class _AiSettingsSectionState extends State<AiSettingsSection> {
     final controller = AiSettingsController(
       profileStore: context.read<AiConnectionProfileStore>(),
       assistantRepository: context.read<AiAssistantRepository>(),
+      credentialStore: context.read<AiCredentialStore>(),
     );
     controller.addListener(_onControllerChanged);
     _controller = controller;
@@ -120,7 +122,7 @@ class _AiSettingsSectionState extends State<AiSettingsSection> {
     final controller = _controller;
     if (controller == null) return;
 
-    final savedProfile = await showDialog<AiConnectionProfile>(
+    final result = await showDialog<_AiConnectionProfileEditResult>(
       context: context,
       builder:
           (context) => _AiConnectionProfileEditor(
@@ -128,10 +130,13 @@ class _AiSettingsSectionState extends State<AiSettingsSection> {
             settingsController: controller,
           ),
     );
-    if (savedProfile == null || !mounted) return;
+    if (result == null || !mounted) return;
 
     try {
-      await controller.saveProfile(savedProfile);
+      await controller.saveProfile(
+        result.profile,
+        bearerToken: result.bearerToken,
+      );
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -162,7 +167,14 @@ class _AiSettingsSectionState extends State<AiSettingsSection> {
           ),
     );
     if (shouldDelete != true || !mounted) return;
-    await _controller?.deleteProfile(profile.id);
+    try {
+      await _controller?.deleteProfile(profile.id);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not delete AI connection: $error')),
+      );
+    }
   }
 }
 
@@ -502,6 +514,16 @@ class _AiConnectionProfileEditor extends StatefulWidget {
       _AiConnectionProfileEditorState();
 }
 
+class _AiConnectionProfileEditResult {
+  const _AiConnectionProfileEditResult({
+    required this.profile,
+    this.bearerToken,
+  });
+
+  final AiConnectionProfile profile;
+  final String? bearerToken;
+}
+
 class _AiConnectionProfileEditorState
     extends State<_AiConnectionProfileEditor> {
   final _formKey = GlobalKey<FormState>();
@@ -512,6 +534,7 @@ class _AiConnectionProfileEditorState
   late final TextEditingController _connectionTimeoutController;
   late final TextEditingController _responseIdleTimeoutController;
   late final TextEditingController _systemPromptController;
+  late final TextEditingController _credentialController;
   late final String _profileId;
   late AiProtocol _protocol;
   late AiAuthenticationMode _authenticationMode;
@@ -521,6 +544,7 @@ class _AiConnectionProfileEditorState
   bool _discoveringModels = false;
   String? _discoveryMessage;
   String? _urlWarning;
+  bool _obscureCredential = true;
 
   @override
   void initState() {
@@ -549,6 +573,7 @@ class _AiConnectionProfileEditorState
     _systemPromptController = TextEditingController(
       text: profile?.systemPrompt ?? aiDefaultSystemPrompt,
     );
+    _credentialController = TextEditingController();
     _protocol = profile?.protocol ?? AiProtocol.openAiCompatibleChat;
     _authenticationMode =
         profile?.authenticationMode ?? AiAuthenticationMode.none;
@@ -566,6 +591,7 @@ class _AiConnectionProfileEditorState
     _connectionTimeoutController.dispose();
     _responseIdleTimeoutController.dispose();
     _systemPromptController.dispose();
+    _credentialController.dispose();
     super.dispose();
   }
 
@@ -669,6 +695,7 @@ class _AiConnectionProfileEditorState
                       key: const Key('ai-discover-models'),
                       onPressed:
                           _discoveringModels ||
+                                  !_hasUsableSavedCredential ||
                                   !_supportsCapability(
                                     AiCapability.modelDiscovery,
                                   )
@@ -928,9 +955,7 @@ class _AiConnectionProfileEditorState
                     for (final mode in AiAuthenticationMode.values)
                       DropdownMenuItem(
                         value: mode,
-                        enabled:
-                            !mode.requiresCredential ||
-                            widget.profile?.credentialReference != null,
+                        enabled: _authenticationModeEnabled(mode),
                         child: Text(
                           mode.label,
                           overflow: TextOverflow.ellipsis,
@@ -939,13 +964,78 @@ class _AiConnectionProfileEditorState
                   ],
                   onChanged: (value) {
                     if (value != null) {
-                      setState(() => _authenticationMode = value);
+                      setState(() {
+                        _authenticationMode = value;
+                        if (value != AiAuthenticationMode.bearerToken) {
+                          _credentialController.clear();
+                        }
+                      });
                     }
                   },
                 ),
+                if (_authenticationMode ==
+                    AiAuthenticationMode.bearerToken) ...[
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    key: const Key('ai-profile-bearer-token-field'),
+                    controller: _credentialController,
+                    obscureText: _obscureCredential,
+                    enableSuggestions: false,
+                    autocorrect: false,
+                    maxLength: aiMaxCredentialCharacters,
+                    decoration: InputDecoration(
+                      labelText:
+                          widget.profile?.credentialReference == null
+                              ? 'Bearer token'
+                              : 'Replace bearer token',
+                      helperMaxLines: 3,
+                      helperText:
+                          widget.profile?.credentialReference == null
+                              ? 'Stored only in this device’s secure credential storage.'
+                              : 'Leave blank to keep the saved token. Choose None above to remove it.',
+                      suffixIcon: IconButton(
+                        key: const Key('ai-profile-toggle-token-visibility'),
+                        tooltip:
+                            _obscureCredential ? 'Show token' : 'Hide token',
+                        onPressed:
+                            () => setState(
+                              () => _obscureCredential = !_obscureCredential,
+                            ),
+                        icon: Icon(
+                          _obscureCredential
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                        ),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (_authenticationMode !=
+                          AiAuthenticationMode.bearerToken) {
+                        return null;
+                      }
+                      if ((value?.trim().isEmpty ?? true) &&
+                          widget.profile?.credentialReference == null) {
+                        return 'Enter a bearer token.';
+                      }
+                      return null;
+                    },
+                  ),
+                  if (Uri.tryParse(_baseUrlController.text.trim())?.scheme ==
+                      'http') ...[
+                    const SizedBox(height: 8),
+                    const _InlineWarning(
+                      message:
+                          'A bearer token sent over plain HTTP is visible on the network. Prefer HTTPS even for private endpoints.',
+                    ),
+                  ],
+                ],
                 const SizedBox(height: 6),
                 Text(
-                  'Bearer-token and API-key entry will be enabled only with secure credential storage. Direct hosted-provider credentials remain unavailable on web.',
+                  !widget.settingsController.credentialStorageAvailable
+                      ? kIsWeb
+                          ? 'Direct endpoint credentials are unavailable on web. Use a user-owned gateway instead.'
+                          : 'Secure endpoint credentials are not configured for this platform yet.'
+                      : 'Bearer tokens are for local or private endpoints. They use this device’s secure storage and are never saved in the connection profile or Firestore. Hosted-provider BYOK and API-key headers are not available yet.',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
@@ -1012,11 +1102,18 @@ class _AiConnectionProfileEditorState
     );
     if (!validation.isValid) return;
 
-    Navigator.pop(
+    Navigator.pop<_AiConnectionProfileEditResult>(
       context,
-      _buildProfile(
-        baseUrl: validation.uri!,
-        fallbackModelId: _modelController.text.trim(),
+      _AiConnectionProfileEditResult(
+        profile: _buildProfile(
+          baseUrl: validation.uri!,
+          fallbackModelId: _modelController.text.trim(),
+        ),
+        bearerToken:
+            _authenticationMode == AiAuthenticationMode.bearerToken &&
+                    _credentialController.text.trim().isNotEmpty
+                ? _credentialController.text.trim()
+                : null,
       ),
     );
   }
@@ -1063,6 +1160,21 @@ class _AiConnectionProfileEditorState
   bool _supportsCapability(AiCapability capability) {
     return _capabilityOverrides[capability] ??
         _protocol.defaultCapabilities.contains(capability);
+  }
+
+  bool get _hasUsableSavedCredential =>
+      _authenticationMode != AiAuthenticationMode.bearerToken ||
+      widget.profile?.credentialReference != null;
+
+  bool _authenticationModeEnabled(AiAuthenticationMode mode) {
+    if (mode == _authenticationMode) return true;
+    return switch (mode) {
+      AiAuthenticationMode.none => true,
+      AiAuthenticationMode.bearerToken =>
+        !kIsWeb && widget.settingsController.credentialStorageAvailable,
+      AiAuthenticationMode.apiKeyHeader ||
+      AiAuthenticationMode.gatewaySession => false,
+    };
   }
 
   static String? _boundedIntegerError(
@@ -1118,7 +1230,7 @@ extension on AiProtocol {
 extension on AiAuthenticationMode {
   String get label => switch (this) {
     AiAuthenticationMode.none => 'None',
-    AiAuthenticationMode.bearerToken => 'Bearer token (not yet available)',
+    AiAuthenticationMode.bearerToken => 'Bearer token',
     AiAuthenticationMode.apiKeyHeader => 'API key header (not yet available)',
     AiAuthenticationMode.gatewaySession => 'Nexecute gateway session',
   };

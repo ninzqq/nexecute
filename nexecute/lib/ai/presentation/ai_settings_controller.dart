@@ -2,21 +2,26 @@ import 'package:flutter/foundation.dart';
 import 'package:nexecute/ai/domain/ai_connection_profile.dart';
 import 'package:nexecute/ai/domain/ai_connection_result.dart';
 import 'package:nexecute/ai/domain/ai_model_info.dart';
+import 'package:nexecute/ai/domain/ai_protocol.dart';
 import 'package:nexecute/ai/repositories/ai_assistant_repository.dart';
 import 'package:nexecute/ai/repositories/ai_connection_profile_store.dart';
+import 'package:nexecute/ai/repositories/ai_credential_store.dart';
 import 'package:uuid/uuid.dart';
 
 class AiSettingsController extends ChangeNotifier {
   AiSettingsController({
     required AiConnectionProfileStore profileStore,
     required AiAssistantRepository assistantRepository,
+    required AiCredentialStore credentialStore,
     String Function()? idFactory,
   }) : _profileStore = profileStore,
        _assistantRepository = assistantRepository,
+       _credentialStore = credentialStore,
        _idFactory = idFactory ?? _newId;
 
   final AiConnectionProfileStore _profileStore;
   final AiAssistantRepository _assistantRepository;
+  final AiCredentialStore _credentialStore;
   final String Function() _idFactory;
 
   List<AiConnectionProfile> _profiles = const [];
@@ -41,6 +46,7 @@ class AiSettingsController extends ChangeNotifier {
   String? get discoveringProfileId => _discoveringProfileId;
   List<AiModelInfo> get discoveredModels => _discoveredModels;
   Object? get modelDiscoveryError => _modelDiscoveryError;
+  bool get credentialStorageAvailable => _credentialStore.isAvailable;
 
   String createProfileId() => _idFactory();
 
@@ -58,13 +64,69 @@ class AiSettingsController extends ChangeNotifier {
     }
   }
 
-  Future<void> saveProfile(AiConnectionProfile profile) async {
+  Future<void> saveProfile(
+    AiConnectionProfile profile, {
+    String? bearerToken,
+  }) async {
     final shouldActivate = _profiles.isEmpty;
-    await _profileStore.saveProfile(profile);
-    if (shouldActivate) {
-      await _profileStore.setActiveProfileId(profile.id);
+    final existing = _profileWithId(profile.id);
+    final oldReference =
+        existing?.credentialReference ?? profile.credentialReference;
+    final normalizedToken = bearerToken?.trim();
+    String? newReference;
+    late final AiConnectionProfile profileToSave;
+
+    if (profile.authenticationMode == AiAuthenticationMode.bearerToken) {
+      if (!_credentialStore.isAvailable) {
+        throw const AiCredentialStoreException(
+          'Secure endpoint credentials are not available on this platform.',
+        );
+      }
+      if (normalizedToken?.isNotEmpty ?? false) {
+        newReference = await _credentialStore.saveCredential(normalizedToken!);
+        profileToSave = profile.copyWith(credentialReference: newReference);
+      } else if (oldReference != null) {
+        profileToSave = profile.copyWith(credentialReference: oldReference);
+      } else {
+        throw const AiCredentialStoreException(
+          'Enter a bearer token for this connection.',
+        );
+      }
+    } else if (profile.authenticationMode.requiresCredential) {
+      throw const AiCredentialStoreException(
+        'This authentication method is not available yet.',
+      );
+    } else {
+      if (oldReference != null) {
+        await _credentialStore.deleteCredential(oldReference);
+      }
+      profileToSave = profile.copyWith(clearCredentialReference: true);
     }
-    _clearResultsFor(profile.id);
+
+    if (!profileToSave.isValid) {
+      if (newReference != null) {
+        await _deleteCredentialBestEffort(newReference);
+      }
+      throw const FormatException('The AI connection profile is incomplete.');
+    }
+
+    try {
+      await _profileStore.saveProfile(profileToSave);
+    } catch (_) {
+      if (newReference != null) {
+        await _deleteCredentialBestEffort(newReference);
+      }
+      rethrow;
+    }
+    if (newReference != null &&
+        oldReference != null &&
+        oldReference != newReference) {
+      await _credentialStore.deleteCredential(oldReference);
+    }
+    if (shouldActivate) {
+      await _profileStore.setActiveProfileId(profileToSave.id);
+    }
+    _clearResultsFor(profileToSave.id);
     await _reloadAndNotify();
   }
 
@@ -74,6 +136,7 @@ class AiSettingsController extends ChangeNotifier {
     final duplicate = profile.copyWith(
       id: _idFactory(),
       name: '${profile.name} copy',
+      clearCredentialReference: true,
     );
     await _profileStore.saveProfile(duplicate);
     await _reloadAndNotify();
@@ -81,6 +144,10 @@ class AiSettingsController extends ChangeNotifier {
   }
 
   Future<void> deleteProfile(String profileId) async {
+    final profile = _profileWithId(profileId);
+    if (profile?.credentialReference case final reference?) {
+      await _credentialStore.deleteCredential(reference);
+    }
     await _profileStore.deleteProfile(profileId);
     _clearResultsFor(profileId);
     await _reloadAndNotify();
@@ -150,6 +217,19 @@ class AiSettingsController extends ChangeNotifier {
   Future<void> _reload() async {
     _profiles = await _profileStore.getProfiles();
     _activeProfile = await _profileStore.getActiveProfile();
+  }
+
+  AiConnectionProfile? _profileWithId(String profileId) {
+    for (final profile in _profiles) {
+      if (profile.id == profileId) return profile;
+    }
+    return null;
+  }
+
+  Future<void> _deleteCredentialBestEffort(String reference) async {
+    try {
+      await _credentialStore.deleteCredential(reference);
+    } catch (_) {}
   }
 
   void _clearResultsFor(String profileId) {

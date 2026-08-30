@@ -95,6 +95,9 @@ void main() {
           ChangeNotifierProvider(create: (_) => AppThemeController()),
           ChangeNotifierProvider.value(value: calendarSettings),
           Provider<AiConnectionProfileStore>.value(value: profileStore),
+          Provider<AiCredentialStore>.value(
+            value: const UnavailableAiCredentialStore(),
+          ),
           Provider<AiAssistantRepository>.value(
             value: const UnconfiguredAiAssistantRepository(),
           ),

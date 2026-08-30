@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/ai/ai.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../support/fake_ai_dependencies.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -61,6 +63,34 @@ void main() {
     addTearDown(store.dispose);
 
     expect(store.getProfiles, throwsA(isA<FormatException>()));
+  });
+
+  test('persists only an opaque credential reference', () async {
+    final store = SharedPreferencesAiConnectionProfileStore();
+    addTearDown(store.dispose);
+    final credentialStore = FakeAiCredentialStore();
+    final controller = AiSettingsController(
+      profileStore: store,
+      assistantRepository: FakeAiAssistantRepository(),
+      credentialStore: credentialStore,
+    );
+    addTearDown(controller.dispose);
+    await controller.initialize();
+    final profile = _profile().copyWith(
+      authenticationMode: AiAuthenticationMode.bearerToken,
+      clearCredentialReference: true,
+    );
+
+    await controller.saveProfile(profile, bearerToken: 'private-bearer-token');
+
+    final preferences = await SharedPreferences.getInstance();
+    final persistedStrings = preferences
+        .getKeys()
+        .map(preferences.getString)
+        .whereType<String>()
+        .join('\n');
+    expect(persistedStrings, contains('secure-storage:fake-1'));
+    expect(persistedStrings, isNot(contains('private-bearer-token')));
   });
 }
 

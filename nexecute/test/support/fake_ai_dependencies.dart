@@ -49,6 +49,50 @@ class FakeAiConnectionProfileStore extends InMemoryAiConnectionProfileStore {
   FakeAiConnectionProfileStore({super.profiles, super.activeProfileId});
 }
 
+class FakeAiCredentialStore implements AiCredentialStore {
+  FakeAiCredentialStore({
+    this.isAvailable = true,
+    Map<String, String> credentials = const {},
+  }) : credentials = Map.of(credentials);
+
+  @override
+  final bool isAvailable;
+  final Map<String, String> credentials;
+  final List<String> savedCredentials = [];
+  final List<String> readReferences = [];
+  final List<String> deletedReferences = [];
+  int _nextReference = 1;
+
+  @override
+  Future<String> saveCredential(String credential) async {
+    if (!isAvailable) {
+      throw const AiCredentialStoreException('Credential store unavailable.');
+    }
+    final reference = 'secure-storage:fake-${_nextReference++}';
+    credentials[reference] = credential;
+    savedCredentials.add(credential);
+    return reference;
+  }
+
+  @override
+  Future<String?> readCredential(String reference) async {
+    if (!isAvailable) {
+      throw const AiCredentialStoreException('Credential store unavailable.');
+    }
+    readReferences.add(reference);
+    return credentials[reference];
+  }
+
+  @override
+  Future<void> deleteCredential(String reference) async {
+    if (!isAvailable) {
+      throw const AiCredentialStoreException('Credential store unavailable.');
+    }
+    credentials.remove(reference);
+    deletedReferences.add(reference);
+  }
+}
+
 class FakeAiConversationStore extends InMemoryAiConversationStore {
   FakeAiConversationStore({super.conversations});
 }

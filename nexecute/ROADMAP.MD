@@ -401,12 +401,12 @@ system message.
 ##### Step 6B: remaining reliability and secure access 🚧
 
 > **Why this remains unfinished:** Basic protocol diagnostics, capability
-> overrides, response normalization, and timeout handling are implemented. The
-> remaining work either needs platform secure-storage integration, evidence
-> from real servers before exposing model-specific context/warm-up controls, or
-> broader platform and network failure testing. Retry behavior also needs a
-> deliberate policy because automatically repeating an ambiguous generation
-> could duplicate work or incur provider usage later.
+> overrides, response normalization, timeout handling, and native bearer-token
+> storage are implemented. The remaining work needs evidence from real servers
+> before exposing model-specific context/warm-up controls, or broader platform
+> and network failure testing. Retry behavior also needs a deliberate policy
+> because automatically repeating an ambiguous generation could duplicate work
+> or incur provider usage later.
 
 - [x] Show protocol-default, confirmed-supported, confirmed-unsupported, and
   unconfirmed capabilities for each profile, with editable per-model
@@ -421,14 +421,28 @@ system message.
 - [x] Report empty, malformed, unreachable, timed-out, and HTTP-failed
   responses as actionable normalized failures instead of silently completing.
 
-- [ ] Add platform secure credential storage for optional local/private
-  endpoint tokens.
+- [x] Add platform secure credential storage for optional local/private
+  endpoint bearer tokens.
 - [ ] Add explicit context-window and warm-up settings where the server and
   protocol support them reliably.
 - [ ] Keep automatic retries away from ambiguous generation requests that may
   already have completed or incurred provider work.
 - [ ] Add actionable diagnostics for DNS, TLS, CORS, mixed-content, local
   network, authentication, model-missing, and protocol-compatibility failures.
+
+Bearer tokens are stored on the current Android client through
+`flutter_secure_storage`; only opaque credential references remain in local
+connection-profile metadata. OpenAI-compatible model discovery, connection
+tests, and chat resolve the token per request and send it through the
+`Authorization` header. Tokens are not copied when profiles are duplicated,
+are deleted when replaced, removed, or when their profile is deleted, and are
+redacted from endpoint errors. Direct credentials remain disabled on Flutter
+Web and on native targets that have not yet received their platform security
+configuration. The storage dependency requires at least Android API 23; the
+current Flutter toolchain already targets API 24. Android Auto Backup is
+disabled so encrypted preferences are not restored without the device-bound
+KeyStore key. Configurable API-key headers remain a separate follow-up because
+their header-name contract is not yet defined.
 
 #### Step 7: local phase 3 — first confirmed structured action ✅
 

@@ -163,8 +163,18 @@ class NexecuteState extends State<Nexecute> {
                 noteRepository: context.read<NoteRepository>(),
               ),
         ),
+        Provider<AiCredentialStore>(
+          create:
+              (_) =>
+                  !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+                      ? FlutterSecureAiCredentialStore()
+                      : const UnavailableAiCredentialStore(),
+        ),
         Provider<AiAssistantRepository>(
-          create: (_) => OpenAiCompatibleAssistantRepository(),
+          create:
+              (context) => OpenAiCompatibleAssistantRepository(
+                credentialStore: context.read<AiCredentialStore>(),
+              ),
           dispose:
               (_, repository) =>
                   (repository as OpenAiCompatibleAssistantRepository).dispose(),

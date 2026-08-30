@@ -11,11 +11,13 @@ import 'package:nexecute/ai/domain/ai_protocol.dart';
 import 'package:nexecute/ai/domain/ai_stream_event.dart';
 import 'package:nexecute/ai/domain/ai_tool.dart';
 import 'package:nexecute/ai/repositories/ai_assistant_repository.dart';
+import 'package:nexecute/ai/repositories/ai_credential_store.dart';
 import 'package:nexecute/ai/repositories/ai_response_handle.dart';
 
 class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
   OpenAiCompatibleAssistantRepository({
     http.Client? client,
+    this.credentialStore,
     this.connectionTimeout,
     this.responseIdleTimeout,
   }) : _client = client ?? http.Client(),
@@ -23,6 +25,7 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
 
   final http.Client _client;
   final bool _ownsClient;
+  final AiCredentialStore? credentialStore;
   final Duration? connectionTimeout;
   final Duration? responseIdleTimeout;
 
@@ -63,6 +66,11 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
                   'base URL ending in /v1.'
               : error.message;
       return AiConnectionResult(status: status, message: message);
+    } on AiCredentialStoreException catch (error) {
+      return AiConnectionResult(
+        status: AiConnectionStatus.invalidConfiguration,
+        message: error.message,
+      );
     } on http.ClientException catch (error) {
       return AiConnectionResult(
         status: AiConnectionStatus.unreachable,
@@ -82,13 +90,14 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
     if (configurationError != null) {
       throw StateError(configurationError.message);
     }
+    final headers = await _headers(profile);
     final response = await _client
-        .get(_endpoint(profile.baseUrl, 'models'), headers: _headers(profile))
+        .get(_endpoint(profile.baseUrl, 'models'), headers: headers)
         .timeout(connectionTimeout ?? profile.connectionTimeout);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw OpenAiCompatibleHttpException(
         response.statusCode,
-        _errorMessage(response.body, response.statusCode),
+        _safeErrorMessage(response.body, response.statusCode, headers),
       );
     }
     final body = jsonDecode(response.body);
@@ -137,12 +146,24 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
       return;
     }
 
+    final Map<String, String> headers;
+    try {
+      headers = await _headers(profile);
+    } on AiCredentialStoreException catch (error) {
+      yield AiResponseFailed(
+        error: error,
+        message: error.message,
+        code: 'credential_unavailable',
+      );
+      return;
+    }
+
     final httpRequest = http.AbortableRequest(
       'POST',
       _endpoint(profile.baseUrl, 'chat/completions'),
       abortTrigger: abortTrigger,
     );
-    httpRequest.headers.addAll(_headers(profile));
+    httpRequest.headers.addAll(headers);
     final toolDefinitions = request.toolDefinitions;
     httpRequest.body = jsonEncode({
       'model': profile.modelId,
@@ -183,7 +204,7 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
       responseStarted = true;
       if (response.statusCode < 200 || response.statusCode >= 300) {
         final body = await response.stream.bytesToString();
-        final message = _errorMessage(body, response.statusCode);
+        final message = _safeErrorMessage(body, response.statusCode, headers);
         yield AiResponseFailed(
           error: OpenAiCompatibleHttpException(response.statusCode, message),
           message: message,
@@ -230,7 +251,7 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
                   : error.toString();
           yield AiResponseFailed(
             error: error,
-            message: message,
+            message: _redactCredential(message, headers),
             code: error is Map ? error['code']?.toString() : null,
             retryable: true,
           );
@@ -355,10 +376,19 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
         message: 'This AI protocol is not implemented yet.',
       );
     }
-    if (profile.authenticationMode != AiAuthenticationMode.none) {
+    if (profile.authenticationMode == AiAuthenticationMode.bearerToken &&
+        !(credentialStore?.isAvailable ?? false)) {
+      return const AiConnectionResult(
+        status: AiConnectionStatus.invalidConfiguration,
+        message:
+            'Secure endpoint credentials are not available on this platform.',
+      );
+    }
+    if (profile.authenticationMode != AiAuthenticationMode.none &&
+        profile.authenticationMode != AiAuthenticationMode.bearerToken) {
       return const AiConnectionResult(
         status: AiConnectionStatus.unsupported,
-        message: 'Direct endpoint credentials are not available yet.',
+        message: 'This endpoint authentication method is not available yet.',
       );
     }
     return null;
@@ -445,10 +475,36 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
     );
   }
 
-  static Map<String, String> _headers(AiConnectionProfile _) => const {
-    'accept': 'application/json, text/event-stream',
-    'content-type': 'application/json',
-  };
+  Future<Map<String, String>> _headers(AiConnectionProfile profile) async {
+    final headers = <String, String>{
+      'accept': 'application/json, text/event-stream',
+      'content-type': 'application/json',
+    };
+    if (profile.authenticationMode == AiAuthenticationMode.none) {
+      return headers;
+    }
+    if (profile.authenticationMode != AiAuthenticationMode.bearerToken) {
+      throw const AiCredentialStoreException(
+        'This endpoint authentication method is not available yet.',
+      );
+    }
+
+    final store = credentialStore;
+    final reference = profile.credentialReference;
+    if (store == null || !store.isAvailable || reference == null) {
+      throw const AiCredentialStoreException(
+        'The endpoint credential is not available on this device.',
+      );
+    }
+    final credential = await store.readCredential(reference);
+    if (credential == null || credential.trim().isEmpty) {
+      throw const AiCredentialStoreException(
+        'The endpoint credential is missing. Add it again in Settings.',
+      );
+    }
+    headers['authorization'] = 'Bearer ${credential.trim()}';
+    return headers;
+  }
 
   static Uri _endpoint(Uri baseUrl, String relativePath) {
     final path = baseUrl.path.endsWith('/') ? baseUrl.path : '${baseUrl.path}/';
@@ -478,6 +534,31 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
         'The AI server is unavailable or still starting the model (HTTP $statusCode).',
       _ => 'The AI endpoint returned HTTP $statusCode.',
     };
+  }
+
+  static String _safeErrorMessage(
+    String body,
+    int statusCode,
+    Map<String, String> headers,
+  ) {
+    final message = _errorMessage(body, statusCode);
+    return _redactCredential(message, headers);
+  }
+
+  static String _redactCredential(String message, Map<String, String> headers) {
+    var redacted = message;
+    final authorization = headers['authorization'];
+    if (authorization != null) {
+      redacted = redacted.replaceAll(authorization, '[credential redacted]');
+      final separator = authorization.indexOf(' ');
+      if (separator >= 0 && separator + 1 < authorization.length) {
+        redacted = redacted.replaceAll(
+          authorization.substring(separator + 1),
+          '[credential redacted]',
+        );
+      }
+    }
+    return redacted;
   }
 
   void dispose() {
