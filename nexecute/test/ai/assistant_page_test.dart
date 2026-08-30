@@ -188,6 +188,7 @@ void main() {
         protocol: AiProtocol.openAiCompatibleChat,
         baseUrl: Uri.parse('https://ai.example.test/v1'),
         modelId: 'local-model',
+        capabilityOverrides: const {AiCapability.tools: true},
       );
       final profileStore = FakeAiConnectionProfileStore(
         profiles: [profile],
@@ -250,6 +251,12 @@ void main() {
       expect(
         assistantRepository.startedRequests.single.applicationContext!.encode(),
         preview,
+      );
+      expect(
+        assistantRepository.startedRequests.single.toolDefinitions.map(
+          (tool) => tool.name,
+        ),
+        [AiReadToolNames.listTasks],
       );
       expect(find.byKey(const Key('assistant-task-context')), findsNothing);
       final saved = (await conversationStore.getConversations()).single;

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:nexecute/ai/application/ai_read_tool_coordinator.dart';
 import 'package:nexecute/ai/domain/ai_chat_message.dart';
 import 'package:nexecute/ai/domain/ai_chat_request.dart';
 import 'package:nexecute/ai/domain/ai_application_context.dart';
@@ -18,17 +19,20 @@ class AiChatController extends ChangeNotifier {
     required AiAssistantRepository assistantRepository,
     required AiConnectionProfileStore connectionProfileStore,
     required AiConversationStore conversationStore,
+    AiReadToolCoordinator? readToolCoordinator,
     String Function()? idFactory,
     DateTime Function()? clock,
   }) : _assistantRepository = assistantRepository,
        _connectionProfileStore = connectionProfileStore,
        _conversationStore = conversationStore,
+       _readToolCoordinator = readToolCoordinator,
        _idFactory = idFactory ?? const Uuid().v4,
        _clock = clock ?? DateTime.now;
 
   final AiAssistantRepository _assistantRepository;
   final AiConnectionProfileStore _connectionProfileStore;
   final AiConversationStore _conversationStore;
+  final AiReadToolCoordinator? _readToolCoordinator;
   final String Function() _idFactory;
   final DateTime Function() _clock;
 
@@ -145,6 +149,7 @@ class AiChatController extends ChangeNotifier {
   Future<bool> send(
     String rawText, {
     AiApplicationContextEnvelope? applicationContext,
+    AiReadToolExecutionScope? readToolExecutionScope,
   }) async {
     final text = rawText.trim();
     if (text.isEmpty || isGenerating) return false;
@@ -199,6 +204,7 @@ class AiChatController extends ChangeNotifier {
         profile,
         requestMessages,
         applicationContext: applicationContext,
+        readToolExecutionScope: readToolExecutionScope,
       );
     } catch (error) {
       errorMessage = 'Could not send the message: $error';
@@ -259,6 +265,7 @@ class AiChatController extends ChangeNotifier {
     AiConnectionProfile profile,
     List<AiChatMessage> requestMessages, {
     AiApplicationContextEnvelope? applicationContext,
+    AiReadToolExecutionScope? readToolExecutionScope,
   }) async {
     final current = conversation;
     if (current == null) return false;
@@ -275,23 +282,30 @@ class AiChatController extends ChangeNotifier {
     _notify();
 
     try {
-      final handle = await _assistantRepository.startResponse(
-        AiChatRequest(
-          connectionProfile: profile,
-          conversationId: current.id,
-          systemInstruction:
-              profile.systemPrompt.trim().isEmpty
-                  ? null
-                  : profile.systemPrompt.trim(),
-          messages:
-              requestMessages
-                  .where(
-                    (message) => message.status == AiMessageStatus.complete,
-                  )
-                  .toList(),
-          applicationContext: applicationContext,
-        ),
+      final request = AiChatRequest(
+        connectionProfile: profile,
+        conversationId: current.id,
+        systemInstruction:
+            profile.systemPrompt.trim().isEmpty
+                ? null
+                : profile.systemPrompt.trim(),
+        messages:
+            requestMessages
+                .where((message) => message.status == AiMessageStatus.complete)
+                .toList(),
+        applicationContext: applicationContext,
+        readToolAuthorization:
+            _readToolCoordinator == null
+                ? null
+                : readToolExecutionScope?.authorization,
       );
+      final handle =
+          _readToolCoordinator != null && readToolExecutionScope != null
+              ? await _readToolCoordinator.startResponse(
+                request,
+                scope: readToolExecutionScope,
+              )
+              : await _assistantRepository.startResponse(request);
       if (generation != _generation || _generationFinalized) {
         await handle.cancel();
         return false;
@@ -362,8 +376,14 @@ class AiChatController extends ChangeNotifier {
           ),
         );
       case AiToolCallRequested():
-        // Tool execution is deliberately deferred to the later tools step.
-        break;
+        unawaited(_responseHandle?.cancel());
+        unawaited(
+          _finalizeGeneration(
+            generation,
+            AiMessageStatus.failed,
+            'The AI requested an unauthorized tool call.',
+          ),
+        );
     }
   }
 

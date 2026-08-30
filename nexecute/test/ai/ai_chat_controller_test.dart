@@ -230,6 +230,87 @@ void main() {
       expect(repository.startedRequests, hasLength(2));
     },
   );
+
+  test('executes scoped reads without persisting tool transcripts', () async {
+    profile = profile.copyWith(
+      capabilityOverrides: const {AiCapability.tools: true},
+    );
+    await profileStore.saveProfile(profile);
+    late FakeAiAssistantRepository repository;
+    repository = FakeAiAssistantRepository(
+      responseStreamBuilder: (_) {
+        if (repository.startedRequests.length == 1) {
+          return Stream.fromIterable([
+            AiToolCallRequested(
+              id: 'call-1',
+              name: AiReadToolNames.listTasks,
+              arguments: const {'limit': 5},
+            ),
+            const AiResponseCompleted(finishReason: 'tool_calls'),
+          ]);
+        }
+        return Stream.fromIterable(const [
+          AiTextDelta('Finish the bounded coordinator.'),
+          AiResponseCompleted(),
+        ]);
+      },
+    );
+    final readService = FakeAiApplicationContextReadService();
+    readService.tasksContext = AiApplicationContextEnvelope(
+      generatedAt: DateTime.utc(2026, 8, 30),
+      attachments: [
+        AiActiveTasksContextAttachment(
+          tasks: const [
+            AiTaskContextItem(
+              title: 'Private task context',
+              isCompleted: false,
+            ),
+          ],
+          omittedCount: 0,
+        ),
+      ],
+    );
+    final authorization = AiReadToolAuthorization(allowActiveTasks: true);
+    var nextId = 0;
+    final controller = AiChatController(
+      assistantRepository: repository,
+      connectionProfileStore: profileStore,
+      conversationStore: conversationStore,
+      readToolCoordinator: AiReadToolCoordinator(
+        assistantRepository: repository,
+        readService: readService,
+      ),
+      idFactory: () => 'id-${nextId++}',
+      clock: () => DateTime.utc(2026, 8, 30, 12),
+    );
+    addTearDown(controller.dispose);
+    await controller.initialize();
+
+    await controller.send(
+      'Plan my work',
+      readToolExecutionScope: AiReadToolExecutionScope(
+        authorization: authorization,
+      ),
+    );
+    await _flushEvents();
+    await _flushEvents();
+
+    final saved = (await conversationStore.getConversations()).single;
+    expect(saved.messages, hasLength(2));
+    expect(saved.messages.first.content, 'Plan my work');
+    expect(saved.messages.last.content, 'Finish the bounded coordinator.');
+    expect(
+      saved.messages.any(
+        (message) =>
+            message.role == AiMessageRole.tool ||
+            message.content.contains('Private task context') ||
+            message.content.contains('call-1'),
+      ),
+      isFalse,
+    );
+    expect(repository.startedRequests, hasLength(2));
+    expect(repository.startedRequests.last.continuationMessages, hasLength(2));
+  });
 }
 
 Future<void> _flushEvents() async {

@@ -590,18 +590,32 @@ matching request authorization; protocol defaults alone are insufficient. The
 OpenAI-compatible adapter serializes only that filtered catalog, reconstructs
 parallel calls whose IDs, names, and JSON arguments arrive across stream
 fragments, and normalizes malformed calls as invalid endpoint responses. Tool
-execution and continuation-round coordination remain deferred to Step 9E.
+execution and continuation-round coordination are supplied separately by Step
+9E.
 
-##### Step 9E: authorized read-tool execution
+##### Step 9E: authorized read-tool execution ✅
 
-- [ ] Validate and execute approved read calls through the Step 9B service,
+- [x] Validate and execute approved read calls through the Step 9B service,
   return only bounded context results, and continue generation to a final text
   response.
-- [ ] Bound tool calls, continuation rounds, cumulative result size, timeouts,
+- [x] Bound tool calls, continuation rounds, cumulative result size, timeouts,
   and cancellation while safely rejecting unknown, malformed, excessive, or
   unauthorized requests.
-- [ ] Keep transient tool calls and results out of conversation persistence and
+- [x] Keep transient tool calls and results out of conversation persistence and
   leave every application write for Step 10's confirmed-action path.
+
+A request-scoped coordinator now validates exact argument sets and types,
+executes only authorized reads through the Step 9B service, returns bounded
+context JSON, and feeds transient assistant calls and results into subsequent
+model rounds until final text is produced. Search results receive temporary
+opaque note references rather than application IDs. A session allows at most
+four calls per round, eight calls total, three continuation rounds, 4,000
+argument characters per call, 48,000 cumulative result characters, and 30
+seconds per read. Unknown, malformed, unauthorized, timed-out, and unavailable
+calls become safe tool errors; excessive sessions fail closed. Cancellation
+stops the active model response and prevents further continuations. Explicit
+Step 9C task, event-range, and selected-note attachments grant only equivalent
+request-scoped reads, and neither calls nor results enter conversation storage.
 
 ##### Step 9F: completed workflow verification
 

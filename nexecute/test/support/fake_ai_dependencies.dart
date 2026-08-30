@@ -62,6 +62,11 @@ class FakeAiApplicationContextReadService
   AiApplicationContextEnvelope? tasksContext;
   AiApplicationContextEnvelope? eventsContext;
   AiNoteSearchContextResult? noteSearchResult;
+  AiApplicationContextEnvelope? noteContext;
+  int taskReadCount = 0;
+  int eventReadCount = 0;
+  int noteSearchCount = 0;
+  int noteReadCount = 0;
 
   AiApplicationContextEnvelope get _empty => AiApplicationContextEnvelope(
     generatedAt: generatedAt,
@@ -72,27 +77,38 @@ class FakeAiApplicationContextReadService
   Future<AiApplicationContextEnvelope> listTasks({
     required AiApplicationReadScope scope,
     int limit = AiApplicationContextLimits.maxActiveTasks,
-  }) async => tasksContext ?? _empty;
+  }) async {
+    taskReadCount++;
+    return tasksContext ?? _empty;
+  }
 
   @override
   Future<AiApplicationContextEnvelope> eventsForDateRange({
     required AiApplicationReadScope scope,
     required CalendarQueryRange range,
     int limit = AiApplicationContextLimits.maxEvents,
-  }) async => eventsContext ?? _empty;
+  }) async {
+    eventReadCount++;
+    return eventsContext ?? _empty;
+  }
 
   @override
   Future<AiApplicationContextEnvelope> getNote({
     required AiApplicationReadScope scope,
     required String noteId,
-  }) async => _empty;
+  }) async {
+    noteReadCount++;
+    return noteContext ?? _empty;
+  }
 
   @override
   Future<AiNoteSearchContextResult> searchNotes({
     required AiApplicationReadScope scope,
     required String query,
     int limit = AiApplicationContextReadLimits.maxSearchResults,
-  }) async =>
-      noteSearchResult ??
-      AiNoteSearchContextResult(context: _empty, sourceNoteIds: const []);
+  }) async {
+    noteSearchCount++;
+    return noteSearchResult ??
+        AiNoteSearchContextResult(context: _empty, sourceNoteIds: const []);
+  }
 }

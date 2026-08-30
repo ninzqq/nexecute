@@ -27,10 +27,15 @@ class _AssistantPageState extends State<AssistantPage> {
   void initState() {
     super.initState();
     _contextReadService = context.read<AiApplicationContextReadService>();
+    final assistantRepository = context.read<AiAssistantRepository>();
     _controller = AiChatController(
-      assistantRepository: context.read<AiAssistantRepository>(),
+      assistantRepository: assistantRepository,
       connectionProfileStore: context.read<AiConnectionProfileStore>(),
       conversationStore: context.read<AiConversationStore>(),
+      readToolCoordinator: AiReadToolCoordinator(
+        assistantRepository: assistantRepository,
+        readService: _contextReadService,
+      ),
     )..addListener(_onControllerChanged);
     unawaited(_controller.initialize());
   }
@@ -178,9 +183,43 @@ class _AssistantPageState extends State<AssistantPage> {
     final sent = await _controller.send(
       text,
       applicationContext: _applicationContext,
+      readToolExecutionScope: _readToolExecutionScope,
     );
     if (!mounted || !sent) return;
     setState(_clearApplicationContext);
+  }
+
+  AiReadToolExecutionScope? get _readToolExecutionScope {
+    final taskAccess = _taskContext != null;
+    AiEventsContextAttachment? eventAttachment;
+    for (final attachment in _eventContext?.attachments ?? const []) {
+      if (attachment is AiEventsContextAttachment) {
+        eventAttachment = attachment;
+        break;
+      }
+    }
+    final noteMapping = <String, String>{};
+    var index = 1;
+    for (final noteId in _noteContexts.keys) {
+      noteMapping['note_$index'] = noteId;
+      index++;
+    }
+    if (!taskAccess && eventAttachment == null && noteMapping.isEmpty) {
+      return null;
+    }
+    final authorization = AiReadToolAuthorization(
+      allowActiveTasks: taskAccess,
+      eventRange: eventAttachment?.range,
+      allowedNoteReferences: noteMapping.keys.toSet(),
+    );
+    try {
+      return AiReadToolExecutionScope(
+        authorization: authorization,
+        noteIdsByReference: noteMapping,
+      );
+    } on ArgumentError {
+      return null;
+    }
   }
 
   Future<void> _showAttachmentMenu() async {
