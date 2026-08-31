@@ -271,16 +271,24 @@ content, then contextual creation across compact and rail layouts.
 
 ##### Phase 2A: Firebase and Google authentication
 
-- [ ] Register the macOS application in the existing Firebase project using a
+- [x] Register the macOS application in the existing Firebase project using a
   stable bundle identifier owned by Nexecute.
-- [ ] Regenerate FlutterFire options for Android and macOS without changing the
+- [x] Regenerate FlutterFire options for Android and macOS without changing the
   existing Android application identity or data project.
-- [ ] Add the required macOS Firebase configuration and Google sign-in callback
+- [x] Add the required macOS Firebase configuration and Google sign-in callback
   setup, documenting which console-side steps cannot be reproduced from Git.
-- [ ] Verify sign-in, sign-out, session restoration, cancellation, and
+- [x] Verify sign-in, sign-out, session restoration, cancellation, and
   authentication failures on a development-signed macOS build.
-- [ ] Confirm that Firestore rules continue to isolate every user's documents;
+- [x] Confirm that Firestore rules continue to isolate every user's documents;
   the desktop client must not introduce a privileged synchronization path.
+
+The macOS Firebase app uses `com.jndevworks.nexecute`. Automated authentication
+coverage verifies session-stream restoration, cancellation, visible failures,
+and non-interactive sign-out, and the Firestore emulator suite confirms owner,
+unauthenticated, and cross-user access behavior. The interactive authentication
+flow was also verified by launching a locally development-signed build from
+Xcode. See `docs/macos_firebase_authentication.md` for the console prerequisites
+and repeatable test checklist.
 
 ##### Phase 2B: platform service boundaries
 

@@ -4,7 +4,7 @@
       "android": {
         "default": {
           "projectId": "nexecute-49018",
-          "appId": "1:810257036214:android:a32e78f5b0b30f4a038717",
+          "appId": "1:810257036214:android:67a30b5c8095ffcb038717",
           "fileOutput": "android/app/google-services.json"
         }
       },
@@ -12,7 +12,18 @@
         "lib/firebase_options.dart": {
           "projectId": "nexecute-49018",
           "configurations": {
-            "android": "1:810257036214:android:a32e78f5b0b30f4a038717"
+            "android": "1:810257036214:android:67a30b5c8095ffcb038717",
+            "macos": "1:810257036214:ios:cd394829942b9d84038717"
+          }
+        }
+      },
+      "macos": {
+        "targets": {
+          "Runner": {
+            "projectId": "nexecute-49018",
+            "appId": "1:810257036214:ios:cd394829942b9d84038717",
+            "uploadDebugSymbols": false,
+            "fileOutput": "macos/Runner/GoogleService-Info.plist"
           }
         }
       }
