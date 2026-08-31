@@ -203,20 +203,20 @@ without a second UI implementation.
 
 #### Phase 1: shared adaptive desktop foundation
 
-##### Phase 1A: breakpoint and shell contract — next task
+##### Phase 1A: breakpoint and shell contract — complete
 
-- [ ] Define centralized compact, medium, and expanded layout classes so
+- [x] Define centralized compact, medium, and expanded layout classes so
   feature screens do not invent independent width thresholds.
-- [ ] Extract the top-level navigation destinations and selected-destination
+- [x] Extract the top-level navigation destinations and selected-destination
   state from the phone-only shell into one reusable adaptive shell.
-- [ ] Preserve the existing bottom `NavigationBar` on compact layouts.
-- [ ] Use `NavigationRail` on medium and expanded layouts, with labels and a
+- [x] Preserve the existing bottom `NavigationBar` on compact layouts.
+- [x] Use `NavigationRail` on medium and expanded layouts, with labels and a
   stable destination order matching the compact navigation.
-- [ ] Preserve the selected destination and feature state when a window crosses
+- [x] Preserve the selected destination and feature state when a window crosses
   a breakpoint instead of rebuilding a separate application tree.
-- [ ] Keep the drawer and existing named routes reachable until their actions
+- [x] Keep the drawer and existing named routes reachable until their actions
   have deliberate desktop placements.
-- [ ] Cover compact, medium, expanded, and live-resize transitions with widget
+- [x] Cover compact, medium, expanded, and live-resize transitions with widget
   tests, including overflow checks and destination-state preservation.
 
 **Phase 1A boundary:** Do not configure Firebase for macOS, redesign individual

@@ -6,67 +6,56 @@ import 'package:nexecute/models/home_tab_index.dart';
 import 'package:nexecute/models/notes_controller.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/selected_day.dart';
+import 'package:nexecute/shared/adaptive_navigation_shell.dart';
 import 'package:nexecute/shared/drawer.dart';
 import 'package:nexecute/tasks/tasks_page.dart';
 import 'package:nexecute/tasks/todo_editor_sheet.dart';
-import 'package:nexecute/themes.dart';
 import 'package:nexecute/ui/calendar/calendar.dart';
 import 'package:provider/provider.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-  static const _titles = ['Calendar', 'Tasks', 'Notes'];
+  static const _destinations = [
+    AdaptiveNavigationItem(
+      label: 'Calendar',
+      icon: Icons.calendar_month_outlined,
+      selectedIcon: Icons.calendar_month_rounded,
+    ),
+    AdaptiveNavigationItem(
+      label: 'Tasks',
+      icon: Icons.checklist_outlined,
+      selectedIcon: Icons.checklist_rounded,
+    ),
+    AdaptiveNavigationItem(
+      label: 'Notes',
+      icon: Icons.sticky_note_2_outlined,
+      selectedIcon: Icons.sticky_note_2_rounded,
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
     final tab = context.watch<HomeTabIndex>();
     final tabIndex = tab.index;
-    final palette = context.appPalette;
 
-    return SafeArea(
-      child: Scaffold(
-        appBar: tabIndex == 0 ? null : AppBar(title: Text(_titles[tabIndex])),
-        drawer: const MainDrawer(),
-        resizeToAvoidBottomInset: true,
-        body: IndexedStack(
-          index: tabIndex,
-          children: const [CalendarPage(), TasksPage(), Quicxecs()],
-        ),
-        bottomNavigationBar: Container(
-          key: const Key('bottom-navigation-shell'),
-          foregroundDecoration: BoxDecoration(
-            border: Border(
-              top: BorderSide(color: palette.outline.withValues(alpha: 0.75)),
-            ),
-          ),
-          child: NavigationBar(
-            selectedIndex: tabIndex,
-            onDestinationSelected: tab.select,
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.calendar_month_outlined),
-                selectedIcon: Icon(Icons.calendar_month_rounded),
-                label: 'Calendar',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.checklist_outlined),
-                selectedIcon: Icon(Icons.checklist_rounded),
-                label: 'Tasks',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.sticky_note_2_outlined),
-                selectedIcon: Icon(Icons.sticky_note_2_rounded),
-                label: 'Notes',
-              ),
-            ],
-          ),
-        ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () => _createItem(context, tabIndex),
-          tooltip: _fabLabel(tabIndex),
-          child: Icon(_fabIcon(tabIndex)),
-        ),
+    return AdaptiveNavigationShell(
+      selectedIndex: tabIndex,
+      onDestinationSelected: tab.select,
+      destinations: _destinations,
+      appBar:
+          tabIndex == 0
+              ? null
+              : AppBar(title: Text(_destinations[tabIndex].label)),
+      drawer: const MainDrawer(),
+      body: IndexedStack(
+        index: tabIndex,
+        children: const [CalendarPage(), TasksPage(), Quicxecs()],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _createItem(context, tabIndex),
+        tooltip: _fabLabel(tabIndex),
+        child: Icon(_fabIcon(tabIndex)),
       ),
     );
   }
