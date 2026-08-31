@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 
 enum AppLayoutClass { compact, medium, expanded }
 
@@ -165,12 +166,31 @@ class AdaptiveNavigationShell extends StatelessWidget {
                   if (usesRail) _navigationRail(context, layoutClass),
                   Expanded(
                     key: const Key('adaptive-navigation-content'),
-                    child: body,
+                    child: FocusTraversalOrder(
+                      key: const Key('content-focus-order'),
+                      order: const NumericFocusOrder(2),
+                      child: Semantics(
+                        container: true,
+                        sortKey: const OrdinalSortKey(2),
+                        child: body,
+                      ),
+                    ),
                   ),
                 ],
               ),
               bottomNavigationBar: usesRail ? null : _bottomNavigation(context),
-              floatingActionButton: floatingActionButton,
+              floatingActionButton:
+                  floatingActionButton == null
+                      ? null
+                      : FocusTraversalOrder(
+                        key: const Key('create-focus-order'),
+                        order: const NumericFocusOrder(3),
+                        child: Semantics(
+                          container: true,
+                          sortKey: const OrdinalSortKey(3),
+                          child: floatingActionButton!,
+                        ),
+                      ),
             ),
           );
         },
@@ -181,56 +201,73 @@ class AdaptiveNavigationShell extends StatelessWidget {
   Widget _navigationRail(BuildContext context, AppLayoutClass layoutClass) {
     final extended = layoutClass.usesExtendedNavigationRail;
     final colors = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      key: const Key('adaptive-navigation-rail-shell'),
-      decoration: BoxDecoration(
-        color: Theme.of(context).appBarTheme.backgroundColor ?? colors.surface,
-        border: Border(
-          right: BorderSide(color: colors.outline.withValues(alpha: 0.75)),
-        ),
-      ),
-      child: NavigationRail(
-        selectedIndex: selectedIndex,
-        onDestinationSelected: onDestinationSelected,
-        extended: extended,
-        minExtendedWidth: 200,
-        labelType:
-            extended
-                ? NavigationRailLabelType.none
-                : NavigationRailLabelType.all,
-        groupAlignment: -1,
-        destinations: [
-          for (final destination in destinations)
-            NavigationRailDestination(
-              icon: Icon(destination.icon),
-              selectedIcon: Icon(destination.selectedIcon),
-              label: Text(destination.label),
+    return FocusTraversalOrder(
+      key: const Key('navigation-focus-order'),
+      order: const NumericFocusOrder(1),
+      child: Semantics(
+        container: true,
+        sortKey: const OrdinalSortKey(1),
+        child: DecoratedBox(
+          key: const Key('adaptive-navigation-rail-shell'),
+          decoration: BoxDecoration(
+            color:
+                Theme.of(context).appBarTheme.backgroundColor ?? colors.surface,
+            border: Border(
+              right: BorderSide(color: colors.outline.withValues(alpha: 0.75)),
             ),
-        ],
+          ),
+          child: NavigationRail(
+            selectedIndex: selectedIndex,
+            onDestinationSelected: onDestinationSelected,
+            extended: extended,
+            minExtendedWidth: 200,
+            labelType:
+                extended
+                    ? NavigationRailLabelType.none
+                    : NavigationRailLabelType.all,
+            groupAlignment: -1,
+            destinations: [
+              for (final destination in destinations)
+                NavigationRailDestination(
+                  icon: Icon(destination.icon),
+                  selectedIcon: Icon(destination.selectedIcon),
+                  label: Text(destination.label),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
   Widget _bottomNavigation(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return Container(
-      key: const Key('bottom-navigation-shell'),
-      foregroundDecoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: colors.outline.withValues(alpha: 0.75)),
-        ),
-      ),
-      child: NavigationBar(
-        selectedIndex: selectedIndex,
-        onDestinationSelected: onDestinationSelected,
-        destinations: [
-          for (final destination in destinations)
-            NavigationDestination(
-              icon: Icon(destination.icon),
-              selectedIcon: Icon(destination.selectedIcon),
-              label: destination.label,
+    return FocusTraversalOrder(
+      key: const Key('navigation-focus-order'),
+      order: const NumericFocusOrder(1),
+      child: Semantics(
+        container: true,
+        sortKey: const OrdinalSortKey(1),
+        child: Container(
+          key: const Key('bottom-navigation-shell'),
+          foregroundDecoration: BoxDecoration(
+            border: Border(
+              top: BorderSide(color: colors.outline.withValues(alpha: 0.75)),
             ),
-        ],
+          ),
+          child: NavigationBar(
+            selectedIndex: selectedIndex,
+            onDestinationSelected: onDestinationSelected,
+            destinations: [
+              for (final destination in destinations)
+                NavigationDestination(
+                  icon: Icon(destination.icon),
+                  selectedIcon: Icon(destination.selectedIcon),
+                  label: destination.label,
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

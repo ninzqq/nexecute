@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/ai/ai.dart';
 import 'package:nexecute/themes.dart';
@@ -157,6 +158,57 @@ void main() {
     );
     expect(contentRect.width, 840);
     expect(contentRect.center.dx, 700);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('focuses and sends from the composer with desktop shortcuts', (
+    tester,
+  ) async {
+    final profile = AiConnectionProfile(
+      id: 'home',
+      name: 'Home AI',
+      protocol: AiProtocol.openAiCompatibleChat,
+      baseUrl: Uri.parse('https://ai.example.test/v1'),
+      modelId: 'local-model',
+    );
+    final profileStore = FakeAiConnectionProfileStore(
+      profiles: [profile],
+      activeProfileId: profile.id,
+    );
+    final conversationStore = FakeAiConversationStore();
+    final assistantRepository = FakeAiAssistantRepository();
+    addTearDown(profileStore.dispose);
+    addTearDown(conversationStore.dispose);
+
+    await tester.pumpWidget(
+      _app(
+        assistantRepository: assistantRepository,
+        profileStore: profileStore,
+        conversationStore: conversationStore,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final composer = find.byKey(const Key('assistant-composer'));
+    expect(tester.widget<TextField>(composer).focusNode!.hasFocus, isFalse);
+
+    await _pressControlShiftShortcut(tester, LogicalKeyboardKey.keyA);
+    expect(tester.widget<TextField>(composer).focusNode!.hasFocus, isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    expect(tester.widget<TextField>(composer).focusNode!.hasFocus, isFalse);
+
+    await _pressControlShiftShortcut(tester, LogicalKeyboardKey.keyA);
+
+    await tester.enterText(composer, 'Send from the keyboard');
+    await _pressControlShortcut(tester, LogicalKeyboardKey.enter);
+
+    expect(assistantRepository.startedRequests, hasLength(1));
+    expect(
+      assistantRepository.startedRequests.single.messages.last.content,
+      'Send from the keyboard',
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -510,4 +562,26 @@ Widget _app({
       home: const AssistantPage(),
     ),
   );
+}
+
+Future<void> _pressControlShortcut(
+  WidgetTester tester,
+  LogicalKeyboardKey key,
+) async {
+  await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+  await tester.sendKeyEvent(key);
+  await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+  await tester.pumpAndSettle();
+}
+
+Future<void> _pressControlShiftShortcut(
+  WidgetTester tester,
+  LogicalKeyboardKey key,
+) async {
+  await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+  await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+  await tester.sendKeyEvent(key);
+  await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+  await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+  await tester.pumpAndSettle();
 }

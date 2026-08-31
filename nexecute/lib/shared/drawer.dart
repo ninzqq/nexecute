@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nexecute/shared/app_shortcuts.dart';
 
 class MainDrawer extends StatelessWidget {
   const MainDrawer({super.key});
@@ -18,6 +19,7 @@ class MainDrawer extends StatelessWidget {
       },
       {
         "title": const Text("Search"),
+        "subtitle": Text(AppShortcutLabels.search),
         "icon": const Icon(Icons.search_rounded),
         "function":
             () => {
@@ -57,6 +59,16 @@ class MainDrawer extends StatelessWidget {
         "selected": false,
       },
       {
+        "title": const Text("Keyboard shortcuts"),
+        "icon": const Icon(Icons.keyboard_outlined),
+        "function":
+            () => {
+              Navigator.pop(context),
+              showKeyboardShortcutsDialog(context),
+            },
+        "selected": false,
+      },
+      {
         "title": const Text("Settings"),
         "icon": const Icon(Icons.settings),
         "function":
@@ -91,6 +103,7 @@ class MainDrawer extends StatelessWidget {
                     child: ListTile(
                       leading: menuItem[index]['icon'],
                       title: menuItem[index]['title'],
+                      subtitle: menuItem[index]['subtitle'],
                       onTap: () => {menuItem[index]['function']()},
                       selected: menuItem[index]['selected'],
                     ),

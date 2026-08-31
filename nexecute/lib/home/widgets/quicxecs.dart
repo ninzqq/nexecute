@@ -8,6 +8,7 @@ import 'package:nexecute/models/notes_controller.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/repositories/note_folder_repository.dart';
 import 'package:nexecute/shared/adaptive_navigation_shell.dart';
+import 'package:nexecute/shared/app_shortcuts.dart';
 import 'package:nexecute/shared/data_state_placeholder.dart';
 import 'package:provider/provider.dart';
 
@@ -543,29 +544,33 @@ class _FolderNameDialogState extends State<_FolderNameDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.folder == null ? 'New folder' : 'Rename folder'),
-      content: TextField(
-        key: const Key('note-folder-name-field'),
-        controller: _controller,
-        autofocus: true,
-        textCapitalization: TextCapitalization.sentences,
-        decoration: InputDecoration(
-          labelText: 'Folder name',
-          errorText: _errorText,
+    return AppEditorShortcutRegion(
+      onSave: _submit,
+      onCancel: () => Navigator.maybePop(context),
+      child: AlertDialog(
+        title: Text(widget.folder == null ? 'New folder' : 'Rename folder'),
+        content: TextField(
+          key: const Key('note-folder-name-field'),
+          controller: _controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: InputDecoration(
+            labelText: 'Folder name',
+            errorText: _errorText,
+          ),
+          onSubmitted: (_) => _submit(),
         ),
-        onSubmitted: (_) => _submit(),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: _submit,
+            child: Text(widget.folder == null ? 'Create' : 'Save'),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: _submit,
-          child: Text(widget.folder == null ? 'Create' : 'Save'),
-        ),
-      ],
     );
   }
 }

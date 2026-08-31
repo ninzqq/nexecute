@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/todo_item.dart';
@@ -148,6 +149,32 @@ void main() {
     expect(repository.completedValue, isTrue);
   });
 
+  testWidgets('editor shortcuts save and cancel while its field owns focus', (
+    tester,
+  ) async {
+    final repository = _FakeTodoRepository();
+    final activeTodo = todo(id: 'Original task', completed: false);
+    await tester.pumpWidget(appWith([activeTodo], repository: repository));
+
+    await tester.tap(find.byTooltip('Edit task'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField), 'Updated by shortcut');
+    await _pressControlShortcut(tester, LogicalKeyboardKey.enter);
+
+    expect(repository.updatedTodo, same(activeTodo));
+    expect(repository.updatedTitle, 'Updated by shortcut');
+    expect(find.text('Edit task'), findsNothing);
+
+    await tester.tap(find.byTooltip('Edit task'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField), 'Discard this title');
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit task'), findsNothing);
+    expect(repository.updatedTitle, 'Updated by shortcut');
+  });
+
   for (final preset in AppThemePreset.values) {
     testWidgets('renders under the ${preset.name} theme', (tester) async {
       await tester.pumpWidget(
@@ -169,6 +196,8 @@ void main() {
 class _FakeTodoRepository implements TodoRepository {
   TodoItem? completedTodo;
   bool? completedValue;
+  TodoItem? updatedTodo;
+  String? updatedTitle;
 
   @override
   Stream<DataState<List<TodoItem>>> watchTodos() =>
@@ -181,7 +210,10 @@ class _FakeTodoRepository implements TodoRepository {
   Future<void> createTodos(CreateTodosCommand command) async {}
 
   @override
-  Future<void> updateTitle(TodoItem todo, String title) async {}
+  Future<void> updateTitle(TodoItem todo, String title) async {
+    updatedTodo = todo;
+    updatedTitle = title;
+  }
 
   @override
   Future<void> setCompleted(TodoItem todo, bool isCompleted) async {
@@ -194,4 +226,14 @@ class _FakeTodoRepository implements TodoRepository {
 
   @override
   Future<void> restoreTodo(TodoItem todo) async {}
+}
+
+Future<void> _pressControlShortcut(
+  WidgetTester tester,
+  LogicalKeyboardKey key,
+) async {
+  await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+  await tester.sendKeyEvent(key);
+  await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+  await tester.pumpAndSettle();
 }

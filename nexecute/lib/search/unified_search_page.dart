@@ -13,6 +13,7 @@ import 'package:nexecute/models/todo_item.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/search/search_matcher.dart';
 import 'package:nexecute/shared/data_state_placeholder.dart';
+import 'package:nexecute/shared/app_shortcuts.dart';
 import 'package:nexecute/tasks/todo_editor_sheet.dart';
 import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
@@ -28,6 +29,7 @@ class UnifiedSearchPage extends StatefulWidget {
 
 class _UnifiedSearchPageState extends State<UnifiedSearchPage> {
   final _controller = TextEditingController();
+  final _focusNode = FocusNode(debugLabel: 'Unified search');
   Timer? _debounce;
   String _query = '';
   int _searchGeneration = 0;
@@ -39,6 +41,7 @@ class _UnifiedSearchPageState extends State<UnifiedSearchPage> {
   void dispose() {
     _debounce?.cancel();
     _controller.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -49,49 +52,77 @@ class _UnifiedSearchPageState extends State<UnifiedSearchPage> {
     final tagState = context.watch<DataState<Tags>>();
     final folderState = context.watch<DataState<List<NoteFolder>>>();
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Search')),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-            child: TextField(
-              key: const Key('unified-search-field'),
-              controller: _controller,
-              autofocus: true,
-              textInputAction: TextInputAction.search,
-              onChanged: _onQueryChanged,
-              decoration: InputDecoration(
-                hintText: 'Search everything',
-                prefixIcon: const Icon(Icons.search_rounded),
-                suffixIcon:
-                    _query.isEmpty
-                        ? null
-                        : IconButton(
-                          tooltip: 'Clear search',
-                          onPressed: () {
-                            _controller.clear();
-                            _onQueryChanged('');
-                          },
-                          icon: const Icon(Icons.close_rounded),
-                        ),
-                border: const OutlineInputBorder(),
-              ),
+    return Shortcuts(
+      shortcuts: AppShortcutBindings.search,
+      child: Actions(
+        actions: {
+          OpenSearchIntent: CallbackAction<OpenSearchIntent>(
+            onInvoke: (_) {
+              if (isCurrentAppRoute(context)) _focusNode.requestFocus();
+              return null;
+            },
+          ),
+          CancelAppIntent: CallbackAction<CancelAppIntent>(
+            onInvoke: (_) {
+              if (!isCurrentAppRoute(context)) return null;
+              if (_focusNode.hasFocus) {
+                _focusNode.unfocus();
+              } else {
+                Navigator.maybePop(context);
+              }
+              return null;
+            },
+          ),
+        },
+        child: FocusScope(
+          autofocus: true,
+          child: Scaffold(
+            appBar: AppBar(title: const Text('Search')),
+            body: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+                  child: TextField(
+                    key: const Key('unified-search-field'),
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    autofocus: true,
+                    textInputAction: TextInputAction.search,
+                    onChanged: _onQueryChanged,
+                    decoration: InputDecoration(
+                      hintText: 'Search everything',
+                      prefixIcon: const Icon(Icons.search_rounded),
+                      suffixIcon:
+                          _query.isEmpty
+                              ? null
+                              : IconButton(
+                                tooltip: 'Clear search',
+                                onPressed: () {
+                                  _controller.clear();
+                                  _onQueryChanged('');
+                                },
+                                icon: const Icon(Icons.close_rounded),
+                              ),
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child:
+                      _query.isEmpty
+                          ? const _SearchPrompt()
+                          : _buildResults(
+                            context,
+                            noteState,
+                            todoState,
+                            tagState,
+                            folderState,
+                          ),
+                ),
+              ],
             ),
           ),
-          Expanded(
-            child:
-                _query.isEmpty
-                    ? const _SearchPrompt()
-                    : _buildResults(
-                      context,
-                      noteState,
-                      todoState,
-                      tagState,
-                      folderState,
-                    ),
-          ),
-        ],
+        ),
       ),
     );
   }

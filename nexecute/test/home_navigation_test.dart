@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nexecute/home/bottomsheets/item_editor_sheet.dart';
 import 'package:nexecute/home/screens/homescreen.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/home_tab_index.dart';
@@ -11,6 +13,7 @@ import 'package:nexecute/models/tag.dart' as models;
 import 'package:nexecute/models/todo_item.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/shared/adaptive_navigation_shell.dart';
+import 'package:nexecute/shared/app_shortcuts.dart';
 import 'package:nexecute/themes.dart';
 import 'package:nexecute/ui/calendar/calendar.dart';
 import 'package:provider/provider.dart';
@@ -169,6 +172,73 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('desktop shortcuts navigate, create, search, and respect focus', (
+    tester,
+  ) async {
+    _setViewport(tester, const Size(1200, 900));
+    await _pumpHome(tester);
+
+    await _pressControlShortcut(tester, LogicalKeyboardKey.digit1);
+    expect(_selectedDestination(tester), 0);
+
+    await _pressControlShortcut(tester, LogicalKeyboardKey.digit2);
+    expect(_selectedDestination(tester), 1);
+
+    await _pressControlShortcut(tester, LogicalKeyboardKey.digit3);
+    expect(_selectedDestination(tester), 2);
+
+    await tester.tap(find.widgetWithText(TextField, 'Search notes'));
+    await tester.pump();
+    expect(FocusManager.instance.primaryFocus, isNotNull);
+    await _pressControlShortcut(tester, LogicalKeyboardKey.digit1);
+    expect(_selectedDestination(tester), 2);
+
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pump();
+    await _pressControlShortcut(tester, LogicalKeyboardKey.keyN);
+    expect(find.byType(ItemEditorSheet), findsOneWidget);
+
+    await _pressControlShortcut(tester, LogicalKeyboardKey.digit1);
+    expect(_selectedDestination(tester), 2);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(ItemEditorSheet), findsNothing);
+
+    await _pressControlShortcut(tester, LogicalKeyboardKey.keyK);
+    expect(find.byKey(const Key('shortcut-search-route')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('shortcut help and shell focus order are discoverable', (
+    tester,
+  ) async {
+    _setViewport(tester, const Size(1200, 900));
+    final semantics = tester.ensureSemantics();
+    await _pumpHome(tester);
+
+    expect(_focusOrder(tester, 'navigation-focus-order'), 1);
+    expect(_focusOrder(tester, 'content-focus-order'), 2);
+    expect(_focusOrder(tester, 'create-focus-order'), 3);
+    final createSemantics = tester.getSemantics(
+      find.byKey(const Key('create-shortcut-semantics')),
+    );
+    expect(createSemantics.getSemanticsData().hint, contains('Ctrl+N'));
+
+    await tester.tap(find.byTooltip('Open navigation menu'));
+    await tester.pumpAndSettle();
+    expect(find.text('Keyboard shortcuts'), findsOneWidget);
+    expect(find.text(AppShortcutLabels.search), findsOneWidget);
+
+    await tester.tap(find.text('Keyboard shortcuts'));
+    await tester.pumpAndSettle();
+    expect(find.text('Save or confirm'), findsOneWidget);
+    expect(find.text(AppShortcutLabels.save), findsOneWidget);
+    expect(find.text('Focus Assistant composer'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    semantics.dispose();
+  });
+
   const representativeSizes = <String, Size>{
     'phone': Size(390, 844),
     'tablet': Size(700, 900),
@@ -226,10 +296,35 @@ Future<void> _pumpHome(
       ],
       child: MaterialApp(
         theme: AppThemes.forPreset(themePreset),
+        routes: {
+          '/search':
+              (_) => const Scaffold(
+                key: Key('shortcut-search-route'),
+                body: Text('Search route'),
+              ),
+        },
         home: const HomeScreen(),
       ),
     ),
   );
+}
+
+int _selectedDestination(WidgetTester tester) =>
+    tester.widget<NavigationRail>(find.byType(NavigationRail)).selectedIndex!;
+
+double _focusOrder(WidgetTester tester, String key) =>
+    (tester.widget<FocusTraversalOrder>(find.byKey(Key(key))).order
+            as NumericFocusOrder)
+        .order;
+
+Future<void> _pressControlShortcut(
+  WidgetTester tester,
+  LogicalKeyboardKey key,
+) async {
+  await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+  await tester.sendKeyEvent(key);
+  await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+  await tester.pumpAndSettle();
 }
 
 void _expectCalendarWeekSelected(WidgetTester tester) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nexecute/models/todo_item.dart';
 import 'package:nexecute/repositories/todo_repository.dart';
 import 'package:nexecute/shared/adaptive_navigation_shell.dart';
+import 'package:nexecute/shared/app_shortcuts.dart';
 import 'package:nexecute/shared/bottom_sheet_safe_area.dart';
 import 'package:provider/provider.dart';
 
@@ -53,48 +54,52 @@ class _TodoEditorSheetState extends State<_TodoEditorSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              _isEditing ? 'Edit task' : 'New task',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _titleController,
-              autofocus: true,
-              textCapitalization: TextCapitalization.sentences,
-              textInputAction: TextInputAction.done,
-              decoration: const InputDecoration(
-                labelText: 'Task',
-                hintText: 'What needs to be done?',
+    return AppEditorShortcutRegion(
+      onSave: _save,
+      onCancel: () => Navigator.maybePop(context),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                _isEditing ? 'Edit task' : 'New task',
+                style: Theme.of(context).textTheme.titleLarge,
               ),
-              validator:
-                  (value) =>
-                      value == null || value.trim().isEmpty
-                          ? 'Enter a task'
-                          : null,
-              onFieldSubmitted: (_) => _save(),
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: _isSaving ? null : _save,
-              icon:
-                  _isSaving
-                      ? const SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                      : Icon(_isEditing ? Icons.check : Icons.add),
-              label: Text(_isEditing ? 'Save changes' : 'Add task'),
-            ),
-          ],
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _titleController,
+                autofocus: true,
+                textCapitalization: TextCapitalization.sentences,
+                textInputAction: TextInputAction.done,
+                decoration: const InputDecoration(
+                  labelText: 'Task',
+                  hintText: 'What needs to be done?',
+                ),
+                validator:
+                    (value) =>
+                        value == null || value.trim().isEmpty
+                            ? 'Enter a task'
+                            : null,
+                onFieldSubmitted: (_) => _save(),
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: _isSaving ? null : _save,
+                icon:
+                    _isSaving
+                        ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                        : Icon(_isEditing ? Icons.check : Icons.add),
+                label: Text(_isEditing ? 'Save changes' : 'Add task'),
+              ),
+            ],
+          ),
         ),
       ),
     );

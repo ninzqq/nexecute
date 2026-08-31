@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/calendar/bottomsheets/event_details.dart';
 import 'package:nexecute/home/bottomsheets/item_editor_sheet.dart';
@@ -218,7 +219,8 @@ void main() {
     Navigator.of(tester.element(find.byType(ItemEditorSheet))).pop();
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Close event details'));
+    expect(find.byTooltip('Close event details'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('selected-day-agenda')), findsOneWidget);
     expect(tester.takeException(), isNull);

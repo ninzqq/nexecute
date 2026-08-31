@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:nexecute/ai/ai.dart';
 import 'package:nexecute/domain/calendar/calendar_query_range.dart';
 import 'package:nexecute/shared/adaptive_navigation_shell.dart';
+import 'package:nexecute/shared/app_shortcuts.dart';
 import 'package:nexecute/shared/bottom_sheet_safe_area.dart';
 import 'package:provider/provider.dart';
 
@@ -18,6 +19,7 @@ class _AssistantPageState extends State<AssistantPage> {
   late final AiChatController _controller;
   late final AiApplicationContextReadService _contextReadService;
   final _composerController = TextEditingController();
+  final _composerFocusNode = FocusNode(debugLabel: 'Assistant composer');
   final _scrollController = ScrollController();
   final Map<String, AiApplicationContextEnvelope> _noteContexts = {};
   AiApplicationContextEnvelope? _taskContext;
@@ -47,6 +49,7 @@ class _AssistantPageState extends State<AssistantPage> {
     _controller.removeListener(_onControllerChanged);
     _controller.dispose();
     _composerController.dispose();
+    _composerFocusNode.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -54,76 +57,121 @@ class _AssistantPageState extends State<AssistantPage> {
   @override
   Widget build(BuildContext context) {
     final profile = _controller.activeProfile;
-    return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Assistant'),
-            if (profile != null)
-              Text(
-                '${profile.name} · ${profile.modelId}',
-                key: const Key('assistant-active-connection'),
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall,
+    return Shortcuts(
+      shortcuts: AppShortcutBindings.assistant,
+      child: Actions(
+        actions: {
+          FocusAssistantComposerIntent:
+              CallbackAction<FocusAssistantComposerIntent>(
+                onInvoke: (_) {
+                  if (isCurrentAppRoute(context)) {
+                    _composerFocusNode.requestFocus();
+                  }
+                  return null;
+                },
               ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            key: const Key('assistant-new-conversation'),
-            tooltip: 'New conversation',
-            onPressed: () => unawaited(_controller.startNewConversation()),
-            icon: const Icon(Icons.add_comment_outlined),
+          SaveAppIntent: CallbackAction<SaveAppIntent>(
+            onInvoke: (_) {
+              if (isCurrentAppRoute(context) &&
+                  _composerFocusNode.hasFocus &&
+                  !_controller.isLoading &&
+                  profile != null) {
+                unawaited(_send(_composerController.text));
+              }
+              return null;
+            },
           ),
-          IconButton(
-            key: const Key('assistant-conversation-list'),
-            tooltip: 'Conversations',
-            onPressed: _showConversations,
-            icon: const Icon(Icons.history_rounded),
+          CancelAppIntent: CallbackAction<CancelAppIntent>(
+            onInvoke: (_) {
+              if (!isCurrentAppRoute(context)) return null;
+              if (_composerFocusNode.hasFocus) {
+                _composerFocusNode.unfocus();
+              } else {
+                Navigator.maybePop(context);
+              }
+              return null;
+            },
           ),
-        ],
-      ),
-      body: SafeArea(
-        child: FocusTraversalGroup(
-          child: AdaptiveContentFrame(
-            contentKey: const Key('assistant-content-frame'),
-            child: Column(
-              children: [
-                if (_controller.errorMessage case final error?)
-                  _ErrorBanner(
-                    message: error,
-                    onDismiss: _controller.clearError,
-                  ),
-                Expanded(child: _buildConversation()),
-                if (_applicationContext case final applicationContext?)
-                  _ApplicationContextBar(
-                    contextEnvelope: applicationContext,
-                    noteTitles: [
-                      for (final envelope in _noteContexts.values)
-                        (envelope.attachments.single
-                                as AiSelectedNotesContextAttachment)
-                            .notes
-                            .single
-                            .title,
-                    ],
-                    hasTasks: _taskContext != null,
-                    hasEvents: _eventContext != null,
-                    onRemoveNote: _removeNoteAt,
-                    onRemoveTasks: _removeTasks,
-                    onRemoveEvents: _removeEvents,
-                    onPreview: () => _showContextPreview(applicationContext),
-                  ),
-                _Composer(
-                  controller: _composerController,
-                  enabled: !_controller.isLoading && profile != null,
-                  isGenerating: _controller.isGenerating,
-                  onSend: _send,
-                  onStop: () => unawaited(_controller.stopResponse()),
-                  onAttach: _isLoadingContext ? null : _showAttachmentMenu,
-                  isLoadingContext: _isLoadingContext,
+        },
+        child: Focus(
+          autofocus: true,
+          child: Scaffold(
+            appBar: AppBar(
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Assistant'),
+                  if (profile != null)
+                    Text(
+                      '${profile.name} · ${profile.modelId}',
+                      key: const Key('assistant-active-connection'),
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                ],
+              ),
+              actions: [
+                IconButton(
+                  key: const Key('assistant-new-conversation'),
+                  tooltip: 'New conversation',
+                  onPressed:
+                      () => unawaited(_controller.startNewConversation()),
+                  icon: const Icon(Icons.add_comment_outlined),
+                ),
+                IconButton(
+                  key: const Key('assistant-conversation-list'),
+                  tooltip: 'Conversations',
+                  onPressed: _showConversations,
+                  icon: const Icon(Icons.history_rounded),
                 ),
               ],
+            ),
+            body: SafeArea(
+              child: FocusTraversalGroup(
+                child: AdaptiveContentFrame(
+                  contentKey: const Key('assistant-content-frame'),
+                  child: Column(
+                    children: [
+                      if (_controller.errorMessage case final error?)
+                        _ErrorBanner(
+                          message: error,
+                          onDismiss: _controller.clearError,
+                        ),
+                      Expanded(child: _buildConversation()),
+                      if (_applicationContext case final applicationContext?)
+                        _ApplicationContextBar(
+                          contextEnvelope: applicationContext,
+                          noteTitles: [
+                            for (final envelope in _noteContexts.values)
+                              (envelope.attachments.single
+                                      as AiSelectedNotesContextAttachment)
+                                  .notes
+                                  .single
+                                  .title,
+                          ],
+                          hasTasks: _taskContext != null,
+                          hasEvents: _eventContext != null,
+                          onRemoveNote: _removeNoteAt,
+                          onRemoveTasks: _removeTasks,
+                          onRemoveEvents: _removeEvents,
+                          onPreview:
+                              () => _showContextPreview(applicationContext),
+                        ),
+                      _Composer(
+                        controller: _composerController,
+                        focusNode: _composerFocusNode,
+                        enabled: !_controller.isLoading && profile != null,
+                        isGenerating: _controller.isGenerating,
+                        onSend: _send,
+                        onStop: () => unawaited(_controller.stopResponse()),
+                        onAttach:
+                            _isLoadingContext ? null : _showAttachmentMenu,
+                        isLoadingContext: _isLoadingContext,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -442,6 +490,7 @@ class _AssistantPageState extends State<AssistantPage> {
 class _Composer extends StatelessWidget {
   const _Composer({
     required this.controller,
+    required this.focusNode,
     required this.enabled,
     required this.isGenerating,
     required this.onSend,
@@ -451,6 +500,7 @@ class _Composer extends StatelessWidget {
   });
 
   final TextEditingController controller;
+  final FocusNode focusNode;
   final bool enabled;
   final bool isGenerating;
   final ValueChanged<String> onSend;
@@ -486,16 +536,21 @@ class _Composer extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             Expanded(
-              child: TextField(
-                key: const Key('assistant-composer'),
-                controller: controller,
-                enabled: enabled && !isGenerating,
-                minLines: 1,
-                maxLines: 6,
-                textCapitalization: TextCapitalization.sentences,
-                textInputAction: TextInputAction.newline,
-                decoration: const InputDecoration(
-                  hintText: 'Message the assistant',
+              child: Tooltip(
+                message:
+                    'Focus composer: ${AppShortcutLabels.assistantComposer}',
+                child: TextField(
+                  key: const Key('assistant-composer'),
+                  controller: controller,
+                  focusNode: focusNode,
+                  enabled: enabled && !isGenerating,
+                  minLines: 1,
+                  maxLines: 6,
+                  textCapitalization: TextCapitalization.sentences,
+                  textInputAction: TextInputAction.newline,
+                  decoration: const InputDecoration(
+                    hintText: 'Message the assistant',
+                  ),
                 ),
               ),
             ),

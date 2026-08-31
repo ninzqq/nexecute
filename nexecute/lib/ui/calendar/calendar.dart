@@ -12,6 +12,7 @@ import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/calendar/bottomsheets/event_details.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/shared/adaptive_navigation_shell.dart';
+import 'package:nexecute/shared/app_shortcuts.dart';
 import 'package:nexecute/shared/data_state_placeholder.dart';
 import 'package:nexecute/themes.dart';
 import 'package:nexecute/ui/calendar/month_view.dart';
@@ -158,18 +159,24 @@ class _CalendarPageState extends State<CalendarPage> {
                                       'calendar-event-details-pane',
                                     ),
                                     color: context.appPalette.chrome,
-                                    child: SingleChildScrollView(
-                                      padding: const EdgeInsets.all(16),
-                                      child: EventDetailsPanel(
-                                        event: selectedEvent,
-                                        onClose:
-                                            () => setState(
-                                              () => _selectedEvent = null,
-                                            ),
-                                        onDeleted:
-                                            () => setState(
-                                              () => _selectedEvent = null,
-                                            ),
+                                    child: AppCancelShortcutRegion(
+                                      onCancel:
+                                          () => setState(
+                                            () => _selectedEvent = null,
+                                          ),
+                                      child: SingleChildScrollView(
+                                        padding: const EdgeInsets.all(16),
+                                        child: EventDetailsPanel(
+                                          event: selectedEvent,
+                                          onClose:
+                                              () => setState(
+                                                () => _selectedEvent = null,
+                                              ),
+                                          onDeleted:
+                                              () => setState(
+                                                () => _selectedEvent = null,
+                                              ),
+                                        ),
                                       ),
                                     ),
                                   ),

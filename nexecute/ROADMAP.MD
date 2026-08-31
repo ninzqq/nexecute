@@ -245,15 +245,27 @@ use two, three, or four masonry columns from the shared layout class. Task and
 Assistant content is centered at readable widths, and custom editor/detail
 bottom sheets are capped at 640 logical pixels on non-compact layouts.
 
-##### Phase 1C: baseline desktop commands
+##### Phase 1C: baseline desktop commands — complete
 
-- [ ] Add discoverable keyboard shortcuts for primary navigation, create,
+- [x] Add discoverable keyboard shortcuts for primary navigation, create,
   search, save/confirm, close/cancel, and focusing the Assistant composer.
-- [ ] Prevent shortcuts from firing while an incompatible dialog, text field,
+- [x] Prevent shortcuts from firing while an incompatible dialog, text field,
   or confirmation flow owns keyboard focus.
-- [ ] Add semantics and focus-order tests for keyboard-only navigation.
-- [ ] Defer global shortcuts, menu-bar commands, and operating-system services
+- [x] Add semantics and focus-order tests for keyboard-only navigation.
+- [x] Defer global shortcuts, menu-bar commands, and operating-system services
   until the native macOS alpha is stable.
+
+The shared shell exposes Ctrl/Command plus 1–3 for Calendar, Tasks, and Notes,
+Ctrl/Command+N for contextual creation, and Ctrl/Command+K for search. Editors
+use Ctrl/Command+Enter to confirm and Escape to cancel; Escape also dismisses
+expanded Calendar details. The Assistant adds Ctrl/Command+Shift+A for its
+composer and Ctrl/Command+Enter to send. A keyboard-shortcut reference is
+available from the navigation drawer, with platform-appropriate labels.
+
+Global shell commands are suppressed while editable content or another modal
+route owns focus. Editor and Assistant command regions deliberately handle only
+their compatible commands. Focus and semantics ordering remains navigation,
+content, then contextual creation across compact and rail layouts.
 
 #### Phase 2: native macOS bootstrap
 

@@ -7,6 +7,7 @@ import 'package:nexecute/models/notes_controller.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/shared/adaptive_navigation_shell.dart';
+import 'package:nexecute/shared/app_shortcuts.dart';
 import 'package:nexecute/shared/drawer.dart';
 import 'package:nexecute/tasks/tasks_page.dart';
 import 'package:nexecute/tasks/todo_editor_sheet.dart';
@@ -39,23 +40,66 @@ class HomeScreen extends StatelessWidget {
     final tab = context.watch<HomeTabIndex>();
     final tabIndex = tab.index;
 
-    return AdaptiveNavigationShell(
-      selectedIndex: tabIndex,
-      onDestinationSelected: tab.select,
-      destinations: _destinations,
-      appBar:
-          tabIndex == 0
-              ? null
-              : AppBar(title: Text(_destinations[tabIndex].label)),
-      drawer: const MainDrawer(),
-      body: IndexedStack(
-        index: tabIndex,
-        children: const [CalendarPage(), TasksPage(), Quicxecs()],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _createItem(context, tabIndex),
-        tooltip: _fabLabel(tabIndex),
-        child: Icon(_fabIcon(tabIndex)),
+    return Shortcuts(
+      shortcuts: AppShortcutBindings.home,
+      child: Actions(
+        actions: {
+          SelectDestinationIntent: CallbackAction<SelectDestinationIntent>(
+            onInvoke: (intent) {
+              if (canInvokeGlobalAppShortcut(context)) {
+                tab.select(intent.index);
+              }
+              return null;
+            },
+          ),
+          CreateItemIntent: CallbackAction<CreateItemIntent>(
+            onInvoke: (_) {
+              if (canInvokeGlobalAppShortcut(context)) {
+                _createItem(context, tab.index);
+              }
+              return null;
+            },
+          ),
+          OpenSearchIntent: CallbackAction<OpenSearchIntent>(
+            onInvoke: (_) {
+              if (canInvokeGlobalAppShortcut(context)) {
+                Navigator.pushNamed(context, '/search');
+              }
+              return null;
+            },
+          ),
+        },
+        child: FocusScope(
+          key: const Key('home-shortcut-focus'),
+          autofocus: true,
+          child: FocusTraversalGroup(
+            policy: OrderedTraversalPolicy(),
+            child: AdaptiveNavigationShell(
+              selectedIndex: tabIndex,
+              onDestinationSelected: tab.select,
+              destinations: _destinations,
+              appBar:
+                  tabIndex == 0
+                      ? null
+                      : AppBar(title: Text(_destinations[tabIndex].label)),
+              drawer: const MainDrawer(),
+              body: IndexedStack(
+                index: tabIndex,
+                children: const [CalendarPage(), TasksPage(), Quicxecs()],
+              ),
+              floatingActionButton: Semantics(
+                key: const Key('create-shortcut-semantics'),
+                container: true,
+                hint: 'Shortcut ${AppShortcutLabels.create}',
+                child: FloatingActionButton(
+                  onPressed: () => _createItem(context, tabIndex),
+                  tooltip: _fabLabel(tabIndex),
+                  child: Icon(_fabIcon(tabIndex)),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

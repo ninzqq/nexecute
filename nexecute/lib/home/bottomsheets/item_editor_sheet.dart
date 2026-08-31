@@ -16,6 +16,7 @@ import 'package:nexecute/models/note_folder.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/repositories/note_repository.dart';
 import 'package:nexecute/services/item_conversion_service.dart';
+import 'package:nexecute/shared/app_shortcuts.dart';
 import 'package:provider/provider.dart';
 
 typedef SaveQuicxecCallback =
@@ -309,106 +310,110 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(16),
-          topRight: Radius.circular(16),
+    return AppEditorShortcutRegion(
+      onSave: _submit,
+      onCancel: () => Navigator.maybePop(context),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
+          ),
         ),
-      ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ItemEditorHeader(
-              type: _type,
-              event: widget.event,
-              note: widget.quicxec,
-              onTypeChanged: onItemTypeChanged,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _titleController,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                labelText: 'Title',
-                border: OutlineInputBorder(),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ItemEditorHeader(
+                type: _type,
+                event: widget.event,
+                note: widget.quicxec,
+                onTypeChanged: onItemTypeChanged,
               ),
-              validator: (value) {
-                if (_type == ItemType.event &&
-                    (value == null || value.trim().isEmpty)) {
-                  return 'Please enter a title';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            if (_type == ItemType.quicxec)
-              NoteEditorFields(
-                contentType: _noteContentType,
-                descriptionController: _descriptionController,
-                checklistItems: _checklistItems,
-                onContentTypeChanged: _setNoteContentType,
-                onChecklistItemChanged: _updateChecklistItem,
-                onChecklistItemRemoved: _removeChecklistItem,
-                onChecklistItemAdded: _addChecklistItem,
-              )
-            else ...[
+              const SizedBox(height: 16),
               TextFormField(
-                controller: _descriptionController,
+                controller: _titleController,
                 textCapitalization: TextCapitalization.sentences,
                 decoration: const InputDecoration(
-                  labelText: 'Description',
+                  labelText: 'Title',
                   border: OutlineInputBorder(),
                 ),
-                maxLines: 3,
+                validator: (value) {
+                  if (_type == ItemType.event &&
+                      (value == null || value.trim().isEmpty)) {
+                    return 'Please enter a title';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              if (_type == ItemType.quicxec)
+                NoteEditorFields(
+                  contentType: _noteContentType,
+                  descriptionController: _descriptionController,
+                  checklistItems: _checklistItems,
+                  onContentTypeChanged: _setNoteContentType,
+                  onChecklistItemChanged: _updateChecklistItem,
+                  onChecklistItemRemoved: _removeChecklistItem,
+                  onChecklistItemAdded: _addChecklistItem,
+                )
+              else ...[
+                TextFormField(
+                  controller: _descriptionController,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(
+                    labelText: 'Description',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 8),
+                EventScheduleFields(
+                  startTime: _startTime,
+                  endTime: _endTime,
+                  isAllDay: _isAllDay,
+                  reminder: _eventReminder,
+                  recurrence: _eventRecurrence,
+                  selectedStartDate: _selectedDate,
+                  onStartTimeChanged: _setStartTime,
+                  onEndTimeChanged: (time) => setState(() => _endTime = time),
+                  onStartDateChanged: _setStartDate,
+                  onEndDateChanged:
+                      (date) => setState(
+                        () => _endTime = combineDateAndTime(date, _endTime),
+                      ),
+                  onAllDayChanged:
+                      (isAllDay) => setState(() => _isAllDay = isAllDay),
+                  onReminderChanged:
+                      (reminder) => setState(() => _eventReminder = reminder),
+                  onRecurrenceChanged:
+                      (recurrence) =>
+                          setState(() => _eventRecurrence = recurrence),
+                ),
+              ],
+              const SizedBox(height: 8),
+              if (_type == ItemType.quicxec) ...[
+                NoteFolderField(
+                  folderState: context.watch<DataState<List<NoteFolder>>>(),
+                  selectedFolderId: _folderId,
+                  onChanged: (folderId) => setState(() => _folderId = folderId),
+                ),
+                const SizedBox(height: 8),
+              ],
+              EditorTagSelector(selectedTags: _tags, onTagToggled: _toggleTag),
+              const SizedBox(height: 8),
+              SubmitButton(
+                onPressed: _isSaving ? null : _submit,
+                isEditing: widget.isEditing,
+                isLoading: _isSaving,
               ),
               const SizedBox(height: 8),
-              EventScheduleFields(
-                startTime: _startTime,
-                endTime: _endTime,
-                isAllDay: _isAllDay,
-                reminder: _eventReminder,
-                recurrence: _eventRecurrence,
-                selectedStartDate: _selectedDate,
-                onStartTimeChanged: _setStartTime,
-                onEndTimeChanged: (time) => setState(() => _endTime = time),
-                onStartDateChanged: _setStartDate,
-                onEndDateChanged:
-                    (date) => setState(
-                      () => _endTime = combineDateAndTime(date, _endTime),
-                    ),
-                onAllDayChanged:
-                    (isAllDay) => setState(() => _isAllDay = isAllDay),
-                onReminderChanged:
-                    (reminder) => setState(() => _eventReminder = reminder),
-                onRecurrenceChanged:
-                    (recurrence) =>
-                        setState(() => _eventRecurrence = recurrence),
-              ),
             ],
-            const SizedBox(height: 8),
-            if (_type == ItemType.quicxec) ...[
-              NoteFolderField(
-                folderState: context.watch<DataState<List<NoteFolder>>>(),
-                selectedFolderId: _folderId,
-                onChanged: (folderId) => setState(() => _folderId = folderId),
-              ),
-              const SizedBox(height: 8),
-            ],
-            EditorTagSelector(selectedTags: _tags, onTagToggled: _toggleTag),
-            const SizedBox(height: 8),
-            SubmitButton(
-              onPressed: _isSaving ? null : _submit,
-              isEditing: widget.isEditing,
-              isLoading: _isSaving,
-            ),
-            const SizedBox(height: 8),
-          ],
+          ),
         ),
       ),
     );
