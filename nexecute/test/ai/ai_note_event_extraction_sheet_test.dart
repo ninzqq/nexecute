@@ -226,6 +226,10 @@ void main() {
       findsOneWidget,
     );
     expect(find.textContaining('private model detail'), findsNothing);
+    expect(
+      find.byKey(const Key('ai-diagnostic-action-model_not_found')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('retries an ambiguous creation with the same frozen command', (

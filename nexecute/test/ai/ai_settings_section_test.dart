@@ -263,6 +263,10 @@ void main() {
     );
     expect(find.text('Authentication failed'), findsOneWidget);
     expect(find.text('• Check the credential in AI Settings.'), findsOneWidget);
+    expect(
+      find.byKey(const Key('ai-diagnostic-action-authentication')),
+      findsNothing,
+    );
   });
 
   testWidgets('saves a bearer token outside the connection profile', (

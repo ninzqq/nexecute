@@ -447,6 +447,14 @@ void main() {
     );
     expect(find.textContaining('private host detail'), findsNothing);
     expect(find.byKey(const Key('assistant-retry')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('ai-diagnostic-action-dns')));
+    await tester.pumpAndSettle();
+    expect(find.text('Settings page'), findsOneWidget);
+
+    Navigator.of(tester.element(find.text('Settings page'))).pop();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('assistant-retry')), findsOneWidget);
   });
 }
 

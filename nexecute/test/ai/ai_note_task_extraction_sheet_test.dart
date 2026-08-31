@@ -477,5 +477,9 @@ void main() {
       findsOneWidget,
     );
     expect(find.textContaining('private duration'), findsNothing);
+    expect(
+      find.byKey(const Key('ai-diagnostic-action-timeout')),
+      findsOneWidget,
+    );
   });
 }

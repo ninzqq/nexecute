@@ -7,10 +7,14 @@ class AiDiagnosticPanel extends StatelessWidget {
     super.key,
     required this.diagnostic,
     this.compact = false,
+    this.actionLabel = 'Open AI Settings',
+    this.onAction,
   });
 
   final AiDiagnostic diagnostic;
   final bool compact;
+  final String actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -61,6 +65,15 @@ class AiDiagnosticPanel extends StatelessWidget {
                                 ?.copyWith(color: colors.onErrorContainer),
                           ),
                         ),
+                    ],
+                    if (onAction != null) ...[
+                      const SizedBox(height: 6),
+                      TextButton.icon(
+                        key: Key('ai-diagnostic-action-${diagnostic.code}'),
+                        onPressed: onAction,
+                        icon: const Icon(Icons.settings_outlined, size: 18),
+                        label: Text(actionLabel),
+                      ),
                     ],
                   ],
                 ),

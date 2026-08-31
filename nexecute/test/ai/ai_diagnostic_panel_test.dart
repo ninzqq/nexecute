@@ -6,6 +6,7 @@ void main() {
   testWidgets('shows safe diagnostic details and recovery suggestions', (
     tester,
   ) async {
+    var actionCalled = false;
     final diagnostic = AiDiagnostic(
       kind: AiDiagnosticKind.tls,
       title: 'Secure connection failed',
@@ -18,7 +19,12 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(body: AiDiagnosticPanel(diagnostic: diagnostic)),
+        home: Scaffold(
+          body: AiDiagnosticPanel(
+            diagnostic: diagnostic,
+            onAction: () => actionCalled = true,
+          ),
+        ),
       ),
     );
 
@@ -36,5 +42,7 @@ void main() {
       find.text('• Confirm that the device clock is correct.'),
       findsOneWidget,
     );
+    await tester.tap(find.byKey(const Key('ai-diagnostic-action-tls')));
+    expect(actionCalled, isTrue);
   });
 }

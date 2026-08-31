@@ -219,7 +219,10 @@ class _AiNoteTaskExtractionSheetState
                   ],
                   if (controller.diagnostic case final diagnostic?) ...[
                     const SizedBox(height: 12),
-                    AiDiagnosticPanel(diagnostic: diagnostic),
+                    AiDiagnosticPanel(
+                      diagnostic: diagnostic,
+                      onAction: () => Navigator.pushNamed(context, '/settings'),
+                    ),
                   ] else if (controller.errorMessage case final message?) ...[
                     const SizedBox(height: 12),
                     Text(

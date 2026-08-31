@@ -840,7 +840,11 @@ class _MessageBubble extends StatelessWidget {
             ],
             if (message.diagnostic case final diagnostic?) ...[
               const SizedBox(height: 9),
-              AiDiagnosticPanel(diagnostic: diagnostic, compact: true),
+              AiDiagnosticPanel(
+                diagnostic: diagnostic,
+                compact: true,
+                onAction: () => Navigator.pushNamed(context, '/settings'),
+              ),
             ],
             if (onRetry != null) ...[
               const SizedBox(height: 6),
