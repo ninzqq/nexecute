@@ -132,5 +132,7 @@ void main() {
     expect(completed.usage?.totalTokens, 14);
     expect(failed.error, same(error));
     expect(failed.retryable, isTrue);
+    expect(failed.manualRetrySuggested, isTrue);
+    expect(failed.automaticRetryAllowed, isFalse);
   });
 }

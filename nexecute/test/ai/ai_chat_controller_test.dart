@@ -237,6 +237,7 @@ void main() {
     expect(saved.messages.last.status, AiMessageStatus.failed);
     expect(saved.messages.last.errorMessage, 'Connection lost');
     expect(saved.messages.last.diagnostic, same(diagnostic));
+    expect(repository.startedRequests, hasLength(1));
   });
 
   test(
@@ -263,6 +264,7 @@ void main() {
       await controller.initialize();
       await controller.send('Try this');
       await _flushEvents();
+      expect(repository.startedRequests, hasLength(1));
       repository.responseEvents = const [
         AiTextDelta('Recovered'),
         AiResponseCompleted(),

@@ -462,7 +462,7 @@ system message.
   endpoint bearer tokens.
 - [ ] Add explicit context-window and warm-up settings where the server and
   protocol support them reliably.
-- [ ] Keep automatic retries away from ambiguous generation requests that may
+- [x] Keep automatic retries away from ambiguous generation requests that may
   already have completed or incurred provider work.
 - [x] Add actionable diagnostics for DNS, TLS, CORS, mixed-content, local
   network, authentication, model-missing, and protocol-compatibility failures.

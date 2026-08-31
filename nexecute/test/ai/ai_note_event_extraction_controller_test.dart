@@ -220,16 +220,18 @@ void main() {
       summary: 'The selected model is unavailable.',
       suggestions: const ['Choose an installed model in AI Settings.'],
     );
+    final repository = FakeAiAssistantRepository(
+      responseEvents: [
+        AiResponseFailed(
+          error: StateError('private provider detail'),
+          message: diagnostic.summary,
+          retryable: true,
+          diagnostic: diagnostic,
+        ),
+      ],
+    );
     final controller = AiNoteEventExtractionController(
-      assistantRepository: FakeAiAssistantRepository(
-        responseEvents: [
-          AiResponseFailed(
-            error: StateError('private provider detail'),
-            message: diagnostic.summary,
-            diagnostic: diagnostic,
-          ),
-        ],
-      ),
+      assistantRepository: repository,
       connectionProfileStore: profileStore,
     );
     addTearDown(controller.dispose);
@@ -245,6 +247,7 @@ void main() {
     expect(controller.status, AiNoteEventExtractionStatus.failed);
     expect(controller.diagnostic, same(diagnostic));
     expect(controller.errorMessage, diagnostic.summary);
+    expect(repository.startedRequests, hasLength(1));
   });
 
   test(

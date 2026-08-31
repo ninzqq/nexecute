@@ -97,16 +97,18 @@ void main() {
       summary: 'The endpoint did not respond before the configured timeout.',
       suggestions: const ['Check whether the model is still starting.'],
     );
+    final repository = FakeAiAssistantRepository(
+      responseEvents: [
+        AiResponseFailed(
+          error: TimeoutException('private detail'),
+          message: diagnostic.summary,
+          retryable: true,
+          diagnostic: diagnostic,
+        ),
+      ],
+    );
     final controller = AiNoteTaskExtractionController(
-      assistantRepository: FakeAiAssistantRepository(
-        responseEvents: [
-          AiResponseFailed(
-            error: TimeoutException('private detail'),
-            message: diagnostic.summary,
-            diagnostic: diagnostic,
-          ),
-        ],
-      ),
+      assistantRepository: repository,
       connectionProfileStore: profileStore,
     );
     addTearDown(controller.dispose);
@@ -122,6 +124,7 @@ void main() {
     expect(controller.status, AiNoteTaskExtractionStatus.failed);
     expect(controller.diagnostic, same(diagnostic));
     expect(controller.errorMessage, diagnostic.summary);
+    expect(repository.startedRequests, hasLength(1));
   });
 
   test('supports editing and selecting parsed task proposals locally', () async {

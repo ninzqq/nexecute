@@ -64,6 +64,13 @@ final class AiResponseFailed extends AiStreamEvent {
   final Object error;
   final String message;
   final String? code;
+
+  /// Whether repeating the request after an explicit user action may be
+  /// reasonable. This never authorizes an automatic generation retry.
   final bool retryable;
+
+  bool get manualRetrySuggested => retryable;
+  bool get automaticRetryAllowed => false;
+
   final AiDiagnostic? diagnostic;
 }
