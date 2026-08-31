@@ -24,6 +24,7 @@ export 'infrastructure/ai_event_proposal_parser.dart';
 export 'infrastructure/ai_task_proposal_parser.dart';
 export 'infrastructure/firestore_ai_conversation_store.dart';
 export 'infrastructure/flutter_secure_ai_credential_store.dart';
+export 'infrastructure/ai_failure_diagnostics.dart';
 export 'infrastructure/open_ai_compatible_assistant_repository.dart';
 export 'infrastructure/shared_preferences_ai_connection_profile_store.dart';
 export 'infrastructure/unconfigured_ai_assistant_repository.dart';

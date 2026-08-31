@@ -76,3 +76,20 @@ final class AiDiagnostic {
     return normalized;
   }
 }
+
+/// An operation failure that carries only a user-safe diagnostic across an
+/// application boundary while retaining its original cause for local handling.
+final class AiDiagnosticException implements Exception {
+  AiDiagnosticException({required this.diagnostic, String? message, this.cause})
+    : message = AiDiagnostic._requiredText(
+        message ?? diagnostic.summary,
+        'message',
+      );
+
+  final AiDiagnostic diagnostic;
+  final String message;
+  final Object? cause;
+
+  @override
+  String toString() => message;
+}

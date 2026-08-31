@@ -469,7 +469,7 @@ system message.
   - [x] Define stable provider-neutral diagnostic categories and an immutable,
     user-safe guidance contract that connection and response failures can
     carry without breaking existing callers.
-  - [ ] Classify transport, HTTP, timeout, configuration, and response failures
+  - [x] Classify transport, HTTP, timeout, configuration, and response failures
     into those diagnostics without exposing credentials or raw payloads.
   - [ ] Present the diagnostics consistently in connection tests, chat, and
     structured proposal workflows.

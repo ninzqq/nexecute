@@ -6,10 +6,12 @@ import 'package:nexecute/ai/domain/ai_chat_message.dart';
 import 'package:nexecute/ai/domain/ai_chat_request.dart';
 import 'package:nexecute/ai/domain/ai_connection_profile.dart';
 import 'package:nexecute/ai/domain/ai_connection_result.dart';
+import 'package:nexecute/ai/domain/ai_diagnostic.dart';
 import 'package:nexecute/ai/domain/ai_model_info.dart';
 import 'package:nexecute/ai/domain/ai_protocol.dart';
 import 'package:nexecute/ai/domain/ai_stream_event.dart';
 import 'package:nexecute/ai/domain/ai_tool.dart';
+import 'package:nexecute/ai/infrastructure/ai_failure_diagnostics.dart';
 import 'package:nexecute/ai/repositories/ai_assistant_repository.dart';
 import 'package:nexecute/ai/repositories/ai_credential_store.dart';
 import 'package:nexecute/ai/repositories/ai_response_handle.dart';
@@ -20,14 +22,17 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
     this.credentialStore,
     this.connectionTimeout,
     this.responseIdleTimeout,
+    AiFailureDiagnostics? failureDiagnostics,
   }) : _client = client ?? http.Client(),
-       _ownsClient = client == null;
+       _ownsClient = client == null,
+       _failureDiagnostics = failureDiagnostics ?? AiFailureDiagnostics();
 
   final http.Client _client;
   final bool _ownsClient;
   final AiCredentialStore? credentialStore;
   final Duration? connectionTimeout;
   final Duration? responseIdleTimeout;
+  final AiFailureDiagnostics _failureDiagnostics;
 
   @override
   Future<AiConnectionResult> testConnection(AiConnectionProfile profile) async {
@@ -42,44 +47,36 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
       stopwatch.stop();
       if (models.isNotEmpty &&
           !models.any((model) => model.id == profile.modelId)) {
+        final diagnostic = _failureDiagnostics.modelNotFound();
         return AiConnectionResult(
           status: AiConnectionStatus.modelNotFound,
           message: 'Connected, but model “${profile.modelId}” was not found.',
           latency: stopwatch.elapsed,
+          diagnostic: diagnostic,
         );
       }
       return AiConnectionResult.connected(latency: stopwatch.elapsed);
     } on TimeoutException {
-      return const AiConnectionResult(
+      final diagnostic = _failureDiagnostics.timeout(
+        operation: AiFailureOperation.connectionTest,
+      );
+      return AiConnectionResult(
         status: AiConnectionStatus.timeout,
         message: 'The AI endpoint did not respond in time.',
+        diagnostic: diagnostic,
       );
-    } on OpenAiCompatibleHttpException catch (error) {
-      final status = switch (error.statusCode) {
-        401 || 403 => AiConnectionStatus.authenticationFailed,
-        404 => AiConnectionStatus.invalidConfiguration,
-        _ => AiConnectionStatus.failed,
-      };
-      final message =
-          error.statusCode == 404
-              ? 'The model-list endpoint was not found. For Ollama, use a '
-                  'base URL ending in /v1.'
-              : error.message;
-      return AiConnectionResult(status: status, message: message);
-    } on AiCredentialStoreException catch (error) {
+    } on AiDiagnosticException catch (error) {
       return AiConnectionResult(
-        status: AiConnectionStatus.invalidConfiguration,
+        status: _connectionStatus(error.diagnostic.kind),
         message: error.message,
+        diagnostic: error.diagnostic,
       );
-    } on http.ClientException catch (error) {
-      return AiConnectionResult(
-        status: AiConnectionStatus.unreachable,
-        message: 'Could not reach the AI endpoint: ${error.message}',
-      );
-    } catch (error) {
+    } catch (_) {
+      final diagnostic = _failureDiagnostics.unknown();
       return AiConnectionResult(
         status: AiConnectionStatus.failed,
-        message: 'Connection test failed: $error',
+        message: 'Connection test failed.',
+        diagnostic: diagnostic,
       );
     }
   }
@@ -88,37 +85,100 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
   Future<List<AiModelInfo>> listModels(AiConnectionProfile profile) async {
     final configurationError = _configurationError(profile);
     if (configurationError != null) {
-      throw StateError(configurationError.message);
-    }
-    final headers = await _headers(profile);
-    final response = await _client
-        .get(_endpoint(profile.baseUrl, 'models'), headers: headers)
-        .timeout(connectionTimeout ?? profile.connectionTimeout);
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw OpenAiCompatibleHttpException(
-        response.statusCode,
-        _safeErrorMessage(response.body, response.statusCode, headers),
+      throw AiDiagnosticException(
+        diagnostic:
+            configurationError.diagnostic ??
+            _failureDiagnostics.invalidConfiguration(),
+        message: configurationError.message,
       );
     }
-    final body = jsonDecode(response.body);
-    if (body is! Map || body['data'] is! List) {
-      throw const FormatException(
-        'The endpoint returned an invalid model list.',
+    try {
+      final headers = await _headers(profile);
+      final response = await _client
+          .get(_endpoint(profile.baseUrl, 'models'), headers: headers)
+          .timeout(connectionTimeout ?? profile.connectionTimeout);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        final message =
+            response.statusCode == 404
+                ? 'The model-list endpoint was not found. For Ollama, use a base URL ending in /v1.'
+                : _safeErrorMessage(
+                  response.body,
+                  response.statusCode,
+                  headers,
+                );
+        throw AiDiagnosticException(
+          diagnostic: _failureDiagnostics.httpFailure(
+            response.statusCode,
+            operation: AiFailureOperation.modelDiscovery,
+            safeProviderMessage: message,
+          ),
+          message: message,
+          cause: OpenAiCompatibleHttpException(response.statusCode, message),
+        );
+      }
+      final body = jsonDecode(response.body);
+      if (body is! Map || body['data'] is! List) {
+        throw const FormatException(
+          'The endpoint returned an invalid model list.',
+        );
+      }
+      return List.unmodifiable(
+        (body['data'] as List)
+            .whereType<Map>()
+            .map(
+              (model) => AiModelInfo(
+                id: model['id']?.toString() ?? '',
+                displayName: model['name']?.toString(),
+                ownedBy: model['owned_by']?.toString(),
+                capabilities: profile.protocol.defaultCapabilities,
+              ),
+            )
+            .where((model) => model.id.isNotEmpty),
+      );
+    } on AiDiagnosticException {
+      rethrow;
+    } on AiCredentialStoreException catch (error) {
+      throw AiDiagnosticException(
+        diagnostic: _failureDiagnostics.credentialUnavailable(),
+        message: error.message,
+        cause: error,
+      );
+    } on TimeoutException catch (error) {
+      throw AiDiagnosticException(
+        diagnostic: _failureDiagnostics.timeout(
+          operation: AiFailureOperation.modelDiscovery,
+        ),
+        message: 'The AI endpoint did not respond in time.',
+        cause: error,
+      );
+    } on FormatException catch (error) {
+      throw AiDiagnosticException(
+        diagnostic: _failureDiagnostics.invalidResponse(),
+        message: 'The endpoint returned an invalid model list.',
+        cause: error,
+      );
+    } on http.ClientException catch (error) {
+      throw AiDiagnosticException(
+        diagnostic: _failureDiagnostics.transportFailure(
+          error,
+          endpoint: profile.baseUrl,
+        ),
+        message:
+            'Could not reach the AI endpoint. Check that the server is running and that this device can access the configured address.',
+        cause: error,
+      );
+    } catch (error) {
+      final transportDiagnostic = _failureDiagnostics
+          .recognizedNativeTransportFailure(error, endpoint: profile.baseUrl);
+      throw AiDiagnosticException(
+        diagnostic: transportDiagnostic ?? _failureDiagnostics.unknown(),
+        message:
+            transportDiagnostic == null
+                ? 'Could not load models from the AI endpoint.'
+                : 'Could not establish a secure connection to the AI endpoint.',
+        cause: error,
       );
     }
-    return List.unmodifiable(
-      (body['data'] as List)
-          .whereType<Map>()
-          .map(
-            (model) => AiModelInfo(
-              id: model['id']?.toString() ?? '',
-              displayName: model['name']?.toString(),
-              ownedBy: model['owned_by']?.toString(),
-              capabilities: profile.protocol.defaultCapabilities,
-            ),
-          )
-          .where((model) => model.id.isNotEmpty),
-    );
   }
 
   @override
@@ -142,6 +202,7 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
       yield AiResponseFailed(
         error: StateError(configurationError.message),
         message: configurationError.message,
+        diagnostic: configurationError.diagnostic,
       );
       return;
     }
@@ -154,6 +215,7 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
         error: error,
         message: error.message,
         code: 'credential_unavailable',
+        diagnostic: _failureDiagnostics.credentialUnavailable(),
       );
       return;
     }
@@ -210,6 +272,11 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
           message: message,
           code: 'http_${response.statusCode}',
           retryable: response.statusCode == 408 || response.statusCode >= 500,
+          diagnostic: _failureDiagnostics.httpFailure(
+            response.statusCode,
+            operation: AiFailureOperation.responseStart,
+            safeProviderMessage: message,
+          ),
         );
         return;
       }
@@ -254,6 +321,7 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
             message: _redactCredential(message, headers),
             code: error is Map ? error['code']?.toString() : null,
             retryable: true,
+            diagnostic: _failureDiagnostics.providerFailure(),
           );
           return;
         }
@@ -326,6 +394,10 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
         retryable: true,
       );
     } on TimeoutException catch (error) {
+      final operation =
+          responseStarted
+              ? AiFailureOperation.responseStream
+              : AiFailureOperation.responseStart;
       yield AiResponseFailed(
         error: error,
         message:
@@ -334,12 +406,14 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
                 : 'The AI endpoint did not start responding in time.',
         code: responseStarted ? 'stream_timeout' : 'connection_timeout',
         retryable: true,
+        diagnostic: _failureDiagnostics.timeout(operation: operation),
       );
     } on FormatException catch (error) {
       yield AiResponseFailed(
         error: error,
         message: 'The AI endpoint returned a malformed streaming response.',
         code: 'invalid_response',
+        diagnostic: _failureDiagnostics.invalidResponse(),
       );
     } on http.ClientException catch (error) {
       yield AiResponseFailed(
@@ -348,12 +422,22 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
             'Could not reach the AI endpoint. Check that the server is running and that this device can access the configured address.',
         code: 'unreachable',
         retryable: true,
+        diagnostic: _failureDiagnostics.transportFailure(
+          error,
+          endpoint: profile.baseUrl,
+        ),
       );
     } catch (error) {
+      final transportDiagnostic = _failureDiagnostics
+          .recognizedNativeTransportFailure(error, endpoint: profile.baseUrl);
       yield AiResponseFailed(
         error: error,
-        message: 'The AI response was interrupted: $error',
+        message:
+            transportDiagnostic == null
+                ? 'The AI response was interrupted unexpectedly.'
+                : 'Could not establish a secure connection to the AI endpoint.',
         retryable: true,
+        diagnostic: transportDiagnostic ?? _failureDiagnostics.unknown(),
       );
     }
   }
@@ -365,30 +449,34 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
 
   AiConnectionResult? _configurationError(AiConnectionProfile profile) {
     if (!profile.isValid) {
-      return const AiConnectionResult(
+      return AiConnectionResult(
         status: AiConnectionStatus.invalidConfiguration,
         message: 'The AI connection profile is incomplete.',
+        diagnostic: _failureDiagnostics.invalidConfiguration(),
       );
     }
     if (profile.protocol != AiProtocol.openAiCompatibleChat) {
-      return const AiConnectionResult(
+      return AiConnectionResult(
         status: AiConnectionStatus.unsupported,
         message: 'This AI protocol is not implemented yet.',
+        diagnostic: _failureDiagnostics.unsupported(),
       );
     }
     if (profile.authenticationMode == AiAuthenticationMode.bearerToken &&
         !(credentialStore?.isAvailable ?? false)) {
-      return const AiConnectionResult(
+      return AiConnectionResult(
         status: AiConnectionStatus.invalidConfiguration,
         message:
             'Secure endpoint credentials are not available on this platform.',
+        diagnostic: _failureDiagnostics.credentialUnavailable(),
       );
     }
     if (profile.authenticationMode != AiAuthenticationMode.none &&
         profile.authenticationMode != AiAuthenticationMode.bearerToken) {
-      return const AiConnectionResult(
+      return AiConnectionResult(
         status: AiConnectionStatus.unsupported,
         message: 'This endpoint authentication method is not available yet.',
+        diagnostic: _failureDiagnostics.unsupported(),
       );
     }
     return null;
@@ -465,13 +553,14 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
     return null;
   }
 
-  static AiResponseFailed _emptyResponseFailure() {
+  AiResponseFailed _emptyResponseFailure() {
     const message =
         'The endpoint completed without returning text or a supported reasoning stream. Check the selected model and OpenAI-compatible API format.';
     return AiResponseFailed(
       error: const FormatException(message),
       message: message,
       code: 'empty_response',
+      diagnostic: _failureDiagnostics.invalidResponse(empty: true),
     );
   }
 
@@ -685,3 +774,23 @@ class OpenAiCompatibleHttpException implements Exception {
   @override
   String toString() => 'HTTP $statusCode: $message';
 }
+
+AiConnectionStatus _connectionStatus(AiDiagnosticKind kind) => switch (kind) {
+  AiDiagnosticKind.invalidConfiguration ||
+  AiDiagnosticKind.endpointNotFound => AiConnectionStatus.invalidConfiguration,
+  AiDiagnosticKind.authentication => AiConnectionStatus.authenticationFailed,
+  AiDiagnosticKind.modelNotFound => AiConnectionStatus.modelNotFound,
+  AiDiagnosticKind.timeout => AiConnectionStatus.timeout,
+  AiDiagnosticKind.dns ||
+  AiDiagnosticKind.tls ||
+  AiDiagnosticKind.browserMixedContent ||
+  AiDiagnosticKind.browserCorsOrNetwork ||
+  AiDiagnosticKind.localNetwork ||
+  AiDiagnosticKind.unreachable => AiConnectionStatus.unreachable,
+  AiDiagnosticKind.unsupported => AiConnectionStatus.unsupported,
+  AiDiagnosticKind.rateLimited ||
+  AiDiagnosticKind.serverUnavailable ||
+  AiDiagnosticKind.protocolIncompatible ||
+  AiDiagnosticKind.invalidResponse ||
+  AiDiagnosticKind.unknown => AiConnectionStatus.failed,
+};

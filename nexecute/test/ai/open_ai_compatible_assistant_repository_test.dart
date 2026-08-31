@@ -65,6 +65,7 @@ void main() {
     final result = await repository.testConnection(profile);
 
     expect(result.status, AiConnectionStatus.modelNotFound);
+    expect(result.diagnostic?.kind, AiDiagnosticKind.modelNotFound);
   });
 
   test('explains that Ollama base URLs need the v1 path', () async {
@@ -78,6 +79,7 @@ void main() {
 
     expect(result.status, AiConnectionStatus.invalidConfiguration);
     expect(result.message, contains('ending in /v1'));
+    expect(result.diagnostic?.kind, AiDiagnosticKind.endpointNotFound);
   });
 
   test('uses a securely resolved bearer token for models and chat', () async {
@@ -719,6 +721,7 @@ void main() {
     final event = (await handle.events.toList()).single as AiResponseFailed;
 
     expect(event.code, 'unreachable');
+    expect(event.diagnostic?.kind, AiDiagnosticKind.unreachable);
     expect(event.message, contains('server is running'));
     expect(event.retryable, isTrue);
     expect(event.message, isNot(contains('offline')));
@@ -748,6 +751,7 @@ void main() {
     expect(event.message, 'Model is warming up');
     expect(event.code, 'http_503');
     expect(event.retryable, isTrue);
+    expect(event.diagnostic?.kind, AiDiagnosticKind.serverUnavailable);
   });
 
   test('omits reasoning effort when the profile uses automatic', () async {
@@ -795,6 +799,7 @@ void main() {
 
       expect(event.code, 'connection_timeout');
       expect(event.message, contains('did not start'));
+      expect(event.diagnostic?.kind, AiDiagnosticKind.timeout);
     },
   );
 
@@ -835,6 +840,7 @@ void main() {
     expect(event.code, 'stream_timeout');
     expect(event.message, contains('stopped sending'));
     expect(event.retryable, isTrue);
+    expect(event.diagnostic?.kind, AiDiagnosticKind.timeout);
   });
 
   test(
@@ -856,6 +862,7 @@ void main() {
       expect(event.code, 'invalid_response');
       expect(event.message, contains('malformed'));
       expect(event.retryable, isFalse);
+      expect(event.diagnostic?.kind, AiDiagnosticKind.invalidResponse);
     },
   );
 

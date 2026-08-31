@@ -69,6 +69,15 @@ void main() {
       ),
       throwsArgumentError,
     );
+    final diagnostic = AiDiagnostic(
+      kind: AiDiagnosticKind.unknown,
+      title: 'Request failed',
+      summary: 'Something failed.',
+    );
+    expect(
+      () => AiDiagnosticException(diagnostic: diagnostic, message: ' '),
+      throwsArgumentError,
+    );
   });
 
   test('can accompany connection and streamed-response failures', () {
