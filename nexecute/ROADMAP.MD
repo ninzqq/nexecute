@@ -377,24 +377,30 @@ can sync without writing every streamed token.
 
 #### Step 5: local phase 1 — validate real chat 🚧
 
+**Remaining work:** ⏸ Deferred until the owner has time and access to the PC
+running Ollama.
+
 Validate the existing vertical slice against the owner's real Ollama server
 before adding hosted providers or advanced application actions.
 
 > **Why this remains unfinished:** Real Ollama connection testing, model
 > discovery, streaming chat, Stop, Retry, and partial-response preservation
-> have been exercised by the owner. The remaining checklist has not been run
-> and recorded systematically across multiple signed-in devices, home-network
-> and Tailscale access, and the listed failure conditions. Automated
-> development work must not contact the owner's real model endpoint unless the
-> owner explicitly requests that specific test.
+> have been exercised by the owner. Conversation restoration and Firestore
+> synchronization have also been verified between a phone and a tablet, and
+> real-server access works over both the home network and Tailscale. The
+> remaining failure-condition and transport checks have not been run and
+> recorded systematically. They are intentionally deferred until the owner has
+> time and access to the PC running Ollama. Automated development work must not
+> contact the owner's real model endpoint unless the owner explicitly requests
+> that specific test.
 
 - [x] Verify connection testing and model discovery against Ollama's
   OpenAI-compatible API.
 - [x] Verify streaming chat, Stop, Retry, and partial-response preservation
   against a real local model.
-- [ ] Verify conversation restoration and Firestore synchronization between
+- [x] Verify conversation restoration and Firestore synchronization between
   signed-in devices without storing endpoint credentials in Firestore.
-- [ ] Verify access over the home network and over Tailscale.
+- [x] Verify access over the home network and over Tailscale.
 - [ ] Exercise model cold start, warm-up delay, endpoint-offline, timeout,
   interrupted-stream, and malformed-response behavior.
 - [ ] Improve diagnostics and recovery guidance for any failures discovered by
