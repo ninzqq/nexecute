@@ -123,6 +123,34 @@ The reminder preference synchronizes through Firestore, while the scheduled
 alarm itself is local to the Android device where the event is created or
 edited. Cross-device reminder reconciliation can be added later if needed.
 
+## Calendar event recurrence
+
+**Status:** ✅ Completed
+
+- [x] Let users choose no recurrence or repeat an event daily, weekly, monthly,
+  or yearly.
+- [x] Persist recurrence with the event in Firestore while treating older
+  events without recurrence data as non-recurring.
+- [x] Expand only the recurring occurrences needed for the visible calendar
+  range rather than storing a separate Firestore document for every occurrence.
+- [x] Show generated occurrences in month, week, selected-day agenda, and home
+  widget data using their occurrence dates and times.
+- [x] Preserve the original series schedule when a generated occurrence is
+  opened and edited without changing its dates.
+- [x] Show recurrence in the event editor and event details.
+- [x] Schedule recurring Android reminders using daily, weekly, monthly, or
+  yearly notification date-time matching.
+- [x] Cover recurrence selection, Firestore mapping, daily and weekly
+  expansion, month-end behavior, yearly events, leap days, multi-day spans,
+  series editing, and reminder scheduling with automated tests.
+
+Each recurring series remains one event document. Calendar reads combine the
+bounded overlap query used for non-recurring events with a query for recurring
+series, then generate only the occurrences overlapping the requested calendar
+range on the client. Editing or deleting a displayed occurrence currently
+applies to the complete series; per-occurrence exceptions are not part of this
+scope.
+
 ## Future roadmap
 
 The application should continue developing as a focused personal productivity
