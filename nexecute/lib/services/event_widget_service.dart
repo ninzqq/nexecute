@@ -14,6 +14,35 @@ abstract interface class EventWidgetDataWriter {
   Future<void> refresh();
 }
 
+abstract interface class EventWidgetUpdater {
+  Future<void> updateCurrentWeek(
+    List<Event> events, {
+    required AppThemePreset theme,
+    DateTime? now,
+  });
+
+  Future<void> updateStatus(String message);
+
+  Future<void> updateTheme(AppThemePreset theme);
+}
+
+class NoopEventWidgetUpdater implements EventWidgetUpdater {
+  const NoopEventWidgetUpdater();
+
+  @override
+  Future<void> updateCurrentWeek(
+    List<Event> events, {
+    required AppThemePreset theme,
+    DateTime? now,
+  }) async {}
+
+  @override
+  Future<void> updateStatus(String message) async {}
+
+  @override
+  Future<void> updateTheme(AppThemePreset theme) async {}
+}
+
 class HomeWidgetEventDataWriter implements EventWidgetDataWriter {
   static const androidWidgetName = 'CalendarWidgetProvider';
 
@@ -41,7 +70,7 @@ class HomeWidgetEventDataWriter implements EventWidgetDataWriter {
   }
 }
 
-class EventWidgetService {
+class EventWidgetService implements EventWidgetUpdater {
   EventWidgetService({EventWidgetDataWriter? writer})
     : _writer = writer ?? HomeWidgetEventDataWriter();
 
@@ -51,6 +80,7 @@ class EventWidgetService {
   final EventWidgetDataWriter _writer;
   final IsoWeekCalculator _weekCalculator = IsoWeekCalculator();
 
+  @override
   Future<void> updateCurrentWeek(
     List<Event> events, {
     required AppThemePreset theme,
@@ -96,11 +126,13 @@ class EventWidgetService {
     await _writer.refresh();
   }
 
+  @override
   Future<void> updateStatus(String message) async {
     await _writer.saveString('widget_status', message);
     await _writer.refresh();
   }
 
+  @override
   Future<void> updateTheme(AppThemePreset theme) async {
     await _writer.saveString('widget_theme', theme.name);
     await _writer.refresh();

@@ -1,3 +1,4 @@
+export 'app_platform_services.dart';
 export 'auth.dart';
 export 'authenticated_data_stream.dart';
 export 'event_reminder_scheduler.dart';

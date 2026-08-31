@@ -11,7 +11,7 @@ import 'package:nexecute/themes.dart';
 class WidgetSyncingEventRepository implements EventRepository {
   const WidgetSyncingEventRepository({
     required EventRepository delegate,
-    required EventWidgetService widgetService,
+    required EventWidgetUpdater widgetService,
     required AppThemePreset Function() themePreset,
     DateTime Function()? now,
   }) : _delegate = delegate,
@@ -20,7 +20,7 @@ class WidgetSyncingEventRepository implements EventRepository {
        _now = now ?? DateTime.now;
 
   final EventRepository _delegate;
-  final EventWidgetService _widgetService;
+  final EventWidgetUpdater _widgetService;
   final AppThemePreset Function() _themePreset;
   final DateTime Function() _now;
 

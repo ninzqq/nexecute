@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:nexecute/models/event.dart';
@@ -34,18 +33,6 @@ class NoopEventReminderScheduler implements EventReminderScheduler {
 
   @override
   Future<void> cancel(String eventId) async {}
-}
-
-Future<EventReminderScheduler> createDefaultEventReminderScheduler() async {
-  if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
-    return const NoopEventReminderScheduler();
-  }
-
-  try {
-    return await AndroidEventReminderScheduler.initialize();
-  } catch (_) {
-    return const NoopEventReminderScheduler();
-  }
 }
 
 class AndroidEventReminderScheduler implements EventReminderScheduler {

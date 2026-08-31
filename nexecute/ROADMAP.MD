@@ -292,17 +292,24 @@ and repeatable test checklist.
 
 ##### Phase 2B: platform service boundaries
 
-- [ ] Refactor startup registration so each platform receives an explicit
+- [x] Refactor startup registration so each platform receives an explicit
   implementation for reminders, widgets, secure credentials, and other native
   services rather than scattered Android checks.
-- [ ] Keep Android reminder and home-widget behavior unchanged.
-- [ ] Start macOS with a documented no-op for unsupported native features, then
+- [x] Keep Android reminder and home-widget behavior unchanged.
+- [x] Start macOS with a documented no-op for unsupported native features, then
   enable them separately only when their behavior is tested.
 - [ ] Verify `flutter_secure_storage` on macOS, including save, replacement,
   deletion, duplicate-profile behavior, and sign-out expectations.
 - [ ] Ensure an unavailable optional native service cannot prevent Calendar,
   Tasks, Notes, Tags, authentication, or Firestore synchronization from
   starting.
+
+**Phase 2B.1 complete:** Startup now selects one typed platform-service bundle.
+Android retains local event reminders, calendar home-widget updates, and secure
+AI credentials. macOS uses explicit no-op reminder and widget implementations
+and keeps AI credential storage unavailable until its keychain lifecycle is
+verified in Phase 2B.2. The service matrix and boundaries are documented in
+`docs/platform_services.md`.
 
 ##### Phase 2C: networking, entitlements, and first build
 

@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -27,17 +26,12 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   final themeController = await AppThemeController.load();
   final calendarSettingsController = await CalendarSettingsController.load();
-  final reminderScheduler = await createDefaultEventReminderScheduler();
-  final eventWidgetService =
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.android
-          ? EventWidgetService()
-          : null;
+  final platformServices = await createDefaultAppPlatformServices();
   runApp(
     Nexecute(
       themeController: themeController,
       calendarSettingsController: calendarSettingsController,
-      reminderScheduler: reminderScheduler,
-      eventWidgetService: eventWidgetService,
+      platformServices: platformServices,
     ),
   );
 }
@@ -47,14 +41,12 @@ class Nexecute extends StatefulWidget {
     super.key,
     this.themeController,
     this.calendarSettingsController,
-    this.reminderScheduler,
-    this.eventWidgetService,
+    this.platformServices,
   });
 
   final AppThemeController? themeController;
   final CalendarSettingsController? calendarSettingsController;
-  final EventReminderScheduler? reminderScheduler;
-  final EventWidgetService? eventWidgetService;
+  final AppPlatformServices? platformServices;
 
   // Create the initialization Future outside of `build`:
   @override
@@ -66,8 +58,7 @@ class NexecuteState extends State<Nexecute> {
   late final bool _ownsThemeController;
   late final CalendarSettingsController _calendarSettingsController;
   late final bool _ownsCalendarSettingsController;
-  late final EventReminderScheduler _reminderScheduler;
-  EventWidgetService? _eventWidgetService;
+  late final AppPlatformServices _platformServices;
 
   @override
   void initState() {
@@ -77,9 +68,8 @@ class NexecuteState extends State<Nexecute> {
     _ownsCalendarSettingsController = widget.calendarSettingsController == null;
     _calendarSettingsController =
         widget.calendarSettingsController ?? CalendarSettingsController();
-    _reminderScheduler =
-        widget.reminderScheduler ?? const NoopEventReminderScheduler();
-    _eventWidgetService = widget.eventWidgetService;
+    _platformServices =
+        widget.platformServices ?? AppPlatformServices.unsupported;
     _themeController.addListener(_updateEventWidgetTheme);
   }
 
@@ -98,7 +88,9 @@ class NexecuteState extends State<Nexecute> {
     return MultiProvider(
       providers: [
         Provider<AuthService>(create: (_) => AuthService()),
-        Provider<EventReminderScheduler>.value(value: _reminderScheduler),
+        Provider<EventReminderScheduler>.value(
+          value: _platformServices.reminderScheduler,
+        ),
         StreamProvider<DataState<User>>(
           create:
               (context) => context.read<AuthService>().watchAuthentication(),
@@ -125,15 +117,11 @@ class NexecuteState extends State<Nexecute> {
               delegate: firestoreRepository,
               reminderScheduler: context.read<EventReminderScheduler>(),
             );
-            final eventWidgetService = _eventWidgetService;
-            if (eventWidgetService != null) {
-              repository = WidgetSyncingEventRepository(
-                delegate: repository,
-                widgetService: eventWidgetService,
-                themePreset: () => _themeController.preset,
-              );
-            }
-            return repository;
+            return WidgetSyncingEventRepository(
+              delegate: repository,
+              widgetService: _platformServices.eventWidgetUpdater,
+              themePreset: () => _themeController.preset,
+            );
           },
         ),
         Provider<TodoRepository>(
@@ -163,12 +151,8 @@ class NexecuteState extends State<Nexecute> {
                 noteRepository: context.read<NoteRepository>(),
               ),
         ),
-        Provider<AiCredentialStore>(
-          create:
-              (_) =>
-                  !kIsWeb && defaultTargetPlatform == TargetPlatform.android
-                      ? FlutterSecureAiCredentialStore()
-                      : const UnavailableAiCredentialStore(),
+        Provider<AiCredentialStore>.value(
+          value: _platformServices.aiCredentialStore,
         ),
         Provider<AiAssistantRepository>(
           create:
@@ -226,12 +210,11 @@ class NexecuteState extends State<Nexecute> {
   }
 
   void _updateEventWidgetTheme() {
-    final eventWidgetService = _eventWidgetService;
-    if (eventWidgetService == null) return;
-
     unawaited(() async {
       try {
-        await eventWidgetService.updateTheme(_themeController.preset);
+        await _platformServices.eventWidgetUpdater.updateTheme(
+          _themeController.preset,
+        );
       } catch (_) {
         // A launcher without widget support must not affect app theming.
       }
