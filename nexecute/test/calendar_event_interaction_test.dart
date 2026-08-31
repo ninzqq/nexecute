@@ -5,6 +5,7 @@ import 'package:nexecute/home/bottomsheets/item_editor_sheet.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/event_reminder.dart';
+import 'package:nexecute/models/event_recurrence.dart';
 import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/models/tag.dart' as models;
 import 'package:nexecute/repositories/event_repository.dart';
@@ -104,6 +105,19 @@ void main() {
       startTime: DateTime(now.year, now.month, now.day, 9),
       endTime: DateTime(now.year, now.month, now.day, 10),
       tags: const ['Work'],
+      recurrence: EventRecurrence.yearly,
+      recurrenceSeriesStartTime: DateTime(
+        now.year - 1,
+        now.month,
+        now.day,
+        9,
+      ),
+      recurrenceSeriesEndTime: DateTime(
+        now.year - 1,
+        now.month,
+        now.day,
+        10,
+      ),
     );
 
     final repository = FakeEventRepository(events: [event]);
@@ -133,6 +147,7 @@ void main() {
 
     expect(find.byType(EventDetailsBottomSheet), findsOneWidget);
     expect(find.text('Prepare the monthly plan'), findsOneWidget);
+    expect(find.text('Repeats yearly'), findsOneWidget);
     expect(
       tester.getSize(find.byType(EventDetailsBottomSheet)).height,
       greaterThanOrEqualTo(1200 * 0.45),
@@ -143,6 +158,7 @@ void main() {
 
     expect(find.byType(ItemEditorSheet), findsOneWidget);
     expect(find.text('No reminder'), findsOneWidget);
+    expect(find.text('Yearly'), findsOneWidget);
 
     await tester.tap(find.text('No reminder'));
     await tester.pumpAndSettle();
@@ -155,6 +171,11 @@ void main() {
     expect(
       repository.updateCommand?.reminder,
       EventReminder.fifteenMinutesBefore,
+    );
+    expect(repository.updateCommand?.recurrence, EventRecurrence.yearly);
+    expect(
+      repository.updateCommand?.startTime,
+      DateTime(now.year - 1, now.month, now.day, 9),
     );
   });
 

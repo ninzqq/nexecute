@@ -3,9 +3,11 @@ import 'package:intl/intl.dart';
 import 'package:nexecute/home/bottomsheets/item_editor.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/event_reminder.dart';
+import 'package:nexecute/models/event_recurrence.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/shared/bottom_sheet_safe_area.dart';
 import 'package:nexecute/shared/event_reminder_labels.dart';
+import 'package:nexecute/shared/event_recurrence_labels.dart';
 import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
 
@@ -72,6 +74,13 @@ class EventDetailsBottomSheet extends StatelessWidget {
                 _DetailRow(
                   icon: Icons.notifications_outlined,
                   text: event.reminder.label,
+                ),
+              ],
+              if (event.recurrence != EventRecurrence.none) ...[
+                const SizedBox(height: 12),
+                _DetailRow(
+                  icon: Icons.repeat_rounded,
+                  text: event.recurrence.detailsLabel,
                 ),
               ],
               if (event.description.trim().isNotEmpty) ...[

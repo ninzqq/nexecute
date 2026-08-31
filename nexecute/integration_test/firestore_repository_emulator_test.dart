@@ -8,6 +8,7 @@ import 'package:nexecute/firebase_options.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/event_reminder.dart';
+import 'package:nexecute/models/event_recurrence.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/repositories/repositories.dart';
 import 'package:nexecute/repositories/firestore/event_document_mapper.dart';
@@ -238,6 +239,7 @@ void main() {
         isAllDay: false,
         tags: ['work'],
         reminder: EventReminder.fifteenMinutesBefore,
+        recurrence: EventRecurrence.yearly,
       ),
     );
     expect(
@@ -248,6 +250,19 @@ void main() {
       (await addedEvent.reference.get()).data()!['reminderMinutesBefore'],
       15,
     );
+    expect((await addedEvent.reference.get()).data()!['recurrence'], 'yearly');
+    expect((await addedEvent.reference.get()).data()!['isRecurring'], isTrue);
+    final nextYearRange = CalendarQueryRange(
+      startInclusive: DateTime.utc(2027, 1, 10),
+      endExclusive: DateTime.utc(2027, 1, 11),
+    );
+    final nextYearState = await events
+        .watchEvents(nextYearRange)
+        .firstWhere((state) => state is DataReady<List<Event>>);
+    final nextYearOccurrence =
+        (nextYearState as DataReady<List<Event>>).value.single;
+    expect(nextYearOccurrence.startTime, DateTime.utc(2027, 1, 10, 9));
+    expect(nextYearOccurrence.seriesStartTime, start);
     final eventSearchResults = await events.searchEvents('agenda WORK');
     expect(eventSearchResults.single.id, event.id);
     expect(await events.searchEvents('not present'), isEmpty);

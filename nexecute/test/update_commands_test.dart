@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/event_reminder.dart';
+import 'package:nexecute/models/event_recurrence.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/repositories/note_repository.dart';
@@ -17,6 +18,7 @@ void main() {
       isAllDay: false,
       tags: tags,
       reminder: EventReminder.fifteenMinutesBefore,
+      recurrence: EventRecurrence.monthly,
     );
 
     final command = UpdateEventCommand.fromEvent(event);
@@ -31,6 +33,7 @@ void main() {
     expect(command.tags, ['work']);
     expect(command.reminder, EventReminder.fifteenMinutesBefore);
     expect(command.toEvent().reminder, EventReminder.fifteenMinutesBefore);
+    expect(command.recurrence, EventRecurrence.monthly);
     expect(() => command.tags.add('another'), throwsUnsupportedError);
   });
 

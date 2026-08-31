@@ -3,6 +3,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/event_reminder.dart';
+import 'package:nexecute/models/event_recurrence.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -90,7 +91,7 @@ class AndroidEventReminderScheduler implements EventReminderScheduler {
       if (scheduledTime == null) {
         return EventReminderScheduleStatus.notRequested;
       }
-      if (!scheduledTime.isAfter(DateTime.now())) {
+      if (!event.recurrence.repeats && !scheduledTime.isAfter(DateTime.now())) {
         return EventReminderScheduleStatus.triggerInPast;
       }
 
@@ -133,6 +134,9 @@ class AndroidEventReminderScheduler implements EventReminderScheduler {
           ),
         ),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        matchDateTimeComponents: eventReminderDateTimeComponents(
+          event.recurrence,
+        ),
         payload: event.id,
       );
       return EventReminderScheduleStatus.scheduled;
@@ -153,6 +157,16 @@ class AndroidEventReminderScheduler implements EventReminderScheduler {
         : 'Starting soon';
   }
 }
+
+DateTimeComponents? eventReminderDateTimeComponents(
+  EventRecurrence recurrence,
+) => switch (recurrence) {
+  EventRecurrence.none => null,
+  EventRecurrence.daily => DateTimeComponents.time,
+  EventRecurrence.weekly => DateTimeComponents.dayOfWeekAndTime,
+  EventRecurrence.monthly => DateTimeComponents.dayOfMonthAndTime,
+  EventRecurrence.yearly => DateTimeComponents.dateAndTime,
+};
 
 int eventReminderNotificationId(String eventId) {
   var hash = 0x811c9dc5;

@@ -1,5 +1,6 @@
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/event_reminder.dart';
+import 'package:nexecute/models/event_recurrence.dart';
 
 const maxCreateEventTitleCharacters = 200;
 const maxCreateEventDescriptionCharacters = 4000;
@@ -18,6 +19,7 @@ class CreateEventCommand {
     required this.isAllDay,
     required List<String> tags,
     required this.reminder,
+    this.recurrence = EventRecurrence.none,
     required this.createdAt,
   }) : title = _validateTitle(title),
        description = _validateDescription(description),
@@ -42,6 +44,7 @@ class CreateEventCommand {
   final bool isAllDay;
   final List<String> tags;
   final EventReminder reminder;
+  final EventRecurrence recurrence;
   final DateTime createdAt;
 
   String get eventId => 'ai-event-$creationId';
@@ -56,6 +59,7 @@ class CreateEventCommand {
       isAllDay: isAllDay,
       tags: tags,
       reminder: reminder,
+      recurrence: recurrence,
     );
   }
 

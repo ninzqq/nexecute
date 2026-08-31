@@ -1,5 +1,6 @@
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/event_reminder.dart';
+import 'package:nexecute/models/event_recurrence.dart';
 
 class UpdateEventCommand {
   UpdateEventCommand({
@@ -11,6 +12,7 @@ class UpdateEventCommand {
     required this.isAllDay,
     required List<String> tags,
     required this.reminder,
+    this.recurrence = EventRecurrence.none,
   }) : tags = List.unmodifiable(tags);
 
   factory UpdateEventCommand.fromEvent(Event event) {
@@ -18,11 +20,12 @@ class UpdateEventCommand {
       eventId: event.id,
       title: event.title,
       description: event.description,
-      startTime: event.startTime,
-      endTime: event.endTime,
+      startTime: event.seriesStartTime,
+      endTime: event.seriesEndTime,
       isAllDay: event.isAllDay,
       tags: event.tags,
       reminder: event.reminder,
+      recurrence: event.recurrence,
     );
   }
 
@@ -34,6 +37,7 @@ class UpdateEventCommand {
   final bool isAllDay;
   final List<String> tags;
   final EventReminder reminder;
+  final EventRecurrence recurrence;
 
   Event toEvent() {
     return Event(
@@ -45,6 +49,7 @@ class UpdateEventCommand {
       isAllDay: isAllDay,
       tags: tags,
       reminder: reminder,
+      recurrence: recurrence,
     );
   }
 }

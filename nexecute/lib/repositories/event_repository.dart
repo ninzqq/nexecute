@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nexecute/domain/calendar/calendar_query_range.dart';
+import 'package:nexecute/domain/calendar/recurring_event_expander.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/repositories/commands/create_event_command.dart';
@@ -10,6 +11,7 @@ import 'package:nexecute/search/search_matcher.dart';
 import 'package:nexecute/services/auth.dart';
 import 'package:nexecute/services/authenticated_data_stream.dart';
 import 'package:uuid/uuid.dart';
+import 'package:rxdart/rxdart.dart';
 
 export 'package:nexecute/repositories/commands/update_event_command.dart';
 export 'package:nexecute/repositories/commands/create_event_command.dart';
@@ -46,20 +48,38 @@ class FirestoreEventRepository implements EventRepository {
     return authenticatedDataStream(
       authentication: _authService.userStream,
       isEmpty: (events) => events.isEmpty,
-      load:
-          (user) => _db
-              .collection('users')
-              .doc(user.uid)
-              .collection('events')
-              .where('startTime', isLessThan: range.endExclusive)
-              .where('endTime', isGreaterThanOrEqualTo: range.startInclusive)
-              .snapshots()
-              .map(
-                (snapshot) =>
-                    snapshot.docs
-                        .map(EventDocumentMapper.fromDocument)
-                        .toList(),
-              ),
+      load: (user) {
+        final events = _db
+            .collection('users')
+            .doc(user.uid)
+            .collection('events');
+        final overlapping =
+            events
+                .where('startTime', isLessThan: range.endExclusive)
+                .where('endTime', isGreaterThanOrEqualTo: range.startInclusive)
+                .snapshots();
+        final recurring =
+            events.where('isRecurring', isEqualTo: true).snapshots();
+
+        return Rx.combineLatest2(overlapping, recurring, (
+          QuerySnapshot<Map<String, dynamic>> overlappingSnapshot,
+          QuerySnapshot<Map<String, dynamic>> recurringSnapshot,
+        ) {
+          final oneOffEvents = overlappingSnapshot.docs
+              .map(EventDocumentMapper.fromDocument)
+              .where((event) => !event.recurrence.repeats);
+          final recurringEvents = recurringSnapshot.docs
+              .map(EventDocumentMapper.fromDocument)
+              .where((event) => event.recurrence.repeats);
+          final visibleEvents = <Event>[
+            ...oneOffEvents,
+            ...expandRecurringEvents(recurringEvents, range),
+          ]..sort(
+            (first, second) => first.startTime.compareTo(second.startTime),
+          );
+          return visibleEvents;
+        });
+      },
     );
   }
 
@@ -114,6 +134,8 @@ class FirestoreEventRepository implements EventRepository {
             'isAllDay': command.isAllDay,
             'tags': command.tags,
             'reminderMinutesBefore': command.reminder.minutesBefore,
+            'recurrence': command.recurrence.name,
+            'isRecurring': command.recurrence.repeats,
           }),
         );
   }

@@ -9,6 +9,7 @@ import 'package:nexecute/home/bottomsheets/submit_button.dart';
 import 'package:nexecute/home/bottomsheets/utils.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/event_reminder.dart';
+import 'package:nexecute/models/event_recurrence.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/note_folder.dart';
@@ -48,6 +49,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
   DateTime _endTime = DateTime.now().add(const Duration(hours: 1));
   bool _isAllDay = false;
   EventReminder _eventReminder = EventReminder.none;
+  EventRecurrence _eventRecurrence = EventRecurrence.none;
   DateTime? _selectedDate;
   ItemType _type = ItemType.quicxec;
   NoteContentType _noteContentType = NoteContentType.text;
@@ -67,6 +69,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
       _endTime = widget.event!.endTime;
       _isAllDay = widget.event!.isAllDay;
       _eventReminder = widget.event!.reminder;
+      _eventRecurrence = widget.event!.recurrence;
       _type = ItemType.event;
       _tags = List.of(widget.event!.tags);
     } else if (widget.quicxec != null) {
@@ -236,15 +239,25 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
   }
 
   Future<void> _submitEvent() async {
+    final originalEvent = widget.event;
+    final unchangedOccurrenceSchedule =
+        originalEvent?.isGeneratedOccurrence == true &&
+        _startTime == originalEvent!.startTime &&
+        _endTime == originalEvent.endTime;
     final event = Event(
       id: widget.event?.id ?? '',
       title: _titleController.text,
       description: _descriptionController.text,
-      startTime: _startTime,
-      endTime: _endTime,
+      startTime:
+          unchangedOccurrenceSchedule
+              ? originalEvent.seriesStartTime
+              : _startTime,
+      endTime:
+          unchangedOccurrenceSchedule ? originalEvent.seriesEndTime : _endTime,
       isAllDay: _isAllDay,
       tags: _tags,
       reminder: _eventReminder,
+      recurrence: _eventRecurrence,
     );
 
     if (widget.event?.id.isNotEmpty == true) {
@@ -360,6 +373,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                 endTime: _endTime,
                 isAllDay: _isAllDay,
                 reminder: _eventReminder,
+                recurrence: _eventRecurrence,
                 selectedStartDate: _selectedDate,
                 onStartTimeChanged: _setStartTime,
                 onEndTimeChanged: (time) => setState(() => _endTime = time),
@@ -372,6 +386,9 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                     (isAllDay) => setState(() => _isAllDay = isAllDay),
                 onReminderChanged:
                     (reminder) => setState(() => _eventReminder = reminder),
+                onRecurrenceChanged:
+                    (recurrence) =>
+                        setState(() => _eventRecurrence = recurrence),
               ),
             ],
             const SizedBox(height: 8),

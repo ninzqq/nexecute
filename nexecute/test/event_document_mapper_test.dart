@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/event_reminder.dart';
+import 'package:nexecute/models/event_recurrence.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/repositories/firestore/event_document_mapper.dart';
 import 'package:nexecute/repositories/firestore/schema/app_data_schema.dart';
@@ -36,6 +37,7 @@ void main() {
         startTime: DateTime.utc(2026, 8, 26, 14),
         endTime: DateTime.utc(2026, 8, 26, 15),
         reminder: EventReminder.thirtyMinutesBefore,
+        recurrence: EventRecurrence.yearly,
       );
 
       final data = EventDocumentMapper.toMap(event);
@@ -44,6 +46,8 @@ void main() {
       expect(data['title'], 'Review');
       expect(data['tags'], isEmpty);
       expect(data['reminderMinutesBefore'], 30);
+      expect(data['recurrence'], 'yearly');
+      expect(data['isRecurring'], isTrue);
       expect(data[AppDataSchema.versionField], AppDataSchema.currentVersion);
     },
   );
@@ -87,6 +91,19 @@ void main() {
     expect(event.isAllDay, isFalse);
     expect(event.tags, isEmpty);
     expect(event.reminder, EventReminder.none);
+    expect(event.recurrence, EventRecurrence.none);
+  });
+
+  test('maps a persisted recurrence into the event model', () {
+    final event = EventDocumentMapper.fromMap('birthday', {
+      'title': 'Birthday',
+      'startTime': DateTime(1990, 10, 12),
+      'endTime': DateTime(1990, 10, 12),
+      'isAllDay': true,
+      'recurrence': 'yearly',
+    });
+
+    expect(event.recurrence, EventRecurrence.yearly);
   });
 
   test('migrates a version one event to the reminder schema', () {

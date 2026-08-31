@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/home/bottomsheets/event_reminder_field.dart';
+import 'package:nexecute/home/bottomsheets/event_recurrence_field.dart';
 import 'package:nexecute/home/bottomsheets/utils.dart';
 import 'package:nexecute/home/widgets/item_time_picker.dart';
 import 'package:nexecute/models/event_reminder.dart';
+import 'package:nexecute/models/event_recurrence.dart';
 
 class EventScheduleFields extends StatelessWidget {
   const EventScheduleFields({
@@ -11,12 +13,14 @@ class EventScheduleFields extends StatelessWidget {
     required this.endTime,
     required this.isAllDay,
     required this.reminder,
+    required this.recurrence,
     required this.onStartTimeChanged,
     required this.onEndTimeChanged,
     required this.onStartDateChanged,
     required this.onEndDateChanged,
     required this.onAllDayChanged,
     required this.onReminderChanged,
+    required this.onRecurrenceChanged,
     this.selectedStartDate,
   });
 
@@ -24,6 +28,7 @@ class EventScheduleFields extends StatelessWidget {
   final DateTime endTime;
   final bool isAllDay;
   final EventReminder reminder;
+  final EventRecurrence recurrence;
   final DateTime? selectedStartDate;
   final ValueChanged<DateTime> onStartTimeChanged;
   final ValueChanged<DateTime> onEndTimeChanged;
@@ -31,6 +36,7 @@ class EventScheduleFields extends StatelessWidget {
   final ValueChanged<DateTime> onEndDateChanged;
   final ValueChanged<bool> onAllDayChanged;
   final ValueChanged<EventReminder> onReminderChanged;
+  final ValueChanged<EventRecurrence> onRecurrenceChanged;
 
   Future<void> _pickStartDate(BuildContext context) async {
     final date = await showDatePicker(
@@ -106,6 +112,11 @@ class EventScheduleFields extends StatelessWidget {
           ),
         ),
         EventReminderField(reminder: reminder, onChanged: onReminderChanged),
+        const SizedBox(height: 8),
+        EventRecurrenceField(
+          recurrence: recurrence,
+          onChanged: onRecurrenceChanged,
+        ),
       ],
     );
   }

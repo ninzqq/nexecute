@@ -1,7 +1,9 @@
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:nexecute/domain/calendar/calendar_query_range.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/event_reminder.dart';
+import 'package:nexecute/models/event_recurrence.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/repositories/reminder_scheduling_event_repository.dart';
 import 'package:nexecute/services/event_reminder_scheduler.dart';
@@ -118,6 +120,26 @@ void main() {
     expect(eventReminderNotificationId('event-1'), first);
     expect(eventReminderNotificationId('event-2'), isNot(first));
     expect(first, greaterThanOrEqualTo(0));
+  });
+
+  test('maps event recurrence to repeating notification components', () {
+    expect(eventReminderDateTimeComponents(EventRecurrence.none), isNull);
+    expect(
+      eventReminderDateTimeComponents(EventRecurrence.daily),
+      DateTimeComponents.time,
+    );
+    expect(
+      eventReminderDateTimeComponents(EventRecurrence.weekly),
+      DateTimeComponents.dayOfWeekAndTime,
+    );
+    expect(
+      eventReminderDateTimeComponents(EventRecurrence.monthly),
+      DateTimeComponents.dayOfMonthAndTime,
+    );
+    expect(
+      eventReminderDateTimeComponents(EventRecurrence.yearly),
+      DateTimeComponents.dateAndTime,
+    );
   });
 }
 

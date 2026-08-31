@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/event_reminder.dart';
+import 'package:nexecute/models/event_recurrence.dart';
 import 'package:nexecute/repositories/commands/create_event_command.dart';
 import 'package:nexecute/repositories/firestore/schema/firestore_document_schema.dart';
 
@@ -17,11 +18,13 @@ abstract final class EventDocumentMapper {
     'id': event.id,
     'title': event.title,
     'description': event.description,
-    'startTime': event.startTime,
-    'endTime': event.endTime,
+    'startTime': event.seriesStartTime,
+    'endTime': event.seriesEndTime,
     'isAllDay': event.isAllDay,
     'tags': event.tags,
     'reminderMinutesBefore': event.reminder.minutesBefore,
+    'recurrence': event.recurrence.name,
+    'isRecurring': event.recurrence.repeats,
   });
 
   static Map<String, dynamic> toCreateMap(CreateEventCommand command) => {
@@ -49,6 +52,7 @@ abstract final class EventDocumentMapper {
       reminder: EventReminder.fromMinutesBefore(
         migrated['reminderMinutesBefore'],
       ),
+      recurrence: EventRecurrence.fromStorage(migrated['recurrence']),
     );
   }
 
