@@ -160,80 +160,201 @@ network connection.
 
 ### Cross-platform laptop access
 
-**Status:** Proposed
+**Status:** 📋 Planned — adaptive desktop foundation first, native macOS second
 
 Provide access to the same Firestore-backed Calendar, Tasks, Notes, and Tags
 from laptop-sized devices without creating a second synchronization system.
 All clients should continue using the same authenticated, user-specific
 Firestore data.
 
-#### Recommended rollout
+The first native laptop target will be macOS because it can reuse Flutter's
+existing macOS runner while providing direct private-network access to local AI
+endpoints, native secure storage, and a path to desktop notifications. The
+shared adaptive interface remains platform-neutral so Flutter Web can follow
+without a second UI implementation.
 
-1. Refactor application startup and services so they are not Android-only.
-2. Add an adaptive application shell shared by all platforms.
-3. Configure Firebase and Google authentication for Flutter Web.
-4. Deploy a private first web release and verify all core workflows.
-5. Add installable PWA behavior and desktop keyboard shortcuts.
-6. Enable macOS as a native target later, reusing the adaptive interface.
-7. Defer native Linux until its Firebase data and authentication approach can
-   be supported without fragile third-party dependencies.
+#### Known starting point
 
-#### Web application
+- The generated Flutter macOS runner and compatible plugin pods already exist.
+- Firebase options are currently configured only for Android; application
+  startup explicitly rejects macOS and Web.
+- No macOS `GoogleService-Info.plist`, Google sign-in configuration,
+  entitlements, signing setup, or release workflow is committed.
+- Event reminders and home-screen widgets are intentionally activated only on
+  Android. macOS must start with explicit supported/no-op service boundaries
+  rather than assuming Android behavior.
+- The current application shell uses compact bottom navigation. Individual
+  views have some responsive sizing, but there is no shared desktop breakpoint
+  contract, `NavigationRail`, or persistent desktop workspace yet.
+- Firebase configuration files may identify the application but credentials,
+  signing keys, personal endpoint URLs, and private test data must never be
+  committed.
 
-- Use Flutter Web as the first laptop client so macOS, Linux, and Windows can
-  use the same release.
-- Treat the web build as a static client; it does not require a continuously
-  running custom application server when deployed to managed static hosting.
-- Prefer Firebase Hosting for the main client so Calendar, Tasks, and Notes
-  remain available even when the home AI PC is offline.
-- Configure the web Firebase application, authorized authentication domains,
-  Google sign-in flow, branding, icons, and PWA manifest.
-- Keep Firebase Authentication and Firestore security rules as the authority
-  for access to user data.
-- Optionally host the static web build privately through the home PC and
-  Tailscale if a tailnet-only application is preferred later. This makes the
-  home PC an availability dependency and is not the initial recommendation.
+#### Delivery order
 
-#### macOS application
+1. Build and verify the shared adaptive desktop shell without requiring macOS
+   Firebase access.
+2. Configure the macOS Firebase application, authentication, platform service
+   boundaries, and network entitlements.
+3. Validate a private macOS alpha against the existing Firestore account and
+   optional local/private AI connections.
+4. Add native desktop conveniences only after the core workflows are stable.
+5. Reuse the same shell for a separately configured and hosted web client.
 
-- Consider macOS as the second laptop target when native integration becomes
-  valuable.
-- Reuse the responsive Flutter widgets and repositories rather than creating a
-  separate desktop application.
-- Configure the macOS Firebase application, Google sign-in, entitlements,
-  signing, packaging, and release process.
-- Use the native target for capabilities such as direct local-network access,
-  richer notifications, menu-bar actions, file integration, and global
-  shortcuts.
-- Decide later whether personal builds are installed manually or require an
-  application update mechanism.
+#### Phase 1: shared adaptive desktop foundation
 
-#### Linux application
+##### Phase 1A: breakpoint and shell contract — next task
 
-- Continue supporting Linux laptops through the web client initially.
-- Do not depend on a native Linux release until the official Firebase plugin
-  support needed by Nexecute is sufficient or the data layer has a deliberate
-  REST/backend implementation.
+- [ ] Define centralized compact, medium, and expanded layout classes so
+  feature screens do not invent independent width thresholds.
+- [ ] Extract the top-level navigation destinations and selected-destination
+  state from the phone-only shell into one reusable adaptive shell.
+- [ ] Preserve the existing bottom `NavigationBar` on compact layouts.
+- [ ] Use `NavigationRail` on medium and expanded layouts, with labels and a
+  stable destination order matching the compact navigation.
+- [ ] Preserve the selected destination and feature state when a window crosses
+  a breakpoint instead of rebuilding a separate application tree.
+- [ ] Keep the drawer and existing named routes reachable until their actions
+  have deliberate desktop placements.
+- [ ] Cover compact, medium, expanded, and live-resize transitions with widget
+  tests, including overflow checks and destination-state preservation.
 
-#### Adaptive desktop interface
+**Phase 1A boundary:** Do not configure Firebase for macOS, redesign individual
+features, or add native desktop integrations in this slice. It should be
+testable using the existing platform-independent widget test environment.
 
-- Preserve bottom navigation on compact phone layouts.
-- Use a `NavigationRail` or persistent sidebar on medium and wide layouts.
-- Allow the calendar and selected-day agenda/details to appear side by side.
-- Increase the Notes masonry-grid column count based on available width.
-- Consider list-and-detail layouts for Tasks and Notes.
-- Add keyboard shortcuts for creation, search, navigation, save, and close.
-- Add appropriate hover states, right-click menus, focus traversal, and desktop
-  spacing.
-- Support freely resizable windows instead of assuming phone dimensions.
+##### Phase 1B: desktop feature layouts
+
+- [ ] Allow Calendar and the selected-day agenda/details to use a side-by-side
+  layout when enough width is available while retaining the compact flow.
+- [ ] Increase the Notes masonry-grid column count from the shared layout class
+  and keep editor sheets usable at desktop widths.
+- [ ] Constrain long Task and Assistant content to readable widths instead of
+  stretching text across the complete window.
+- [ ] Audit dialogs, bottom sheets, popups, date/time pickers, loading states,
+  and empty/error states in freely resizable windows.
+- [ ] Add desktop-appropriate focus traversal, hover feedback, scroll behavior,
+  and minimum interactive sizes without forking feature implementations.
+- [ ] Verify the adaptive layouts under every application theme at representative
+  phone, tablet, laptop, and wide-window sizes.
+
+##### Phase 1C: baseline desktop commands
+
+- [ ] Add discoverable keyboard shortcuts for primary navigation, create,
+  search, save/confirm, close/cancel, and focusing the Assistant composer.
+- [ ] Prevent shortcuts from firing while an incompatible dialog, text field,
+  or confirmation flow owns keyboard focus.
+- [ ] Add semantics and focus-order tests for keyboard-only navigation.
+- [ ] Defer global shortcuts, menu-bar commands, and operating-system services
+  until the native macOS alpha is stable.
+
+#### Phase 2: native macOS bootstrap
+
+##### Phase 2A: Firebase and Google authentication
+
+- [ ] Register the macOS application in the existing Firebase project using a
+  stable bundle identifier owned by Nexecute.
+- [ ] Regenerate FlutterFire options for Android and macOS without changing the
+  existing Android application identity or data project.
+- [ ] Add the required macOS Firebase configuration and Google sign-in callback
+  setup, documenting which console-side steps cannot be reproduced from Git.
+- [ ] Verify sign-in, sign-out, session restoration, cancellation, and
+  authentication failures on a development-signed macOS build.
+- [ ] Confirm that Firestore rules continue to isolate every user's documents;
+  the desktop client must not introduce a privileged synchronization path.
+
+##### Phase 2B: platform service boundaries
+
+- [ ] Refactor startup registration so each platform receives an explicit
+  implementation for reminders, widgets, secure credentials, and other native
+  services rather than scattered Android checks.
+- [ ] Keep Android reminder and home-widget behavior unchanged.
+- [ ] Start macOS with a documented no-op for unsupported native features, then
+  enable them separately only when their behavior is tested.
+- [ ] Verify `flutter_secure_storage` on macOS, including save, replacement,
+  deletion, duplicate-profile behavior, and sign-out expectations.
+- [ ] Ensure an unavailable optional native service cannot prevent Calendar,
+  Tasks, Notes, Tags, authentication, or Firestore synchronization from
+  starting.
+
+##### Phase 2C: networking, entitlements, and first build
+
+- [ ] Configure the minimum sandbox/network entitlements needed for Firebase,
+  Google sign-in, HTTPS endpoints, and user-configured local/private AI
+  endpoints.
+- [ ] Define deliberate transport behavior for plain HTTP, local network names,
+  Tailscale HTTPS/MagicDNS, certificate failures, and offline startup without
+  broad permanent security exceptions.
+- [ ] Confirm that direct AI endpoint credentials remain device-local and that
+  diagnostic output contains no token, raw payload, or personal URL.
+- [ ] Produce a debug macOS build from a clean checkout and document all manual
+  prerequisites.
+- [ ] Add a lightweight macOS smoke test that proves startup reaches the
+  authentication or main application shell without an unsupported-platform
+  exception.
+
+#### Phase 3: private macOS alpha
+
+- [ ] Sign in with the same Google account used on Android and verify existing
+  Calendar, recurring events, Tasks, Notes, Tags, and AI conversations appear.
+- [ ] Create, edit, complete, and delete representative records on macOS and
+  verify synchronization in both directions with Android.
+- [ ] Verify compact-to-wide resizing, all themes, keyboard-only navigation,
+  sleep/wake, offline launch, reconnection, and application restart.
+- [ ] Verify Assistant chat and confirmed proposal workflows when the AI server
+  is available, slow, unreachable, or intentionally offline; core workflows
+  must remain usable in every case.
+- [ ] Verify direct local-network and Tailscale endpoint access without
+  recording private addresses, credentials, or conversation content.
+- [ ] Choose and document the initial personal distribution method: local Xcode
+  run, development-signed archive, or manually installed signed build.
+- [ ] Record the tested macOS, Flutter, Firebase plugin, Ollama/API, and model
+  versions needed to reproduce the alpha results.
+
+#### Phase 4: native macOS enhancements
+
+- [ ] Add native event notifications only after defining permission,
+  rescheduling, recurrence, time-zone, restart, and series-edit behavior.
+- [ ] Add macOS menu commands and standard shortcut labels for supported app
+  actions.
+- [ ] Consider right-click menus, drag and drop, file import/export, menu-bar
+  access, and global shortcuts as separate opt-in tasks.
+- [ ] Decide whether personal builds remain manually installed or require a
+  signed packaging and update mechanism.
+- [ ] Keep every native enhancement optional so failure or denial of an
+  operating-system permission cannot block core data access.
+
+#### Phase 5: web follow-up
+
+- [ ] Configure the Flutter Web Firebase application, authorized authentication
+  domains, Google sign-in flow, branding, icons, and PWA manifest.
+- [ ] Reuse the adaptive shell and repositories; do not create separate web
+  feature implementations or a second synchronization system.
+- [ ] Keep direct hosted-provider credentials disabled in Web and use only
+  browser-compatible endpoints or a user-owned gateway.
+- [ ] Deploy a private Firebase Hosting release and verify that core workflows
+  remain useful when the home AI server is offline.
+- [ ] Add installable PWA behavior after authentication, routing, refresh, and
+  offline/error states are reliable.
+- [ ] Continue serving Linux and Windows laptops through the web client unless
+  their native Firebase and authentication paths gain a deliberate supported
+  design.
 
 #### Cross-platform acceptance criteria
 
 - The same Google account sees the same data on Android and the laptop client.
 - Core Calendar, Tasks, and Notes workflows work at phone and desktop widths.
-- Navigation adapts without maintaining separate feature implementations.
-- The web client remains useful when the home AI server is unreachable.
-- Authentication and Firestore rules protect data on every target.
+- Navigation adapts across live window resizing without maintaining separate
+  feature implementations or losing the selected destination.
+- Optional reminders, widgets, secure storage, AI endpoints, and other native
+  services cannot prevent the core application from starting.
+- The macOS client remains useful when every configured AI endpoint is
+  unreachable.
+- Authentication and Firestore rules protect data on every enabled target.
+- Android behavior remains unchanged while the shared shell and service
+  boundaries are introduced.
+- Desktop builds, logs, diagnostics, and committed configuration contain no
+  signing material, credentials, personal URLs, or private application data.
 
 ### Configurable AI assistant / intelligent quick capture
 
