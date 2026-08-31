@@ -466,6 +466,13 @@ system message.
   already have completed or incurred provider work.
 - [ ] Add actionable diagnostics for DNS, TLS, CORS, mixed-content, local
   network, authentication, model-missing, and protocol-compatibility failures.
+  - [x] Define stable provider-neutral diagnostic categories and an immutable,
+    user-safe guidance contract that connection and response failures can
+    carry without breaking existing callers.
+  - [ ] Classify transport, HTTP, timeout, configuration, and response failures
+    into those diagnostics without exposing credentials or raw payloads.
+  - [ ] Present the diagnostics consistently in connection tests, chat, and
+    structured proposal workflows.
 
 Bearer tokens are stored on the current Android client through
 `flutter_secure_storage`; only opaque credential references remain in local

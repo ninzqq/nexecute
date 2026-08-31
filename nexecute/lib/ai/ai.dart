@@ -10,6 +10,7 @@ export 'domain/ai_chat_request.dart';
 export 'domain/ai_connection_profile.dart';
 export 'domain/ai_connection_result.dart';
 export 'domain/ai_conversation.dart';
+export 'domain/ai_diagnostic.dart';
 export 'domain/ai_event_proposal.dart';
 export 'domain/ai_model_info.dart';
 export 'domain/ai_protocol.dart';

@@ -1,3 +1,4 @@
+import 'package:nexecute/ai/domain/ai_diagnostic.dart';
 import 'package:nexecute/ai/domain/ai_tool.dart';
 
 sealed class AiStreamEvent {
@@ -57,10 +58,12 @@ final class AiResponseFailed extends AiStreamEvent {
     required this.message,
     this.code,
     this.retryable = false,
+    this.diagnostic,
   });
 
   final Object error;
   final String message;
   final String? code;
   final bool retryable;
+  final AiDiagnostic? diagnostic;
 }
