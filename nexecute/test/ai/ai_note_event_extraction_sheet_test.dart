@@ -188,6 +188,46 @@ void main() {
     expect(dependencies.repository.startedRequests, hasLength(2));
   });
 
+  testWidgets('shows response diagnostics with event extraction recovery', (
+    tester,
+  ) async {
+    final diagnostic = AiDiagnostic(
+      kind: AiDiagnosticKind.modelNotFound,
+      title: 'Model not found',
+      summary: 'The selected model is unavailable.',
+      suggestions: const ['Choose an installed model in AI Settings.'],
+    );
+    final dependencies = _Dependencies(
+      responseStreamBuilder:
+          (_) => Stream.value(
+            AiResponseFailed(
+              error: StateError('private model detail'),
+              message: diagnostic.summary,
+              diagnostic: diagnostic,
+            ),
+          ),
+    );
+    addTearDown(dependencies.dispose);
+
+    await tester.pumpWidget(dependencies.app());
+    await tester.tap(find.text('Open preview'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('ai-note-event-send')));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('ai-diagnostic-model_not_found')),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+
+    expect(find.text('Model not found'), findsOneWidget);
+    expect(
+      find.text('• Choose an installed model in AI Settings.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('private model detail'), findsNothing);
+  });
+
   testWidgets('retries an ambiguous creation with the same frozen command', (
     tester,
   ) async {

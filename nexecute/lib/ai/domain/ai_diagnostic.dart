@@ -22,6 +22,13 @@ enum AiDiagnosticKind {
   unsupported,
   unknown;
 
+  static AiDiagnosticKind? fromCode(String? code) {
+    for (final kind in values) {
+      if (kind.code == code) return kind;
+    }
+    return null;
+  }
+
   /// Stable identifier suitable for tests and presentation branching.
   String get code => switch (this) {
     AiDiagnosticKind.invalidConfiguration => 'invalid_configuration',

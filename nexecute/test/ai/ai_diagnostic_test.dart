@@ -29,6 +29,8 @@ void main() {
       AiDiagnosticKind.values.map((kind) => kind.code).toSet(),
       hasLength(AiDiagnosticKind.values.length),
     );
+    expect(AiDiagnosticKind.fromCode('dns'), AiDiagnosticKind.dns);
+    expect(AiDiagnosticKind.fromCode('future_category'), isNull);
   });
 
   test('normalizes and protects user-facing diagnostic guidance', () {

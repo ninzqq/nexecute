@@ -464,14 +464,14 @@ system message.
   protocol support them reliably.
 - [ ] Keep automatic retries away from ambiguous generation requests that may
   already have completed or incurred provider work.
-- [ ] Add actionable diagnostics for DNS, TLS, CORS, mixed-content, local
+- [x] Add actionable diagnostics for DNS, TLS, CORS, mixed-content, local
   network, authentication, model-missing, and protocol-compatibility failures.
   - [x] Define stable provider-neutral diagnostic categories and an immutable,
     user-safe guidance contract that connection and response failures can
     carry without breaking existing callers.
   - [x] Classify transport, HTTP, timeout, configuration, and response failures
     into those diagnostics without exposing credentials or raw payloads.
-  - [ ] Present the diagnostics consistently in connection tests, chat, and
+  - [x] Present the diagnostics consistently in connection tests, chat, and
     structured proposal workflows.
 
 Bearer tokens are stored on the current Android client through

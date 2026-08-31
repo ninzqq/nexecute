@@ -7,6 +7,7 @@ import 'package:nexecute/ai/domain/ai_chat_request.dart';
 import 'package:nexecute/ai/domain/ai_application_context.dart';
 import 'package:nexecute/ai/domain/ai_connection_profile.dart';
 import 'package:nexecute/ai/domain/ai_conversation.dart';
+import 'package:nexecute/ai/domain/ai_diagnostic.dart';
 import 'package:nexecute/ai/domain/ai_stream_event.dart';
 import 'package:nexecute/ai/repositories/ai_assistant_repository.dart';
 import 'package:nexecute/ai/repositories/ai_connection_profile_store.dart';
@@ -320,14 +321,18 @@ class AiChatController extends ChangeNotifier {
       _responseHandle = handle;
       _responseSubscription = handle.events.listen(
         (event) => _onStreamEvent(generation, event),
-        onError:
-            (Object error) => unawaited(
-              _finalizeGeneration(
-                generation,
-                AiMessageStatus.failed,
-                'The AI response was interrupted: $error',
-              ),
+        onError: (Object error) {
+          final diagnostic =
+              error is AiDiagnosticException ? error.diagnostic : null;
+          unawaited(
+            _finalizeGeneration(
+              generation,
+              AiMessageStatus.failed,
+              diagnostic?.summary ?? 'The AI response was interrupted.',
+              diagnostic: diagnostic,
             ),
+          );
+        },
         onDone: () {
           if (!_generationFinalized) {
             unawaited(
@@ -341,11 +346,19 @@ class AiChatController extends ChangeNotifier {
         },
       );
       return true;
-    } catch (error) {
+    } on AiDiagnosticException catch (error) {
       await _finalizeGeneration(
         generation,
         AiMessageStatus.failed,
-        'Could not start the AI response: $error',
+        error.message,
+        diagnostic: error.diagnostic,
+      );
+      return false;
+    } catch (_) {
+      await _finalizeGeneration(
+        generation,
+        AiMessageStatus.failed,
+        'Could not start the AI response.',
       );
       return false;
     }
@@ -372,7 +385,7 @@ class AiChatController extends ChangeNotifier {
         unawaited(
           _finalizeGeneration(generation, AiMessageStatus.complete, null),
         );
-      case AiResponseFailed(:final message, :final code):
+      case AiResponseFailed(:final message, :final code, :final diagnostic):
         unawaited(
           _finalizeGeneration(
             generation,
@@ -380,6 +393,7 @@ class AiChatController extends ChangeNotifier {
                 ? AiMessageStatus.cancelled
                 : AiMessageStatus.failed,
             message,
+            diagnostic: diagnostic,
           ),
         );
       case AiToolCallRequested():
@@ -397,8 +411,9 @@ class AiChatController extends ChangeNotifier {
   Future<void> _finalizeGeneration(
     int generation,
     AiMessageStatus status,
-    String? message,
-  ) async {
+    String? message, {
+    AiDiagnostic? diagnostic,
+  }) async {
     if (generation != _generation || _generationFinalized) return;
     _generationFinalized = true;
     final draft = _draftAssistant;
@@ -411,7 +426,11 @@ class AiChatController extends ChangeNotifier {
       return;
     }
 
-    final persisted = draft.copyWith(status: status, errorMessage: message);
+    final persisted = draft.copyWith(
+      status: status,
+      errorMessage: message,
+      diagnostic: diagnostic,
+    );
     conversation = current.copyWith(
       updatedAt: persisted.createdAt,
       messages: [...current.messages, persisted],

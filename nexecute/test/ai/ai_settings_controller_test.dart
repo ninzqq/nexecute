@@ -85,7 +85,41 @@ void main() {
     final result = await controller.testConnection(invalid);
 
     expect(result.status, AiConnectionStatus.invalidConfiguration);
+    expect(result.diagnostic?.kind, AiDiagnosticKind.invalidConfiguration);
     expect(repository.testedProfiles, isEmpty);
+  });
+
+  test('exposes a user-safe model-discovery diagnostic', () async {
+    final diagnostic = AiDiagnostic(
+      kind: AiDiagnosticKind.authentication,
+      title: 'Authentication failed',
+      summary: 'The endpoint rejected the configured authentication.',
+      suggestions: const ['Check the credential in AI Settings.'],
+    );
+    final store = FakeAiConnectionProfileStore(profiles: [_profile()]);
+    addTearDown(store.dispose);
+    final controller = AiSettingsController(
+      profileStore: store,
+      assistantRepository: FakeAiAssistantRepository(
+        listModelsError: AiDiagnosticException(
+          diagnostic: diagnostic,
+          cause: StateError('secret raw failure'),
+        ),
+      ),
+      credentialStore: FakeAiCredentialStore(),
+    );
+    addTearDown(controller.dispose);
+    await controller.initialize();
+
+    final models = await controller.discoverModels(_profile());
+
+    expect(models, isEmpty);
+    expect(controller.modelDiscoveryDiagnostic, same(diagnostic));
+    expect(controller.modelDiscoveryError, diagnostic.summary);
+    expect(
+      controller.modelDiscoveryError.toString(),
+      isNot(contains('secret')),
+    );
   });
 
   test('stores, replaces, and removes bearer tokens separately', () async {

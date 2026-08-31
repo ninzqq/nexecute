@@ -399,4 +399,83 @@ void main() {
     expect(find.text('2 tasks created'), findsOneWidget);
     expect(repository.startedRequests, hasLength(1));
   });
+
+  testWidgets('shows response diagnostics with task extraction recovery', (
+    tester,
+  ) async {
+    final profile = AiConnectionProfile(
+      id: 'home',
+      name: 'Home AI',
+      protocol: AiProtocol.openAiCompatibleChat,
+      baseUrl: Uri.parse('https://ai.example.test/v1'),
+      modelId: 'local-model',
+    );
+    final profileStore = FakeAiConnectionProfileStore(
+      profiles: [profile],
+      activeProfileId: profile.id,
+    );
+    final diagnostic = AiDiagnostic(
+      kind: AiDiagnosticKind.timeout,
+      title: 'Endpoint timed out',
+      summary: 'The endpoint did not respond before the configured timeout.',
+      suggestions: const ['Check whether the model is still starting.'],
+    );
+    final repository = FakeAiAssistantRepository(
+      responseEvents: [
+        AiResponseFailed(
+          error: TimeoutException('private duration'),
+          message: diagnostic.summary,
+          retryable: true,
+          diagnostic: diagnostic,
+        ),
+      ],
+    );
+    final note = Quicxec(
+      id: 'note-1',
+      title: 'Weekend plan',
+      text: 'Buy coffee.',
+      created: DateTime.utc(2026, 8, 29),
+    );
+    addTearDown(profileStore.dispose);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<AiAssistantRepository>.value(value: repository),
+          Provider<AiConnectionProfileStore>.value(value: profileStore),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder:
+                  (context) => FilledButton(
+                    onPressed:
+                        () => showAiNoteTaskExtractionPreview(
+                          context,
+                          note: note,
+                        ),
+                    child: const Text('Open preview'),
+                  ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open preview'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('ai-note-task-send')));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('ai-diagnostic-timeout')),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+
+    expect(find.text('Endpoint timed out'), findsOneWidget);
+    expect(
+      find.text('• Check whether the model is still starting.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('private duration'), findsNothing);
+  });
 }

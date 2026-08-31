@@ -5,6 +5,7 @@ import 'package:nexecute/ai/application/ai_note_task_prompt.dart';
 import 'package:nexecute/ai/domain/ai_chat_message.dart';
 import 'package:nexecute/ai/domain/ai_chat_request.dart';
 import 'package:nexecute/ai/domain/ai_connection_profile.dart';
+import 'package:nexecute/ai/domain/ai_diagnostic.dart';
 import 'package:nexecute/ai/domain/ai_stream_event.dart';
 import 'package:nexecute/ai/domain/ai_task_proposal.dart';
 import 'package:nexecute/ai/infrastructure/ai_task_proposal_parser.dart';
@@ -60,6 +61,7 @@ class AiNoteTaskExtractionController extends ChangeNotifier {
   List<AiTaskProposalReviewItem> reviewItems = const [];
   String reasoning = '';
   String? errorMessage;
+  AiDiagnostic? diagnostic;
 
   int get selectedTaskCount =>
       reviewItems.where((item) => item.selected).length;
@@ -111,6 +113,7 @@ class AiNoteTaskExtractionController extends ChangeNotifier {
     reviewItems = const [];
     reasoning = '';
     errorMessage = null;
+    diagnostic = null;
     _finalized = false;
     _notify();
 
@@ -147,12 +150,17 @@ class AiNoteTaskExtractionController extends ChangeNotifier {
               _notify();
             case AiResponseCompleted():
               _complete(output.toString());
-            case AiResponseFailed(:final message, :final code):
+            case AiResponseFailed(
+              :final message,
+              :final code,
+              :final diagnostic,
+            ):
               _finish(
                 code == 'cancelled'
                     ? AiNoteTaskExtractionStatus.cancelled
                     : AiNoteTaskExtractionStatus.failed,
                 message,
+                diagnostic: diagnostic,
               );
             case AiToolCallRequested():
               _finish(
@@ -162,9 +170,13 @@ class AiNoteTaskExtractionController extends ChangeNotifier {
           }
         },
         onError:
-            (_) => _finish(
+            (Object error) => _finish(
               AiNoteTaskExtractionStatus.failed,
-              'The AI response was interrupted.',
+              error is AiDiagnosticException
+                  ? error.message
+                  : 'The AI response was interrupted.',
+              diagnostic:
+                  error is AiDiagnosticException ? error.diagnostic : null,
             ),
         onDone: () {
           if (!_finalized) {
@@ -174,6 +186,12 @@ class AiNoteTaskExtractionController extends ChangeNotifier {
             );
           }
         },
+      );
+    } on AiDiagnosticException catch (error) {
+      _finish(
+        AiNoteTaskExtractionStatus.failed,
+        error.message,
+        diagnostic: error.diagnostic,
       );
     } catch (_) {
       _finish(
@@ -192,6 +210,7 @@ class AiNoteTaskExtractionController extends ChangeNotifier {
     _handle = null;
     status = AiNoteTaskExtractionStatus.cancelled;
     errorMessage = 'Task extraction was cancelled.';
+    diagnostic = null;
     _notify();
   }
 
@@ -265,11 +284,16 @@ class AiNoteTaskExtractionController extends ChangeNotifier {
     }
   }
 
-  void _finish(AiNoteTaskExtractionStatus nextStatus, String? message) {
+  void _finish(
+    AiNoteTaskExtractionStatus nextStatus,
+    String? message, {
+    AiDiagnostic? diagnostic,
+  }) {
     if (_finalized) return;
     _finalized = true;
     status = nextStatus;
     errorMessage = message;
+    this.diagnostic = diagnostic;
     _handle = null;
     unawaited(_subscription?.cancel());
     _subscription = null;

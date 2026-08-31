@@ -784,6 +784,7 @@ class _MessageBubble extends StatelessWidget {
     final statusText = switch (message.status) {
       AiMessageStatus.streaming => 'Thinking…',
       AiMessageStatus.cancelled => 'Stopped',
+      AiMessageStatus.failed when message.diagnostic != null => null,
       AiMessageStatus.failed => message.errorMessage ?? 'Response failed',
       AiMessageStatus.complete => null,
     };
@@ -836,6 +837,10 @@ class _MessageBubble extends StatelessWidget {
                           : colors.onSurfaceVariant,
                 ),
               ),
+            ],
+            if (message.diagnostic case final diagnostic?) ...[
+              const SizedBox(height: 9),
+              AiDiagnosticPanel(diagnostic: diagnostic, compact: true),
             ],
             if (onRetry != null) ...[
               const SizedBox(height: 6),

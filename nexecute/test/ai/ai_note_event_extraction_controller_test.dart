@@ -213,6 +213,40 @@ void main() {
     },
   );
 
+  test('retains structured guidance from a response failure', () async {
+    final diagnostic = AiDiagnostic(
+      kind: AiDiagnosticKind.modelNotFound,
+      title: 'Model not found',
+      summary: 'The selected model is unavailable.',
+      suggestions: const ['Choose an installed model in AI Settings.'],
+    );
+    final controller = AiNoteEventExtractionController(
+      assistantRepository: FakeAiAssistantRepository(
+        responseEvents: [
+          AiResponseFailed(
+            error: StateError('private provider detail'),
+            message: diagnostic.summary,
+            diagnostic: diagnostic,
+          ),
+        ],
+      ),
+      connectionProfileStore: profileStore,
+    );
+    addTearDown(controller.dispose);
+    await controller.initialize();
+
+    await controller.start(
+      noteId: 'note-1',
+      noteTitle: 'Appointment',
+      noteContent: 'Dentist next Thursday.',
+    );
+    await _flushEvents();
+
+    expect(controller.status, AiNoteEventExtractionStatus.failed);
+    expect(controller.diagnostic, same(diagnostic));
+    expect(controller.errorMessage, diagnostic.summary);
+  });
+
   test(
     'freezes the preview reference even when the local clock changes',
     () async {

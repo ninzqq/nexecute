@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nexecute/ai/domain/ai_chat_message.dart';
 import 'package:nexecute/ai/domain/ai_conversation.dart';
+import 'package:nexecute/ai/domain/ai_diagnostic.dart';
 import 'package:nexecute/repositories/firestore/schema/app_data_schema.dart';
 
 abstract final class AiConversationDocumentMapper {
@@ -45,6 +46,7 @@ abstract final class AiConversationDocumentMapper {
         'createdAt': message.createdAt,
         'status': message.status.name,
         'errorMessage': message.errorMessage,
+        'diagnostic': _diagnosticToMap(message.diagnostic),
         'toolCallId': message.toolCallId,
       });
 
@@ -68,6 +70,7 @@ abstract final class AiConversationDocumentMapper {
         AiMessageStatus.complete,
       ),
       errorMessage: data['errorMessage']?.toString(),
+      diagnostic: _diagnosticFromMap(data['diagnostic']),
       toolCallId: data['toolCallId']?.toString(),
     );
   }
@@ -88,4 +91,36 @@ abstract final class AiConversationDocumentMapper {
     DateTime date => date,
     _ => null,
   };
+
+  static Map<String, Object?>? _diagnosticToMap(AiDiagnostic? diagnostic) {
+    if (diagnostic == null) return null;
+    return {
+      'code': diagnostic.code,
+      'title': diagnostic.title,
+      'summary': diagnostic.summary,
+      'suggestions': diagnostic.suggestions,
+    };
+  }
+
+  static AiDiagnostic? _diagnosticFromMap(Object? value) {
+    if (value is! Map) return null;
+    final kind = AiDiagnosticKind.fromCode(value['code']?.toString());
+    final title = value['title']?.toString().trim() ?? '';
+    final summary = value['summary']?.toString().trim() ?? '';
+    final rawSuggestions = value['suggestions'];
+    if (kind == null || title.isEmpty || summary.isEmpty) return null;
+    final suggestions =
+        rawSuggestions is Iterable
+            ? rawSuggestions
+                .map((item) => item.toString().trim())
+                .where((item) => item.isNotEmpty)
+                .toList()
+            : const <String>[];
+    return AiDiagnostic(
+      kind: kind,
+      title: title,
+      summary: summary,
+      suggestions: suggestions,
+    );
+  }
 }

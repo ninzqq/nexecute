@@ -4,8 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:nexecute/ai/domain/ai_connection_profile.dart';
 import 'package:nexecute/ai/domain/ai_connection_result.dart';
+import 'package:nexecute/ai/domain/ai_diagnostic.dart';
 import 'package:nexecute/ai/domain/ai_model_info.dart';
 import 'package:nexecute/ai/domain/ai_protocol.dart';
+import 'package:nexecute/ai/presentation/ai_diagnostic_panel.dart';
 import 'package:nexecute/ai/presentation/ai_endpoint_validation.dart';
 import 'package:nexecute/ai/presentation/ai_settings_controller.dart';
 import 'package:nexecute/ai/repositories/ai_assistant_repository.dart';
@@ -471,6 +473,10 @@ class _ConnectionResultLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final successful = result.isConnected;
+    final diagnostic = result.diagnostic;
+    if (!successful && diagnostic != null) {
+      return AiDiagnosticPanel(diagnostic: diagnostic, compact: true);
+    }
     final color =
         successful
             ? Theme.of(context).colorScheme.primary
@@ -543,6 +549,7 @@ class _AiConnectionProfileEditorState
   List<AiModelInfo> _models = const [];
   bool _discoveringModels = false;
   String? _discoveryMessage;
+  AiDiagnostic? _discoveryDiagnostic;
   String? _urlWarning;
   bool _obscureCredential = true;
 
@@ -645,6 +652,7 @@ class _AiConnectionProfileEditorState
                       _protocol = value;
                       _models = const [];
                       _discoveryMessage = null;
+                      _discoveryDiagnostic = null;
                     });
                   },
                 ),
@@ -738,7 +746,10 @@ class _AiConnectionProfileEditorState
                       ),
                   ],
                 ),
-                if (_discoveryMessage case final message?) ...[
+                if (_discoveryDiagnostic case final diagnostic?) ...[
+                  const SizedBox(height: 8),
+                  AiDiagnosticPanel(diagnostic: diagnostic, compact: true),
+                ] else if (_discoveryMessage case final message?) ...[
                   const SizedBox(height: 6),
                   Text(message, style: Theme.of(context).textTheme.bodySmall),
                 ],
@@ -1075,6 +1086,7 @@ class _AiConnectionProfileEditorState
     setState(() {
       _discoveringModels = true;
       _discoveryMessage = null;
+      _discoveryDiagnostic = null;
     });
     final profile = _buildProfile(
       baseUrl: validation.uri!,
@@ -1085,8 +1097,11 @@ class _AiConnectionProfileEditorState
     setState(() {
       _discoveringModels = false;
       _models = models;
+      _discoveryDiagnostic = widget.settingsController.modelDiscoveryDiagnostic;
       _discoveryMessage =
-          widget.settingsController.modelDiscoveryError != null
+          _discoveryDiagnostic != null
+              ? null
+              : widget.settingsController.modelDiscoveryError != null
               ? 'Could not load models: ${widget.settingsController.modelDiscoveryError}'
               : models.isEmpty
               ? 'No models were reported. You can still enter the model ID manually.'

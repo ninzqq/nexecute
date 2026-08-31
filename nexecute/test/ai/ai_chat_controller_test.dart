@@ -201,6 +201,12 @@ void main() {
   });
 
   test('stream failure preserves partial text as a failed message', () async {
+    final diagnostic = AiDiagnostic(
+      kind: AiDiagnosticKind.localNetwork,
+      title: 'Local endpoint unreachable',
+      summary: 'This device could not reach the private endpoint.',
+      suggestions: const ['Check that both devices use the same network.'],
+    );
     final repository = FakeAiAssistantRepository(
       responseEvents: [
         const AiTextDelta('The beginning'),
@@ -208,6 +214,7 @@ void main() {
           error: StateError('offline'),
           message: 'Connection lost',
           retryable: true,
+          diagnostic: diagnostic,
         ),
       ],
     );
@@ -229,6 +236,7 @@ void main() {
     expect(saved.messages.last.content, 'The beginning');
     expect(saved.messages.last.status, AiMessageStatus.failed);
     expect(saved.messages.last.errorMessage, 'Connection lost');
+    expect(saved.messages.last.diagnostic, same(diagnostic));
   });
 
   test(

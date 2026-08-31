@@ -8,6 +8,7 @@ class FakeAiAssistantRepository implements AiAssistantRepository {
     this.responseEvents = const [AiResponseCompleted()],
     this.responseStreamBuilder,
     this.startResponseError,
+    this.listModelsError,
   });
 
   AiConnectionResult connectionResult;
@@ -15,6 +16,7 @@ class FakeAiAssistantRepository implements AiAssistantRepository {
   List<AiStreamEvent> responseEvents;
   Stream<AiStreamEvent> Function(AiChatRequest request)? responseStreamBuilder;
   Object? startResponseError;
+  Object? listModelsError;
   final testedProfiles = <AiConnectionProfile>[];
   final listedProfiles = <AiConnectionProfile>[];
   final startedRequests = <AiChatRequest>[];
@@ -29,6 +31,7 @@ class FakeAiAssistantRepository implements AiAssistantRepository {
   @override
   Future<List<AiModelInfo>> listModels(AiConnectionProfile profile) async {
     listedProfiles.add(profile);
+    if (listModelsError case final error?) throw error;
     return List.unmodifiable(models);
   }
 

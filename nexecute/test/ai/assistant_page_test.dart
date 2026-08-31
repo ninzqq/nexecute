@@ -390,6 +390,64 @@ void main() {
       isEmpty,
     );
   });
+
+  testWidgets('shows actionable diagnostics for failed chat responses', (
+    tester,
+  ) async {
+    final profile = AiConnectionProfile(
+      id: 'home',
+      name: 'Home AI',
+      protocol: AiProtocol.openAiCompatibleChat,
+      baseUrl: Uri.parse('https://ai.example.test/v1'),
+      modelId: 'local-model',
+    );
+    final profileStore = FakeAiConnectionProfileStore(
+      profiles: [profile],
+      activeProfileId: profile.id,
+    );
+    final conversationStore = FakeAiConversationStore();
+    final diagnostic = AiDiagnostic(
+      kind: AiDiagnosticKind.dns,
+      title: 'Host not found',
+      summary: 'The endpoint name could not be resolved.',
+      suggestions: const ['Check the endpoint address in AI Settings.'],
+    );
+    addTearDown(profileStore.dispose);
+    addTearDown(conversationStore.dispose);
+
+    await tester.pumpWidget(
+      _app(
+        assistantRepository: FakeAiAssistantRepository(
+          responseEvents: [
+            AiResponseFailed(
+              error: StateError('private host detail'),
+              message: diagnostic.summary,
+              retryable: true,
+              diagnostic: diagnostic,
+            ),
+          ],
+        ),
+        profileStore: profileStore,
+        conversationStore: conversationStore,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('assistant-composer')),
+      'Hello',
+    );
+    await tester.tap(find.byKey(const Key('assistant-send')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('ai-diagnostic-dns')), findsOneWidget);
+    expect(find.text('Host not found'), findsOneWidget);
+    expect(
+      find.text('• Check the endpoint address in AI Settings.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('private host detail'), findsNothing);
+    expect(find.byKey(const Key('assistant-retry')), findsOneWidget);
+  });
 }
 
 Widget _app({

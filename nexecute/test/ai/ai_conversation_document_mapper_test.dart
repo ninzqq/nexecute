@@ -39,6 +39,12 @@ void main() {
   });
 
   test('message mapper preserves partial failure state', () {
+    final diagnostic = AiDiagnostic(
+      kind: AiDiagnosticKind.dns,
+      title: 'Host not found',
+      summary: 'The endpoint name could not be resolved.',
+      suggestions: const ['Check the endpoint address.'],
+    );
     final message = AiChatMessage(
       id: 'assistant-1',
       role: AiMessageRole.assistant,
@@ -46,6 +52,7 @@ void main() {
       createdAt: DateTime.utc(2026, 8, 29, 12),
       status: AiMessageStatus.failed,
       errorMessage: 'Connection lost',
+      diagnostic: diagnostic,
     );
 
     final data = AiConversationDocumentMapper.messageToMap(message);
@@ -58,5 +65,20 @@ void main() {
     expect(restored.content, 'Partial answer');
     expect(restored.status, AiMessageStatus.failed);
     expect(restored.errorMessage, 'Connection lost');
+    expect(restored.diagnostic?.kind, AiDiagnosticKind.dns);
+    expect(restored.diagnostic?.title, 'Host not found');
+    expect(restored.diagnostic?.suggestions, ['Check the endpoint address.']);
+  });
+
+  test('ignores malformed or unknown stored diagnostics', () {
+    final restored = AiConversationDocumentMapper.messageFromMap('message', {
+      'diagnostic': {
+        'code': 'future_category',
+        'title': 'Future failure',
+        'summary': 'Not understood by this client.',
+      },
+    });
+
+    expect(restored.diagnostic, isNull);
   });
 }

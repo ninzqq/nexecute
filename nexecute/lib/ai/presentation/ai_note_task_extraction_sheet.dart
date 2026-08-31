@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:nexecute/ai/application/ai_note_task_prompt.dart';
 import 'package:nexecute/ai/domain/ai_task_proposal.dart';
 import 'package:nexecute/ai/presentation/ai_generation_progress.dart';
+import 'package:nexecute/ai/presentation/ai_diagnostic_panel.dart';
 import 'package:nexecute/ai/presentation/ai_note_task_extraction_controller.dart';
 import 'package:nexecute/ai/presentation/ai_task_proposal_creation_controller.dart';
 import 'package:nexecute/ai/repositories/ai_assistant_repository.dart';
@@ -216,7 +217,10 @@ class _AiNoteTaskExtractionSheetState
                       keyPrefix: 'ai-note-task',
                     ),
                   ],
-                  if (controller.errorMessage case final message?) ...[
+                  if (controller.diagnostic case final diagnostic?) ...[
+                    const SizedBox(height: 12),
+                    AiDiagnosticPanel(diagnostic: diagnostic),
+                  ] else if (controller.errorMessage case final message?) ...[
                     const SizedBox(height: 12),
                     Text(
                       message,
@@ -228,13 +232,13 @@ class _AiNoteTaskExtractionSheetState
                                 : Theme.of(context).colorScheme.error,
                       ),
                     ),
-                    if (retrying) ...[
-                      const SizedBox(height: 6),
-                      const Text(
-                        'Nothing was created. You can retry the request or cancel.',
-                        key: Key('ai-note-task-retry-guidance'),
-                      ),
-                    ],
+                  ],
+                  if (retrying) ...[
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Nothing was created. You can retry the request or cancel.',
+                      key: Key('ai-note-task-retry-guidance'),
+                    ),
                   ],
                   if (completed) ...[
                     const SizedBox(height: 12),

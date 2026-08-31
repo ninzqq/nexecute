@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:nexecute/ai/domain/ai_connection_profile.dart';
 import 'package:nexecute/ai/domain/ai_connection_result.dart';
+import 'package:nexecute/ai/domain/ai_diagnostic.dart';
 import 'package:nexecute/ai/domain/ai_model_info.dart';
 import 'package:nexecute/ai/domain/ai_protocol.dart';
+import 'package:nexecute/ai/infrastructure/ai_failure_diagnostics.dart';
 import 'package:nexecute/ai/repositories/ai_assistant_repository.dart';
 import 'package:nexecute/ai/repositories/ai_connection_profile_store.dart';
 import 'package:nexecute/ai/repositories/ai_credential_store.dart';
@@ -34,6 +36,7 @@ class AiSettingsController extends ChangeNotifier {
   String? _discoveringProfileId;
   List<AiModelInfo> _discoveredModels = const [];
   Object? _modelDiscoveryError;
+  AiDiagnostic? _modelDiscoveryDiagnostic;
   bool _disposed = false;
 
   List<AiConnectionProfile> get profiles => _profiles;
@@ -46,6 +49,7 @@ class AiSettingsController extends ChangeNotifier {
   String? get discoveringProfileId => _discoveringProfileId;
   List<AiModelInfo> get discoveredModels => _discoveredModels;
   Object? get modelDiscoveryError => _modelDiscoveryError;
+  AiDiagnostic? get modelDiscoveryDiagnostic => _modelDiscoveryDiagnostic;
   bool get credentialStorageAvailable => _credentialStore.isAvailable;
 
   String createProfileId() => _idFactory();
@@ -160,9 +164,11 @@ class AiSettingsController extends ChangeNotifier {
 
   Future<AiConnectionResult> testConnection(AiConnectionProfile profile) async {
     if (!profile.isValid) {
-      const result = AiConnectionResult(
+      final diagnostic = AiFailureDiagnostics().invalidConfiguration();
+      final result = AiConnectionResult(
         status: AiConnectionStatus.invalidConfiguration,
         message: 'Complete the connection profile before testing it.',
+        diagnostic: diagnostic,
       );
       _testedProfileId = profile.id;
       _connectionResult = result;
@@ -178,10 +184,20 @@ class AiSettingsController extends ChangeNotifier {
       final result = await _assistantRepository.testConnection(profile);
       _connectionResult = result;
       return result;
-    } catch (error) {
+    } on AiDiagnosticException catch (error) {
       final result = AiConnectionResult(
         status: AiConnectionStatus.failed,
-        message: error.toString(),
+        message: error.message,
+        diagnostic: error.diagnostic,
+      );
+      _connectionResult = result;
+      return result;
+    } catch (_) {
+      final diagnostic = AiFailureDiagnostics().unknown();
+      final result = AiConnectionResult(
+        status: AiConnectionStatus.failed,
+        message: diagnostic.summary,
+        diagnostic: diagnostic,
       );
       _connectionResult = result;
       return result;
@@ -195,13 +211,20 @@ class AiSettingsController extends ChangeNotifier {
     _discoveringProfileId = profile.id;
     _discoveredModels = const [];
     _modelDiscoveryError = null;
+    _modelDiscoveryDiagnostic = null;
     _notifyListeners();
     try {
       final models = await _assistantRepository.listModels(profile);
       _discoveredModels = List.unmodifiable(models);
       return _discoveredModels;
-    } catch (error) {
-      _modelDiscoveryError = error;
+    } on AiDiagnosticException catch (error) {
+      _modelDiscoveryError = error.message;
+      _modelDiscoveryDiagnostic = error.diagnostic;
+      return const [];
+    } catch (_) {
+      final diagnostic = AiFailureDiagnostics().unknown();
+      _modelDiscoveryError = diagnostic.summary;
+      _modelDiscoveryDiagnostic = diagnostic;
       return const [];
     } finally {
       _discoveringProfileId = null;
@@ -241,6 +264,7 @@ class AiSettingsController extends ChangeNotifier {
       _discoveringProfileId = null;
       _discoveredModels = const [];
       _modelDiscoveryError = null;
+      _modelDiscoveryDiagnostic = null;
     }
   }
 

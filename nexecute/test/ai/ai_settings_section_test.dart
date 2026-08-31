@@ -213,6 +213,58 @@ void main() {
     expect(find.text('Use a value from 1 to 131072.'), findsOneWidget);
   });
 
+  testWidgets('shows actionable guidance after a failed connection test', (
+    tester,
+  ) async {
+    final profile = AiConnectionProfile(
+      id: 'home',
+      name: 'Home AI',
+      protocol: AiProtocol.openAiCompatibleChat,
+      baseUrl: Uri.parse('https://ai.example.test/v1'),
+      modelId: 'local-model',
+    );
+    final diagnostic = AiDiagnostic(
+      kind: AiDiagnosticKind.authentication,
+      title: 'Authentication failed',
+      summary: 'The endpoint rejected the configured authentication.',
+      suggestions: const ['Check the credential in AI Settings.'],
+    );
+    final store = FakeAiConnectionProfileStore(
+      profiles: [profile],
+      activeProfileId: profile.id,
+    );
+    addTearDown(store.dispose);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<AiConnectionProfileStore>.value(value: store),
+          Provider<AiCredentialStore>.value(value: FakeAiCredentialStore()),
+          Provider<AiAssistantRepository>.value(
+            value: FakeAiAssistantRepository(
+              connectionResult: AiConnectionResult(
+                status: AiConnectionStatus.authenticationFailed,
+                message: diagnostic.summary,
+                diagnostic: diagnostic,
+              ),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: Scaffold(body: AiSettingsSection())),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('ai-profile-test-home')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('ai-diagnostic-authentication')),
+      findsOneWidget,
+    );
+    expect(find.text('Authentication failed'), findsOneWidget);
+    expect(find.text('• Check the credential in AI Settings.'), findsOneWidget);
+  });
+
   testWidgets('saves a bearer token outside the connection profile', (
     tester,
   ) async {
