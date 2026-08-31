@@ -380,17 +380,17 @@ can sync without writing every streamed token.
 Validate the existing vertical slice against the owner's real Ollama server
 before adding hosted providers or advanced application actions.
 
-> **Why this remains unfinished:** The local chat implementation and its fake
-> server tests exist, and the owner has exercised parts of the flow manually,
-> but the complete checklist below has not been run and recorded systematically
-> against the real Ollama server, multiple signed-in devices, home-network and
-> Tailscale access, and the listed failure conditions. Automated development
-> work must not contact the owner's real model endpoint unless the owner
-> explicitly requests that specific test.
+> **Why this remains unfinished:** Real Ollama connection testing, model
+> discovery, streaming chat, Stop, Retry, and partial-response preservation
+> have been exercised by the owner. The remaining checklist has not been run
+> and recorded systematically across multiple signed-in devices, home-network
+> and Tailscale access, and the listed failure conditions. Automated
+> development work must not contact the owner's real model endpoint unless the
+> owner explicitly requests that specific test.
 
-- [ ] Verify connection testing and model discovery against Ollama's
+- [x] Verify connection testing and model discovery against Ollama's
   OpenAI-compatible API.
-- [ ] Verify streaming chat, Stop, Retry, and partial-response preservation
+- [x] Verify streaming chat, Stop, Retry, and partial-response preservation
   against a real local model.
 - [ ] Verify conversation restoration and Firestore synchronization between
   signed-in devices without storing endpoint credentials in Firestore.
