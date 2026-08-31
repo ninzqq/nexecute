@@ -437,13 +437,13 @@ system message.
 
 ##### Step 6B: remaining reliability and secure access 🚧
 
-> **Why this remains unfinished:** Basic protocol diagnostics, capability
-> overrides, response normalization, timeout handling, and native bearer-token
-> storage are implemented. The remaining work needs evidence from real servers
-> before exposing model-specific context/warm-up controls, or broader platform
-> and network failure testing. Retry behavior also needs a deliberate policy
-> because automatically repeating an ambiguous generation could duplicate work
-> or incur provider usage later.
+> **Why this remains unfinished:** Protocol diagnostics, actionable recovery
+> guidance, capability overrides, response normalization, timeout handling,
+> native bearer-token storage, and the manual-only generation retry policy are
+> implemented. Generation requests are never retried automatically. The
+> remaining work needs evidence from real servers before exposing
+> model-specific context/warm-up controls or completing broader platform and
+> network failure testing.
 
 - [x] Show protocol-default, confirmed-supported, confirmed-unsupported, and
   unconfirmed capabilities for each profile, with editable per-model
