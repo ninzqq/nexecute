@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/models/todo_item.dart';
 import 'package:nexecute/repositories/todo_repository.dart';
+import 'package:nexecute/shared/adaptive_navigation_shell.dart';
 import 'package:nexecute/shared/bottom_sheet_safe_area.dart';
 import 'package:provider/provider.dart';
 
@@ -9,6 +10,7 @@ Future<void> showTodoEditor(BuildContext context, {TodoItem? todo}) {
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
+    constraints: adaptiveSheetConstraints(context),
     builder:
         (context) => BottomSheetSafeArea(
           child: Padding(

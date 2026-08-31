@@ -106,18 +106,8 @@ void main() {
       endTime: DateTime(now.year, now.month, now.day, 10),
       tags: const ['Work'],
       recurrence: EventRecurrence.yearly,
-      recurrenceSeriesStartTime: DateTime(
-        now.year - 1,
-        now.month,
-        now.day,
-        9,
-      ),
-      recurrenceSeriesEndTime: DateTime(
-        now.year - 1,
-        now.month,
-        now.day,
-        10,
-      ),
+      recurrenceSeriesStartTime: DateTime(now.year - 1, now.month, now.day, 9),
+      recurrenceSeriesEndTime: DateTime(now.year - 1, now.month, now.day, 10),
     );
 
     final repository = FakeEventRepository(events: [event]);
@@ -177,6 +167,61 @@ void main() {
       repository.updateCommand?.startTime,
       DateTime(now.year - 1, now.month, now.day, 9),
     );
+  });
+
+  testWidgets('shows event details in the expanded calendar side pane', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final now = DateTime.now();
+    final event = Event(
+      id: 'desktop-event',
+      title: 'Desktop planning',
+      description: 'Details stay beside the calendar',
+      startTime: DateTime(now.year, now.month, now.day, 13),
+      endTime: DateTime(now.year, now.month, now.day, 14),
+    );
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<EventRepository>.value(
+            value: FakeEventRepository(events: [event]),
+          ),
+          Provider<DataState<models.Tags>>.value(
+            value: DataEmpty(models.Tags()),
+          ),
+          ChangeNotifierProvider(create: (_) => SelectedDay()),
+        ],
+        child: MaterialApp(
+          theme: AppThemes.forPreset(AppThemePreset.midnight),
+          home: const CalendarPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('agenda-event-desktop-event')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(EventDetailsBottomSheet), findsNothing);
+    expect(find.byKey(const Key('calendar-event-details-pane')), findsOne);
+    expect(find.text('Details stay beside the calendar'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Edit event'));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(find.byType(ItemEditorSheet)).width, 640);
+    Navigator.of(tester.element(find.byType(ItemEditorSheet))).pop();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Close event details'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('selected-day-agenda')), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('shows event failures instead of an empty agenda', (

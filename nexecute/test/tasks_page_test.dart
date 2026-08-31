@@ -115,6 +115,26 @@ void main() {
     expect(find.byTooltip('Edit task'), findsNWidgets(2));
   });
 
+  testWidgets('constrains task content to a readable desktop width', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1400, 900);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      appWith([todo(id: 'Readable task', completed: false)]),
+    );
+
+    final listRect = tester.getRect(
+      find.byKey(const PageStorageKey('tasks-page')),
+    );
+    expect(listRect.width, 840);
+    expect(listRect.center.dx, 700);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('completion uses the injected task repository', (tester) async {
     final repository = _FakeTodoRepository();
     final activeTodo = todo(id: 'Active task', completed: false);

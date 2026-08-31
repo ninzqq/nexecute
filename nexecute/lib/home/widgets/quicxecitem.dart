@@ -13,6 +13,7 @@ import 'package:nexecute/repositories/note_repository.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/repositories/todo_repository.dart';
 import 'package:nexecute/shared/bottom_sheet_safe_area.dart';
+import 'package:nexecute/shared/adaptive_navigation_shell.dart';
 import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
 
@@ -35,6 +36,7 @@ class QuicxecItem extends StatelessWidget {
       context: context,
       useSafeArea: true,
       showDragHandle: true,
+      constraints: adaptiveSheetConstraints(context),
       builder:
           (sheetContext) => BottomSheetSafeArea(
             child: NoteActionsSheet(
@@ -107,6 +109,7 @@ class QuicxecItem extends StatelessWidget {
       context: context,
       useSafeArea: true,
       showDragHandle: true,
+      constraints: adaptiveSheetConstraints(context),
       builder:
           (sheetContext) => BottomSheetSafeArea(
             child: _FolderDestinationSheet(

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:nexecute/ai/ai.dart';
 import 'package:nexecute/domain/calendar/calendar_query_range.dart';
+import 'package:nexecute/shared/adaptive_navigation_shell.dart';
 import 'package:nexecute/shared/bottom_sheet_safe_area.dart';
 import 'package:provider/provider.dart';
 
@@ -84,39 +85,47 @@ class _AssistantPageState extends State<AssistantPage> {
         ],
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            if (_controller.errorMessage case final error?)
-              _ErrorBanner(message: error, onDismiss: _controller.clearError),
-            Expanded(child: _buildConversation()),
-            if (_applicationContext case final applicationContext?)
-              _ApplicationContextBar(
-                contextEnvelope: applicationContext,
-                noteTitles: [
-                  for (final envelope in _noteContexts.values)
-                    (envelope.attachments.single
-                            as AiSelectedNotesContextAttachment)
-                        .notes
-                        .single
-                        .title,
-                ],
-                hasTasks: _taskContext != null,
-                hasEvents: _eventContext != null,
-                onRemoveNote: _removeNoteAt,
-                onRemoveTasks: _removeTasks,
-                onRemoveEvents: _removeEvents,
-                onPreview: () => _showContextPreview(applicationContext),
-              ),
-            _Composer(
-              controller: _composerController,
-              enabled: !_controller.isLoading && profile != null,
-              isGenerating: _controller.isGenerating,
-              onSend: _send,
-              onStop: () => unawaited(_controller.stopResponse()),
-              onAttach: _isLoadingContext ? null : _showAttachmentMenu,
-              isLoadingContext: _isLoadingContext,
+        child: FocusTraversalGroup(
+          child: AdaptiveContentFrame(
+            contentKey: const Key('assistant-content-frame'),
+            child: Column(
+              children: [
+                if (_controller.errorMessage case final error?)
+                  _ErrorBanner(
+                    message: error,
+                    onDismiss: _controller.clearError,
+                  ),
+                Expanded(child: _buildConversation()),
+                if (_applicationContext case final applicationContext?)
+                  _ApplicationContextBar(
+                    contextEnvelope: applicationContext,
+                    noteTitles: [
+                      for (final envelope in _noteContexts.values)
+                        (envelope.attachments.single
+                                as AiSelectedNotesContextAttachment)
+                            .notes
+                            .single
+                            .title,
+                    ],
+                    hasTasks: _taskContext != null,
+                    hasEvents: _eventContext != null,
+                    onRemoveNote: _removeNoteAt,
+                    onRemoveTasks: _removeTasks,
+                    onRemoveEvents: _removeEvents,
+                    onPreview: () => _showContextPreview(applicationContext),
+                  ),
+                _Composer(
+                  controller: _composerController,
+                  enabled: !_controller.isLoading && profile != null,
+                  isGenerating: _controller.isGenerating,
+                  onSend: _send,
+                  onStop: () => unawaited(_controller.stopResponse()),
+                  onAttach: _isLoadingContext ? null : _showAttachmentMenu,
+                  isLoadingContext: _isLoadingContext,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -226,6 +235,7 @@ class _AssistantPageState extends State<AssistantPage> {
   Future<void> _showAttachmentMenu() async {
     final choice = await showModalBottomSheet<_AttachmentChoice>(
       context: context,
+      constraints: adaptiveSheetConstraints(context),
       builder: (context) => const BottomSheetSafeArea(child: _AttachmentMenu()),
     );
     if (!mounted || choice == null) return;
@@ -398,6 +408,7 @@ class _AssistantPageState extends State<AssistantPage> {
     final selectedId = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
+      constraints: adaptiveSheetConstraints(context),
       builder:
           (context) => BottomSheetSafeArea(
             child: _ConversationSheet(

@@ -5,6 +5,20 @@ enum AppLayoutClass { compact, medium, expanded }
 extension AppLayoutClassDetails on AppLayoutClass {
   bool get usesNavigationRail => this != AppLayoutClass.compact;
   bool get usesExtendedNavigationRail => this == AppLayoutClass.expanded;
+
+  bool get usesCalendarSidePane => this == AppLayoutClass.expanded;
+
+  int get notesColumnCount => switch (this) {
+    AppLayoutClass.compact => 2,
+    AppLayoutClass.medium => 3,
+    AppLayoutClass.expanded => 4,
+  };
+
+  double? get readableContentMaxWidth => switch (this) {
+    AppLayoutClass.compact => null,
+    AppLayoutClass.medium => 720,
+    AppLayoutClass.expanded => 840,
+  };
 }
 
 abstract final class AppLayoutBreakpoints {
@@ -16,6 +30,10 @@ abstract final class AppLayoutBreakpoints {
     if (width < minimumExpandedWidth) return AppLayoutClass.medium;
     return AppLayoutClass.expanded;
   }
+
+  static AppLayoutClass fromContext(BuildContext context) =>
+      AppLayoutScope.maybeOf(context) ??
+      fromWidth(MediaQuery.sizeOf(context).width);
 }
 
 class AppLayoutScope extends InheritedWidget {
@@ -39,6 +57,55 @@ class AppLayoutScope extends InheritedWidget {
   @override
   bool updateShouldNotify(AppLayoutScope oldWidget) =>
       layoutClass != oldWidget.layoutClass;
+}
+
+class AdaptiveContentFrame extends StatelessWidget {
+  const AdaptiveContentFrame({
+    super.key,
+    required this.child,
+    this.maxWidth,
+    this.alignment = Alignment.topCenter,
+    this.contentKey,
+  });
+
+  final Widget child;
+  final double? maxWidth;
+  final AlignmentGeometry alignment;
+  final Key? contentKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final layoutClass = AppLayoutBreakpoints.fromContext(context);
+    final effectiveMaxWidth = maxWidth ?? layoutClass.readableContentMaxWidth;
+    if (effectiveMaxWidth == null) return child;
+
+    return LayoutBuilder(
+      builder:
+          (context, constraints) => Align(
+            alignment: alignment,
+            child: SizedBox(
+              key: contentKey,
+              width: constraints.constrainWidth(effectiveMaxWidth),
+              height:
+                  constraints.hasBoundedHeight ? constraints.maxHeight : null,
+              child: child,
+            ),
+          ),
+    );
+  }
+}
+
+BoxConstraints adaptiveSheetConstraints(
+  BuildContext context, {
+  double? minHeight,
+  double? maxHeight,
+}) {
+  final layoutClass = AppLayoutBreakpoints.fromContext(context);
+  return BoxConstraints(
+    minHeight: minHeight ?? 0,
+    maxHeight: maxHeight ?? double.infinity,
+    maxWidth: layoutClass == AppLayoutClass.compact ? double.infinity : 640,
+  );
 }
 
 @immutable

@@ -21,6 +21,7 @@ class SelectedDayAgenda extends StatelessWidget {
     required this.onResize,
     required this.onResizeEnd,
     required this.onEventSelected,
+    this.reserveFloatingActionButtonSpace = true,
   });
 
   final DateTime day;
@@ -30,15 +31,16 @@ class SelectedDayAgenda extends StatelessWidget {
   final ValueChanged<double>? onResize;
   final ValueChanged<double>? onResizeEnd;
   final ValueChanged<Event> onEventSelected;
+  final bool reserveFloatingActionButtonSpace;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.appPalette;
-    final fabClearance = math.min(
-      88.0,
-      MediaQuery.sizeOf(context).width * 0.25,
-    );
+    final fabClearance =
+        reserveFloatingActionButtonSpace
+            ? math.min(88.0, MediaQuery.sizeOf(context).width * 0.25)
+            : 8.0;
 
     return ColoredBox(
       key: const Key('selected-day-agenda'),

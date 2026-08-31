@@ -132,7 +132,14 @@ void main() {
     await tester.tap(find.text('Week'));
     await tester.pumpAndSettle();
 
-    final firstWeekOfNextMonth = IsoWeekCalculator().fromDate(nextMonth);
+    final focusedWeekDate = currentWeek.start.add(const Duration(days: 3));
+    final monthAfterFocusedWeek = DateTime(
+      focusedWeekDate.year,
+      focusedWeekDate.month + 1,
+    );
+    final firstWeekOfNextMonth = IsoWeekCalculator().fromDate(
+      monthAfterFocusedWeek,
+    );
     expect(
       find.text(
         'Week ${firstWeekOfNextMonth.weekNumber} · '
@@ -145,7 +152,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text(DateFormat('MMMM yyyy').format(nextMonth)),
+      find.text(DateFormat('MMMM yyyy').format(monthAfterFocusedWeek)),
       findsOneWidget,
     );
   });

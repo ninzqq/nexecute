@@ -7,6 +7,7 @@ import 'package:nexecute/models/note_folder.dart';
 import 'package:nexecute/models/notes_controller.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/repositories/note_folder_repository.dart';
+import 'package:nexecute/shared/adaptive_navigation_shell.dart';
 import 'package:nexecute/shared/data_state_placeholder.dart';
 import 'package:provider/provider.dart';
 
@@ -54,12 +55,14 @@ class _QuicxecsState extends State<Quicxecs> {
       ),
     };
     final notesController = context.watch<NotesController>();
-    return PopScope(
-      canPop: notesController.location == NotesLocation.root,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _openRoot(context);
-      },
-      child: content,
+    return FocusTraversalGroup(
+      child: PopScope(
+        canPop: notesController.location == NotesLocation.root,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) _openRoot(context);
+        },
+        child: content,
+      ),
     );
   }
 
@@ -276,6 +279,7 @@ class _QuicxecsState extends State<Quicxecs> {
     NoteFolder? folder,
     int? folderTotalNoteCount,
   }) {
+    final layoutClass = AppLayoutBreakpoints.fromContext(context);
     return Column(
       children: [
         _searchBox(),
@@ -341,8 +345,9 @@ class _QuicxecsState extends State<Quicxecs> {
                   : Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: MasonryGridView.count(
+                      key: const Key('notes-masonry-grid'),
                       padding: const EdgeInsets.only(bottom: 96),
-                      crossAxisCount: 2,
+                      crossAxisCount: layoutClass.notesColumnCount,
                       mainAxisSpacing: 8,
                       crossAxisSpacing: 8,
                       itemCount: notes.length,

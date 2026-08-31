@@ -15,6 +15,7 @@ import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/shared/bottom_sheet_safe_area.dart';
+import 'package:nexecute/shared/adaptive_navigation_shell.dart';
 import 'package:nexecute/shared/event_reminder_labels.dart';
 import 'package:provider/provider.dart';
 
@@ -53,6 +54,7 @@ Future<Event?> showAiNoteEventExtractionPreview(
       useSafeArea: true,
       isScrollControlled: true,
       showDragHandle: true,
+      constraints: adaptiveSheetConstraints(context),
       builder:
           (_) => BottomSheetSafeArea(
             child: _AiNoteEventExtractionSheet(

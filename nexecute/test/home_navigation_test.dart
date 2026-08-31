@@ -109,6 +109,18 @@ void main() {
     expect(find.text('Calendar'), findsOneWidget);
     expect(find.text('Tasks'), findsOneWidget);
     expect(find.text('Notes'), findsWidgets);
+
+    await tester.tap(find.byIcon(Icons.calendar_month_outlined));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('calendar-side-by-side-layout')), findsOne);
+    final calendar = tester.getRect(
+      find.byKey(const Key('calendar-swipe-area')),
+    );
+    final agenda = tester.getRect(
+      find.byKey(const Key('selected-day-agenda-container')),
+    );
+    expect(calendar.right, lessThanOrEqualTo(agenda.left));
     expect(tester.takeException(), isNull);
   });
 
@@ -142,6 +154,7 @@ void main() {
       tester.widget<NavigationRail>(find.byType(NavigationRail)).extended,
       isTrue,
     );
+    expect(find.byKey(const Key('calendar-side-by-side-layout')), findsOne);
     _expectCalendarWeekSelected(tester);
 
     tester.view.physicalSize = const Size(390, 900);
@@ -151,9 +164,41 @@ void main() {
       tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
       0,
     );
+    expect(find.byKey(const Key('calendar-side-by-side-layout')), findsNothing);
     _expectCalendarWeekSelected(tester);
     expect(tester.takeException(), isNull);
   });
+
+  const representativeSizes = <String, Size>{
+    'phone': Size(390, 844),
+    'tablet': Size(700, 900),
+    'laptop': Size(1000, 800),
+    'wide': Size(1600, 1000),
+  };
+  for (final preset in AppThemePreset.values) {
+    for (final size in representativeSizes.entries) {
+      testWidgets(
+        '${preset.name} theme has no feature overflow at ${size.key} size',
+        (tester) async {
+          _setViewport(tester, size.value);
+          await _pumpHome(tester, themePreset: preset);
+
+          await tester.tap(find.byIcon(Icons.calendar_month_outlined));
+          await tester.pumpAndSettle();
+          expect(find.byKey(const Key('calendar-toolbar')), findsOne);
+
+          await tester.tap(find.byIcon(Icons.checklist_outlined));
+          await tester.pumpAndSettle();
+          expect(find.text('Nothing to do'), findsOneWidget);
+
+          await tester.tap(find.byIcon(Icons.sticky_note_2_outlined));
+          await tester.pumpAndSettle();
+          expect(find.byKey(const Key('notes-knowledge-base-root')), findsOne);
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
 }
 
 void _setViewport(WidgetTester tester, Size size) {
@@ -163,7 +208,10 @@ void _setViewport(WidgetTester tester, Size size) {
   addTearDown(tester.view.resetPhysicalSize);
 }
 
-Future<void> _pumpHome(WidgetTester tester) {
+Future<void> _pumpHome(
+  WidgetTester tester, {
+  AppThemePreset themePreset = AppThemePreset.midnight,
+}) {
   return tester.pumpWidget(
     MultiProvider(
       providers: [
@@ -177,7 +225,7 @@ Future<void> _pumpHome(WidgetTester tester) {
         Provider<DataState<models.Tags>>.value(value: DataEmpty(models.Tags())),
       ],
       child: MaterialApp(
-        theme: AppThemes.forPreset(AppThemePreset.midnight),
+        theme: AppThemes.forPreset(themePreset),
         home: const HomeScreen(),
       ),
     ),

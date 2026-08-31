@@ -11,7 +11,9 @@ import 'package:nexecute/models/calendar_settings_controller.dart';
 import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/calendar/bottomsheets/event_details.dart';
 import 'package:nexecute/repositories/event_repository.dart';
+import 'package:nexecute/shared/adaptive_navigation_shell.dart';
 import 'package:nexecute/shared/data_state_placeholder.dart';
+import 'package:nexecute/themes.dart';
 import 'package:nexecute/ui/calendar/month_view.dart';
 import 'package:nexecute/ui/calendar/event_date_utils.dart';
 import 'package:nexecute/ui/calendar/selected_day_agenda.dart';
@@ -46,6 +48,7 @@ class _CalendarPageState extends State<CalendarPage> {
   Stream<DataState<List<Event>>>? _eventsStream;
   double _agendaExpansion = 0;
   bool _isDraggingAgenda = false;
+  Event? _selectedEvent;
 
   @override
   void initState() {
@@ -97,138 +100,121 @@ class _CalendarPageState extends State<CalendarPage> {
     final week = _weekCalculator.fromDate(_weekDateForPage(_weekPage));
     final month = _monthCalculator.fromDate(_monthDateForPage(_monthPage));
     final selectedEvents = eventsForDay(events, _selectedDay);
+    final selectedEvent = _matchingEvent(events, _selectedEvent);
 
-    return Material(
-      color: Theme.of(context).scaffoldBackgroundColor,
-      child: Column(
-        children: [
-          _CalendarToolbar(
-            title:
-                _viewMode == CalendarViewMode.month
-                    ? DateFormat('MMMM yyyy').format(month.start)
-                    : 'Week ${week.weekNumber} · ${DateFormat('MMM yyyy').format(week.start)}',
-            viewMode: _viewMode,
-            onViewModeChanged: _changeViewMode,
-            onPrevious: _showPrevious,
-            onNext: _showNext,
-            onToday: _showToday,
-            onOpenNavigation: () => Scaffold.maybeOf(context)?.openDrawer(),
-          ),
-          const Divider(height: 1),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final hasAgenda =
-                    state is DataReady<List<Event>> ||
-                    state is DataEmpty<List<Event>>;
-                final compactHeight =
-                    hasAgenda
-                        ? selectedDayAgendaHeight(selectedEvents.length)
-                        : 120.0;
-                final expandedHeight = _expandedAgendaHeight(
-                  availableHeight: constraints.maxHeight,
-                  compactHeight: compactHeight,
-                );
-                final canExpand =
-                    hasAgenda &&
-                    selectedEvents.isNotEmpty &&
-                    expandedHeight - compactHeight >= 32;
-                final agendaHeight =
-                    compactHeight +
-                    (expandedHeight - compactHeight) *
-                        (canExpand ? _agendaExpansion : 0);
+    return FocusTraversalGroup(
+      child: Material(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: Column(
+          children: [
+            _CalendarToolbar(
+              title:
+                  _viewMode == CalendarViewMode.month
+                      ? DateFormat('MMMM yyyy').format(month.start)
+                      : 'Week ${week.weekNumber} · ${DateFormat('MMM yyyy').format(week.start)}',
+              viewMode: _viewMode,
+              onViewModeChanged: _changeViewMode,
+              onPrevious: _showPrevious,
+              onNext: _showNext,
+              onToday: _showToday,
+              onOpenNavigation: () => Scaffold.maybeOf(context)?.openDrawer(),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final layoutClass = AppLayoutBreakpoints.fromContext(context);
+                  final hasAgenda =
+                      state is DataReady<List<Event>> ||
+                      state is DataEmpty<List<Event>>;
+                  if (layoutClass.usesCalendarSidePane) {
+                    final agendaWidth = math.min(
+                      360.0,
+                      math.max(280.0, constraints.maxWidth * 0.36),
+                    );
+                    return Row(
+                      key: const Key('calendar-side-by-side-layout'),
+                      children: [
+                        Expanded(
+                          child: _calendarPager(
+                            events: events,
+                            showWeekNumbers: showWeekNumbers,
+                          ),
+                        ),
+                        const VerticalDivider(width: 1),
+                        SizedBox(
+                          key: const Key('selected-day-agenda-container'),
+                          width: agendaWidth,
+                          child:
+                              selectedEvent == null
+                                  ? _agendaForState(
+                                    state,
+                                    selectedEvents,
+                                    isExpanded: true,
+                                    reserveFloatingActionButtonSpace: false,
+                                  )
+                                  : ColoredBox(
+                                    key: const Key(
+                                      'calendar-event-details-pane',
+                                    ),
+                                    color: context.appPalette.chrome,
+                                    child: SingleChildScrollView(
+                                      padding: const EdgeInsets.all(16),
+                                      child: EventDetailsPanel(
+                                        event: selectedEvent,
+                                        onClose:
+                                            () => setState(
+                                              () => _selectedEvent = null,
+                                            ),
+                                        onDeleted:
+                                            () => setState(
+                                              () => _selectedEvent = null,
+                                            ),
+                                      ),
+                                    ),
+                                  ),
+                        ),
+                      ],
+                    );
+                  }
 
-                return Column(
-                  children: [
-                    Expanded(
-                      child: KeyedSubtree(
-                        key: const Key('calendar-swipe-area'),
-                        child: IndexedStack(
-                          index: _viewMode == CalendarViewMode.month ? 0 : 1,
-                          children: [
-                            PageView.builder(
-                              controller: _monthPageController,
-                              allowImplicitScrolling: true,
-                              onPageChanged: _onMonthPageChanged,
-                              itemBuilder: (context, page) {
-                                final pageMonth = _monthCalculator.fromDate(
-                                  _monthDateForPage(page),
-                                );
-                                return KeyedSubtree(
-                                  key: ValueKey(
-                                    'month-page-${pageMonth.year}-${pageMonth.month}',
-                                  ),
-                                  child: MonthView(
-                                    month: pageMonth,
-                                    showWeekNumbers: showWeekNumbers,
-                                    selectedDay: _selectedDay,
-                                    events: events,
-                                    onDaySelected: _selectDay,
-                                    onEventSelected: _openEvent,
-                                  ),
-                                );
-                              },
-                            ),
-                            PageView.builder(
-                              controller: _weekPageController,
-                              allowImplicitScrolling: true,
-                              onPageChanged: _onWeekPageChanged,
-                              itemBuilder: (context, page) {
-                                final pageWeek = _weekCalculator.fromDate(
-                                  _weekDateForPage(page),
-                                );
-                                return KeyedSubtree(
-                                  key: ValueKey(
-                                    'week-page-${pageWeek.year}-${pageWeek.weekNumber}',
-                                  ),
-                                  child: WeekView(
-                                    week: pageWeek,
-                                    events: events,
-                                    selectedDay: _selectedDay,
-                                    onDaySelected: _selectDay,
-                                    onEventSelected: _openEvent,
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
+                  final compactHeight =
+                      hasAgenda
+                          ? selectedDayAgendaHeight(selectedEvents.length)
+                          : 120.0;
+                  final expandedHeight = _expandedAgendaHeight(
+                    availableHeight: constraints.maxHeight,
+                    compactHeight: compactHeight,
+                  );
+                  final canExpand =
+                      hasAgenda &&
+                      selectedEvents.isNotEmpty &&
+                      expandedHeight - compactHeight >= 32;
+                  final agendaHeight =
+                      compactHeight +
+                      (expandedHeight - compactHeight) *
+                          (canExpand ? _agendaExpansion : 0);
+
+                  return Column(
+                    children: [
+                      Expanded(
+                        child: _calendarPager(
+                          events: events,
+                          showWeekNumbers: showWeekNumbers,
                         ),
                       ),
-                    ),
-                    const Divider(height: 1),
-                    AnimatedContainer(
-                      key: const Key('selected-day-agenda-container'),
-                      duration:
-                          _isDraggingAgenda
-                              ? Duration.zero
-                              : const Duration(milliseconds: 220),
-                      curve: Curves.easeOutCubic,
-                      height: agendaHeight,
-                      child: switch (state) {
-                        DataLoading<List<Event>>() =>
-                          const DataStatePlaceholder(
-                            presentation: DataStatePresentation.loading,
-                            title: 'Loading events…',
-                            message: '',
-                            compact: true,
-                          ),
-                        DataUnauthenticated<List<Event>>() =>
-                          const DataStatePlaceholder(
-                            presentation: DataStatePresentation.unauthenticated,
-                            title: 'Sign in to access events',
-                            message: '',
-                            compact: true,
-                          ),
-                        DataFailure<List<Event>>() =>
-                          const DataStatePlaceholder(
-                            presentation: DataStatePresentation.failure,
-                            title: 'Could not load events',
-                            compact: true,
-                          ),
-                        DataEmpty<List<Event>>() ||
-                        DataReady<List<Event>>() => SelectedDayAgenda(
-                          day: _selectedDay,
-                          events: selectedEvents,
+                      const Divider(height: 1),
+                      AnimatedContainer(
+                        key: const Key('selected-day-agenda-container'),
+                        duration:
+                            _isDraggingAgenda
+                                ? Duration.zero
+                                : const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        height: agendaHeight,
+                        child: _agendaForState(
+                          state,
+                          selectedEvents,
                           isExpanded: canExpand && _agendaExpansion >= 0.5,
                           onToggleExpanded:
                               canExpand ? _toggleAgendaExpansion : null,
@@ -240,18 +226,114 @@ class _CalendarPageState extends State<CalendarPage> {
                                   )
                                   : null,
                           onResizeEnd: canExpand ? _finishResizingAgenda : null,
-                          onEventSelected: _openEvent,
                         ),
-                      },
-                    ),
-                  ],
-                );
-              },
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _calendarPager({
+    required List<Event> events,
+    required bool showWeekNumbers,
+  }) {
+    return KeyedSubtree(
+      key: const Key('calendar-swipe-area'),
+      child: IndexedStack(
+        index: _viewMode == CalendarViewMode.month ? 0 : 1,
+        children: [
+          PageView.builder(
+            controller: _monthPageController,
+            allowImplicitScrolling: true,
+            onPageChanged: _onMonthPageChanged,
+            itemBuilder: (context, page) {
+              final pageMonth = _monthCalculator.fromDate(
+                _monthDateForPage(page),
+              );
+              return KeyedSubtree(
+                key: ValueKey(
+                  'month-page-${pageMonth.year}-${pageMonth.month}',
+                ),
+                child: MonthView(
+                  month: pageMonth,
+                  showWeekNumbers: showWeekNumbers,
+                  selectedDay: _selectedDay,
+                  events: events,
+                  onDaySelected: _selectDay,
+                  onEventSelected: _openEvent,
+                ),
+              );
+            },
+          ),
+          PageView.builder(
+            controller: _weekPageController,
+            allowImplicitScrolling: true,
+            onPageChanged: _onWeekPageChanged,
+            itemBuilder: (context, page) {
+              final pageWeek = _weekCalculator.fromDate(_weekDateForPage(page));
+              return KeyedSubtree(
+                key: ValueKey(
+                  'week-page-${pageWeek.year}-${pageWeek.weekNumber}',
+                ),
+                child: WeekView(
+                  week: pageWeek,
+                  events: events,
+                  selectedDay: _selectedDay,
+                  onDaySelected: _selectDay,
+                  onEventSelected: _openEvent,
+                ),
+              );
+            },
           ),
         ],
       ),
     );
+  }
+
+  Widget _agendaForState(
+    DataState<List<Event>> state,
+    List<Event> selectedEvents, {
+    required bool isExpanded,
+    VoidCallback? onToggleExpanded,
+    ValueChanged<double>? onResize,
+    ValueChanged<double>? onResizeEnd,
+    bool reserveFloatingActionButtonSpace = true,
+  }) {
+    return switch (state) {
+      DataLoading<List<Event>>() => const DataStatePlaceholder(
+        presentation: DataStatePresentation.loading,
+        title: 'Loading events…',
+        message: '',
+        compact: true,
+      ),
+      DataUnauthenticated<List<Event>>() => const DataStatePlaceholder(
+        presentation: DataStatePresentation.unauthenticated,
+        title: 'Sign in to access events',
+        message: '',
+        compact: true,
+      ),
+      DataFailure<List<Event>>() => const DataStatePlaceholder(
+        presentation: DataStatePresentation.failure,
+        title: 'Could not load events',
+        compact: true,
+      ),
+      DataEmpty<List<Event>>() || DataReady<List<Event>>() => SelectedDayAgenda(
+        day: _selectedDay,
+        events: selectedEvents,
+        isExpanded: isExpanded,
+        onToggleExpanded: onToggleExpanded,
+        onResize: onResize,
+        onResizeEnd: onResizeEnd,
+        onEventSelected: _openEvent,
+        reserveFloatingActionButtonSpace: reserveFloatingActionButtonSpace,
+      ),
+    };
   }
 
   double _expandedAgendaHeight({
@@ -350,6 +432,7 @@ class _CalendarPageState extends State<CalendarPage> {
     setState(() {
       _selectedDay = normalized;
       _focusedDay = normalized;
+      _selectedEvent = null;
     });
     _animateActivePageToDate(normalized);
     context.read<SelectedDay>().setSelectedDay(normalized);
@@ -447,7 +530,25 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   void _openEvent(Event event) {
-    showEventDetails(context, event);
+    if (AppLayoutBreakpoints.fromContext(context).usesCalendarSidePane) {
+      setState(() => _selectedEvent = event);
+    } else {
+      showEventDetails(context, event);
+    }
+  }
+
+  Event? _matchingEvent(List<Event> events, Event? selectedEvent) {
+    if (selectedEvent == null) return null;
+    for (final event in events) {
+      if (event.id == selectedEvent.id &&
+          event.startTime == selectedEvent.startTime) {
+        return event;
+      }
+    }
+    for (final event in events) {
+      if (event.id == selectedEvent.id) return event;
+    }
+    return null;
   }
 }
 

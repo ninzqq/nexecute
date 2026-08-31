@@ -3,6 +3,7 @@ import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/home/bottomsheets/item_editor_sheet.dart';
 import 'package:nexecute/shared/bottom_sheet_safe_area.dart';
+import 'package:nexecute/shared/adaptive_navigation_shell.dart';
 
 void showItemEditor(
   BuildContext context, {
@@ -16,7 +17,8 @@ void showItemEditor(
     isDismissible: true,
     enableDrag: true,
     useSafeArea: true,
-    constraints: BoxConstraints(
+    constraints: adaptiveSheetConstraints(
+      context,
       maxHeight: MediaQuery.of(context).size.height,
       minHeight: MediaQuery.of(context).size.height * 0.3,
     ),

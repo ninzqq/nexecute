@@ -223,20 +223,27 @@ without a second UI implementation.
 features, or add native desktop integrations in this slice. It should be
 testable using the existing platform-independent widget test environment.
 
-##### Phase 1B: desktop feature layouts
+##### Phase 1B: desktop feature layouts — complete
 
-- [ ] Allow Calendar and the selected-day agenda/details to use a side-by-side
+- [x] Allow Calendar and the selected-day agenda/details to use a side-by-side
   layout when enough width is available while retaining the compact flow.
-- [ ] Increase the Notes masonry-grid column count from the shared layout class
+- [x] Increase the Notes masonry-grid column count from the shared layout class
   and keep editor sheets usable at desktop widths.
-- [ ] Constrain long Task and Assistant content to readable widths instead of
+- [x] Constrain long Task and Assistant content to readable widths instead of
   stretching text across the complete window.
-- [ ] Audit dialogs, bottom sheets, popups, date/time pickers, loading states,
+- [x] Audit dialogs, bottom sheets, popups, date/time pickers, loading states,
   and empty/error states in freely resizable windows.
-- [ ] Add desktop-appropriate focus traversal, hover feedback, scroll behavior,
+- [x] Add desktop-appropriate focus traversal, hover feedback, scroll behavior,
   and minimum interactive sizes without forking feature implementations.
-- [ ] Verify the adaptive layouts under every application theme at representative
+- [x] Verify the adaptive layouts under every application theme at representative
   phone, tablet, laptop, and wide-window sizes.
+
+Expanded Calendar windows keep the selected-day agenda in a persistent side
+pane and replace it with scrollable event details when an event is opened.
+Compact windows retain the resizable bottom agenda and modal detail flow. Notes
+use two, three, or four masonry columns from the shared layout class. Task and
+Assistant content is centered at readable widths, and custom editor/detail
+bottom sheets are capped at 640 logical pixels on non-compact layouts.
 
 ##### Phase 1C: baseline desktop commands
 

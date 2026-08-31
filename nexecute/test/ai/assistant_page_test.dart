@@ -131,6 +131,35 @@ void main() {
     );
   });
 
+  testWidgets('constrains assistant content in a wide desktop window', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1400, 900);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final profileStore = FakeAiConnectionProfileStore();
+    final conversationStore = FakeAiConversationStore();
+    addTearDown(profileStore.dispose);
+    addTearDown(conversationStore.dispose);
+
+    await tester.pumpWidget(
+      _app(
+        assistantRepository: FakeAiAssistantRepository(),
+        profileStore: profileStore,
+        conversationStore: conversationStore,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final contentRect = tester.getRect(
+      find.byKey(const Key('assistant-content-frame')),
+    );
+    expect(contentRect.width, 840);
+    expect(contentRect.center.dx, 700);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('sends a message and displays streamed assistant text', (
     tester,
   ) async {

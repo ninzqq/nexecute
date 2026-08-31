@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/todo_item.dart';
 import 'package:nexecute/repositories/todo_repository.dart';
+import 'package:nexecute/shared/adaptive_navigation_shell.dart';
 import 'package:nexecute/shared/data_state_placeholder.dart';
 import 'package:nexecute/tasks/todo_editor_sheet.dart';
 import 'package:nexecute/tasks/todo_list_utils.dart';
@@ -15,22 +16,32 @@ class TasksPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<DataState<List<TodoItem>>>();
 
-    return switch (state) {
-      DataLoading<List<TodoItem>>() => const DataStatePlaceholder(
-        presentation: DataStatePresentation.loading,
-        title: 'Loading tasks…',
+    return FocusTraversalGroup(
+      child: AdaptiveContentFrame(
+        child: switch (state) {
+          DataLoading<List<TodoItem>>() => const DataStatePlaceholder(
+            presentation: DataStatePresentation.loading,
+            title: 'Loading tasks…',
+          ),
+          DataUnauthenticated<List<TodoItem>>() => const DataStatePlaceholder(
+            presentation: DataStatePresentation.unauthenticated,
+            message: 'Sign in to access your tasks.',
+          ),
+          DataFailure<List<TodoItem>>() => const DataStatePlaceholder(
+            presentation: DataStatePresentation.failure,
+            title: 'Could not load tasks',
+          ),
+          DataEmpty<List<TodoItem>>(:final value) => _buildTasks(
+            context,
+            value,
+          ),
+          DataReady<List<TodoItem>>(:final value) => _buildTasks(
+            context,
+            value,
+          ),
+        },
       ),
-      DataUnauthenticated<List<TodoItem>>() => const DataStatePlaceholder(
-        presentation: DataStatePresentation.unauthenticated,
-        message: 'Sign in to access your tasks.',
-      ),
-      DataFailure<List<TodoItem>>() => const DataStatePlaceholder(
-        presentation: DataStatePresentation.failure,
-        title: 'Could not load tasks',
-      ),
-      DataEmpty<List<TodoItem>>(:final value) => _buildTasks(context, value),
-      DataReady<List<TodoItem>>(:final value) => _buildTasks(context, value),
-    };
+    );
   }
 
   Widget _buildTasks(BuildContext context, List<TodoItem> todos) {

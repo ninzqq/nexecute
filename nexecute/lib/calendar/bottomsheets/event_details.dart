@@ -6,6 +6,7 @@ import 'package:nexecute/models/event_reminder.dart';
 import 'package:nexecute/models/event_recurrence.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/shared/bottom_sheet_safe_area.dart';
+import 'package:nexecute/shared/adaptive_navigation_shell.dart';
 import 'package:nexecute/shared/event_reminder_labels.dart';
 import 'package:nexecute/shared/event_recurrence_labels.dart';
 import 'package:nexecute/themes.dart';
@@ -17,6 +18,7 @@ Future<void> showEventDetails(BuildContext context, Event event) {
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: true,
+    constraints: adaptiveSheetConstraints(context),
     builder:
         (_) =>
             BottomSheetSafeArea(child: EventDetailsBottomSheet(event: event)),
@@ -30,89 +32,105 @@ class EventDetailsBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.appPalette;
     final minimumSheetHeight = MediaQuery.sizeOf(context).height * 0.45;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
       child: ConstrainedBox(
         constraints: BoxConstraints(minHeight: minimumSheetHeight),
-        child: IntrinsicHeight(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        child: IntrinsicHeight(child: EventDetailsPanel(event: event)),
+      ),
+    );
+  }
+}
+
+class EventDetailsPanel extends StatelessWidget {
+  const EventDetailsPanel({
+    super.key,
+    required this.event,
+    this.onClose,
+    this.onDeleted,
+  });
+
+  final Event event;
+  final VoidCallback? onClose;
+  final VoidCallback? onDeleted;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.appPalette;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(event.title, style: theme.textTheme.titleLarge),
+            ),
+            IconButton(
+              tooltip: 'Edit event',
+              icon: const Icon(Icons.edit_rounded),
+              onPressed: () {
+                showItemEditor(context, event: event, isEditing: true);
+              },
+            ),
+            IconButton(
+              tooltip: 'Delete event',
+              color: theme.colorScheme.error,
+              icon: const Icon(Icons.delete_outline_rounded),
+              onPressed: () => _deleteEvent(context),
+            ),
+            if (onClose != null)
+              IconButton(
+                tooltip: 'Close event details',
+                onPressed: onClose,
+                icon: const Icon(Icons.close_rounded),
+              ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        _DetailRow(icon: Icons.schedule_rounded, text: _timeLabel()),
+        const SizedBox(height: 12),
+        _DetailRow(icon: Icons.calendar_today_rounded, text: _dateLabel()),
+        if (event.reminder != EventReminder.none) ...[
+          const SizedBox(height: 12),
+          _DetailRow(
+            icon: Icons.notifications_outlined,
+            text: event.reminder.label,
+          ),
+        ],
+        if (event.recurrence != EventRecurrence.none) ...[
+          const SizedBox(height: 12),
+          _DetailRow(
+            icon: Icons.repeat_rounded,
+            text: event.recurrence.detailsLabel,
+          ),
+        ],
+        if (event.description.trim().isNotEmpty) ...[
+          const SizedBox(height: 20),
+          Text(
+            'Description',
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: palette.secondary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(event.description, style: theme.textTheme.bodyMedium),
+        ],
+        if (event.tags.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(event.title, style: theme.textTheme.titleLarge),
-                  ),
-                  IconButton(
-                    tooltip: 'Edit event',
-                    icon: const Icon(Icons.edit_rounded),
-                    onPressed: () {
-                      showItemEditor(context, event: event, isEditing: true);
-                    },
-                  ),
-                  IconButton(
-                    tooltip: 'Delete event',
-                    color: theme.colorScheme.error,
-                    icon: const Icon(Icons.delete_outline_rounded),
-                    onPressed: () => _deleteEvent(context),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _DetailRow(icon: Icons.schedule_rounded, text: _timeLabel()),
-              const SizedBox(height: 12),
-              _DetailRow(
-                icon: Icons.calendar_today_rounded,
-                text: _dateLabel(),
-              ),
-              if (event.reminder != EventReminder.none) ...[
-                const SizedBox(height: 12),
-                _DetailRow(
-                  icon: Icons.notifications_outlined,
-                  text: event.reminder.label,
-                ),
-              ],
-              if (event.recurrence != EventRecurrence.none) ...[
-                const SizedBox(height: 12),
-                _DetailRow(
-                  icon: Icons.repeat_rounded,
-                  text: event.recurrence.detailsLabel,
-                ),
-              ],
-              if (event.description.trim().isNotEmpty) ...[
-                const SizedBox(height: 20),
-                Text(
-                  'Description',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: palette.secondary,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(event.description, style: theme.textTheme.bodyMedium),
-              ],
-              if (event.tags.isNotEmpty) ...[
-                const SizedBox(height: 20),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    for (final tag in event.tags)
-                      Chip(
-                        visualDensity: VisualDensity.compact,
-                        label: Text(tag),
-                      ),
-                  ],
-                ),
-              ],
-              const Spacer(),
+              for (final tag in event.tags)
+                Chip(visualDensity: VisualDensity.compact, label: Text(tag)),
             ],
           ),
-        ),
-      ),
+        ],
+      ],
     );
   }
 
@@ -122,7 +140,11 @@ class EventDetailsBottomSheet extends StatelessWidget {
     try {
       await context.read<EventRepository>().deleteEvent(event);
       if (!context.mounted) return;
-      navigator.pop();
+      if (onDeleted case final callback?) {
+        callback();
+      } else {
+        navigator.pop();
+      }
       messenger.showSnackBar(const SnackBar(content: Text('Event deleted')));
     } catch (_) {
       if (!context.mounted) return;
