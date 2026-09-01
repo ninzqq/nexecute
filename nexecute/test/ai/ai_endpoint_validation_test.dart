@@ -24,6 +24,16 @@ void main() {
     expect(result.warning, contains('HTTPS'));
   });
 
+  test('warns native clients to limit plain HTTP to trusted networks', () {
+    final result = validateAiEndpointUrl(
+      'http://ai-pc.example.test:11434/v1',
+      isWeb: false,
+    );
+
+    expect(result.isValid, isTrue);
+    expect(result.warning, contains('trusted local network or tailnet'));
+  });
+
   test('warns when localhost would refer to the client device', () {
     final result = validateAiEndpointUrl(
       'http://localhost:11434/v1',

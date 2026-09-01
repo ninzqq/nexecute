@@ -245,7 +245,7 @@ final class AiFailureDiagnostics {
     summary:
         'The endpoint reported a failure that Nexecute could not classify safely.',
     suggestions: const [
-      'Review the user-safe endpoint message and check the connection settings.',
+      'Check the connection settings and review the AI server logs locally.',
     ],
   );
 

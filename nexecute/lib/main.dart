@@ -21,18 +21,20 @@ import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/tag.dart';
 import 'package:nexecute/models/todo_item.dart';
 
-void main() async {
+Future<void> main() async {
+  runApp(await initializeNexecute());
+}
+
+Future<Nexecute> initializeNexecute() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   final themeController = await AppThemeController.load();
   final calendarSettingsController = await CalendarSettingsController.load();
   final platformServices = await createDefaultAppPlatformServices();
-  runApp(
-    Nexecute(
-      themeController: themeController,
-      calendarSettingsController: calendarSettingsController,
-      platformServices: platformServices,
-    ),
+  return Nexecute(
+    themeController: themeController,
+    calendarSettingsController: calendarSettingsController,
+    platformServices: platformServices,
   );
 }
 

@@ -330,19 +330,29 @@ macOS Keychain construction.
 
 ##### Phase 2C: networking, entitlements, and first build
 
-- [ ] Configure the minimum sandbox/network entitlements needed for Firebase,
+- [x] Configure the minimum sandbox/network entitlements needed for Firebase,
   Google sign-in, HTTPS endpoints, and user-configured local/private AI
   endpoints.
-- [ ] Define deliberate transport behavior for plain HTTP, local network names,
+- [x] Define deliberate transport behavior for plain HTTP, local network names,
   Tailscale HTTPS/MagicDNS, certificate failures, and offline startup without
   broad permanent security exceptions.
-- [ ] Confirm that direct AI endpoint credentials remain device-local and that
+- [x] Confirm that direct AI endpoint credentials remain device-local and that
   diagnostic output contains no token, raw payload, or personal URL.
-- [ ] Produce a debug macOS build from a clean checkout and document all manual
+- [x] Produce a debug macOS build from a clean checkout and document all manual
   prerequisites.
-- [ ] Add a lightweight macOS smoke test that proves startup reaches the
+- [x] Add a lightweight macOS smoke test that proves startup reaches the
   authentication or main application shell without an unsupported-platform
   exception.
+
+**Phase 2C complete:** Debug and release builds retain the sandbox and minimum
+outbound-network entitlement, while local-network access has a focused privacy
+description and release adds no inbound, discovery, arbitrary-load, or TLS
+bypass capability. Transport and diagnostic behavior is documented and tested;
+credentials remain in device secure storage and provider payloads, tokens, and
+personal endpoint URLs are excluded from surfaced failure output. A disposable
+clean checkout produced a debug macOS build, and a development-signed startup
+smoke reached the authentication or main shell through the production
+initialization path.
 
 #### Phase 3: private macOS alpha
 

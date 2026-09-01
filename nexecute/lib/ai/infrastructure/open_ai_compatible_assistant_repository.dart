@@ -98,19 +98,16 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
           .get(_endpoint(profile.baseUrl, 'models'), headers: headers)
           .timeout(connectionTimeout ?? profile.connectionTimeout);
       if (response.statusCode < 200 || response.statusCode >= 300) {
+        final providerMessage = _providerErrorMessage(response.body);
         final message =
             response.statusCode == 404
                 ? 'The model-list endpoint was not found. For Ollama, use a base URL ending in /v1.'
-                : _safeErrorMessage(
-                  response.body,
-                  response.statusCode,
-                  headers,
-                );
+                : _safeHttpErrorMessage(response.statusCode);
         throw AiDiagnosticException(
           diagnostic: _failureDiagnostics.httpFailure(
             response.statusCode,
             operation: AiFailureOperation.modelDiscovery,
-            safeProviderMessage: message,
+            safeProviderMessage: providerMessage,
           ),
           message: message,
           cause: OpenAiCompatibleHttpException(response.statusCode, message),
@@ -266,7 +263,8 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
       responseStarted = true;
       if (response.statusCode < 200 || response.statusCode >= 300) {
         final body = await response.stream.bytesToString();
-        final message = _safeErrorMessage(body, response.statusCode, headers);
+        final providerMessage = _providerErrorMessage(body);
+        final message = _safeHttpErrorMessage(response.statusCode);
         yield AiResponseFailed(
           error: OpenAiCompatibleHttpException(response.statusCode, message),
           message: message,
@@ -275,7 +273,7 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
           diagnostic: _failureDiagnostics.httpFailure(
             response.statusCode,
             operation: AiFailureOperation.responseStart,
-            safeProviderMessage: message,
+            safeProviderMessage: providerMessage,
           ),
         );
         return;
@@ -312,14 +310,11 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
         if (decoded is! Map) continue;
         final error = decoded['error'];
         if (error is Map || error is String) {
-          final message =
-              error is Map
-                  ? error['message']?.toString() ?? 'AI request failed.'
-                  : error.toString();
+          const message = 'The endpoint reported a streamed response error.';
           yield AiResponseFailed(
-            error: error,
-            message: _redactCredential(message, headers),
-            code: error is Map ? error['code']?.toString() : null,
+            error: const FormatException(message),
+            message: message,
+            code: 'provider_error',
             retryable: true,
             diagnostic: _failureDiagnostics.providerFailure(),
           );
@@ -386,20 +381,20 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
           yield _emptyResponseFailure();
         }
       }
-    } on http.RequestAbortedException catch (error) {
+    } on http.RequestAbortedException {
       yield AiResponseFailed(
-        error: error,
+        error: StateError('AI response cancelled.'),
         message: 'Response stopped.',
         code: 'cancelled',
         retryable: true,
       );
-    } on TimeoutException catch (error) {
+    } on TimeoutException {
       final operation =
           responseStarted
               ? AiFailureOperation.responseStream
               : AiFailureOperation.responseStart;
       yield AiResponseFailed(
-        error: error,
+        error: StateError('AI response timed out.'),
         message:
             responseStarted
                 ? 'The AI endpoint stopped sending response data.'
@@ -408,30 +403,33 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
         retryable: true,
         diagnostic: _failureDiagnostics.timeout(operation: operation),
       );
-    } on FormatException catch (error) {
+    } on FormatException {
       yield AiResponseFailed(
-        error: error,
+        error: const FormatException(
+          'The endpoint returned an invalid response.',
+        ),
         message: 'The AI endpoint returned a malformed streaming response.',
         code: 'invalid_response',
         diagnostic: _failureDiagnostics.invalidResponse(),
       );
     } on http.ClientException catch (error) {
+      final diagnostic = _failureDiagnostics.transportFailure(
+        error,
+        endpoint: profile.baseUrl,
+      );
       yield AiResponseFailed(
-        error: error,
+        error: StateError('The AI endpoint is unreachable.'),
         message:
             'Could not reach the AI endpoint. Check that the server is running and that this device can access the configured address.',
         code: 'unreachable',
         retryable: true,
-        diagnostic: _failureDiagnostics.transportFailure(
-          error,
-          endpoint: profile.baseUrl,
-        ),
+        diagnostic: diagnostic,
       );
     } catch (error) {
       final transportDiagnostic = _failureDiagnostics
           .recognizedNativeTransportFailure(error, endpoint: profile.baseUrl);
       yield AiResponseFailed(
-        error: error,
+        error: StateError('The AI response failed.'),
         message:
             transportDiagnostic == null
                 ? 'The AI response was interrupted unexpectedly.'
@@ -600,7 +598,7 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
     return baseUrl.replace(path: path).resolve(relativePath);
   }
 
-  static String _errorMessage(String body, int statusCode) {
+  static String? _providerErrorMessage(String body) {
     try {
       final decoded = jsonDecode(body);
       if (decoded is Map) {
@@ -612,6 +610,10 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
         if (decoded['message'] != null) return decoded['message'].toString();
       }
     } catch (_) {}
+    return null;
+  }
+
+  static String _safeHttpErrorMessage(int statusCode) {
     return switch (statusCode) {
       401 || 403 =>
         'The AI endpoint rejected authentication. Check the connection credentials.',
@@ -623,31 +625,6 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
         'The AI server is unavailable or still starting the model (HTTP $statusCode).',
       _ => 'The AI endpoint returned HTTP $statusCode.',
     };
-  }
-
-  static String _safeErrorMessage(
-    String body,
-    int statusCode,
-    Map<String, String> headers,
-  ) {
-    final message = _errorMessage(body, statusCode);
-    return _redactCredential(message, headers);
-  }
-
-  static String _redactCredential(String message, Map<String, String> headers) {
-    var redacted = message;
-    final authorization = headers['authorization'];
-    if (authorization != null) {
-      redacted = redacted.replaceAll(authorization, '[credential redacted]');
-      final separator = authorization.indexOf(' ');
-      if (separator >= 0 && separator + 1 < authorization.length) {
-        redacted = redacted.replaceAll(
-          authorization.substring(separator + 1),
-          '[credential redacted]',
-        );
-      }
-    }
-    return redacted;
   }
 
   void dispose() {

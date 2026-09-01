@@ -80,6 +80,10 @@ The provider boundary and login UI have automated coverage for session stream
 restoration, cancellation, sign-out, and failures. The real Google chooser and
 development signing still require this interactive macOS pass.
 
+See `docs/macos_networking_and_build.md` for the minimum sandbox entitlement
+set, local-network privacy behavior, transport policy, and clean debug build
+procedure.
+
 Native compilation can be checked without a personal signing identity:
 
 ```sh

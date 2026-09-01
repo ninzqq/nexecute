@@ -165,7 +165,7 @@ void main() {
     expect(requestCount, 0);
   });
 
-  test('redacts the bearer token from endpoint errors', () async {
+  test('does not expose provider text or credentials from HTTP errors', () async {
     const reference = 'secure-storage:home';
     const token = 'secret-that-must-not-leak';
     final repository = OpenAiCompatibleAssistantRepository(
@@ -188,37 +188,44 @@ void main() {
 
     expect(result.status, AiConnectionStatus.authenticationFailed);
     expect(result.message, isNot(contains(token)));
-    expect(result.message, contains('[credential redacted]'));
+    expect(
+      result.message,
+      'The AI endpoint rejected authentication. Check the connection credentials.',
+    );
   });
 
-  test('redacts the bearer token from streamed endpoint errors', () async {
-    const reference = 'secure-storage:home';
-    const token = 'stream-secret-that-must-not-leak';
-    final repository = OpenAiCompatibleAssistantRepository(
-      credentialStore: _MemoryCredentialStore({reference: token}),
-      client: MockClient(
-        (_) async => http.Response(
-          'data: ${jsonEncode({
-            'error': {'message': 'Rejected token $token'},
-          })}\n\n',
-          200,
-          headers: {'content-type': 'text/event-stream'},
+  test(
+    'does not expose provider text or credentials from stream errors',
+    () async {
+      const reference = 'secure-storage:home';
+      const token = 'stream-secret-that-must-not-leak';
+      final repository = OpenAiCompatibleAssistantRepository(
+        credentialStore: _MemoryCredentialStore({reference: token}),
+        client: MockClient(
+          (_) async => http.Response(
+            'data: ${jsonEncode({
+              'error': {'message': 'Rejected token $token'},
+            })}\n\n',
+            200,
+            headers: {'content-type': 'text/event-stream'},
+          ),
         ),
-      ),
-    );
-    final authenticatedProfile = profile.copyWith(
-      authenticationMode: AiAuthenticationMode.bearerToken,
-      credentialReference: reference,
-    );
+      );
+      final authenticatedProfile = profile.copyWith(
+        authenticationMode: AiAuthenticationMode.bearerToken,
+        credentialReference: reference,
+      );
 
-    final handle = await repository.startResponse(
-      _request(authenticatedProfile),
-    );
-    final event = (await handle.events.toList()).single as AiResponseFailed;
+      final handle = await repository.startResponse(
+        _request(authenticatedProfile),
+      );
+      final event = (await handle.events.toList()).single as AiResponseFailed;
 
-    expect(event.message, isNot(contains(token)));
-    expect(event.message, contains('[credential redacted]'));
-  });
+      expect(event.message, isNot(contains(token)));
+      expect(event.message, 'The endpoint reported a streamed response error.');
+      expect(event.error.toString(), isNot(contains(token)));
+    },
+  );
 
   test('normalizes streamed chat completion deltas', () async {
     late http.Request sentRequest;
@@ -748,10 +755,43 @@ void main() {
 
     final event = (await handle.events.toList()).single as AiResponseFailed;
 
-    expect(event.message, 'Model is warming up');
+    expect(
+      event.message,
+      'The AI server is unavailable or still starting the model (HTTP 503).',
+    );
     expect(event.code, 'http_503');
     expect(event.retryable, isTrue);
     expect(event.diagnostic?.kind, AiDiagnosticKind.serverUnavailable);
+  });
+
+  test('keeps raw payloads and private URLs out of failure output', () async {
+    const privateUrl = 'https://private-device.example.ts.net/v1';
+    const rawPrompt = 'private prompt contents';
+    final repository = OpenAiCompatibleAssistantRepository(
+      client: MockClient(
+        (_) async => http.Response(
+          jsonEncode({
+            'error': {
+              'message': 'Failure at $privateUrl while handling $rawPrompt',
+            },
+          }),
+          503,
+        ),
+      ),
+    );
+
+    final handle = await repository.startResponse(_request(profile));
+    final event = (await handle.events.toList()).single as AiResponseFailed;
+    final output = [
+      event.message,
+      event.error.toString(),
+      event.diagnostic?.title,
+      event.diagnostic?.summary,
+      ...?event.diagnostic?.suggestions,
+    ].join(' ');
+
+    expect(output, isNot(contains(privateUrl)));
+    expect(output, isNot(contains(rawPrompt)));
   });
 
   test('omits reasoning effort when the profile uses automatic', () async {
@@ -817,7 +857,8 @@ void main() {
 
     final event = (await handle.events.toList()).single as AiResponseFailed;
 
-    expect(event.message, 'model runner stopped');
+    expect(event.message, 'The endpoint reported a streamed response error.');
+    expect(event.error.toString(), isNot(contains('model runner stopped')));
     expect(event.retryable, isTrue);
   });
 

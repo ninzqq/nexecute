@@ -148,6 +148,21 @@ void main() {
       expect(loopback.kind, AiDiagnosticKind.localNetwork);
       expect(loopback.suggestions.join(' '), contains('localhost'));
     });
+
+    test('treats Tailscale HTTPS names as private-network endpoints', () {
+      final native = AiFailureDiagnostics(
+        isWeb: false,
+        isSecureWebContext: false,
+      );
+      final diagnostic = native.transportFailure(
+        http.ClientException('private tailnet detail'),
+        endpoint: Uri.parse('https://ai-pc.example.ts.net/v1'),
+      );
+
+      expect(diagnostic.kind, AiDiagnosticKind.localNetwork);
+      expect(diagnostic.summary, isNot(contains('example.ts.net')));
+      expect(diagnostic.summary, isNot(contains('private tailnet detail')));
+    });
   });
 
   test('uses distinct timeout guidance after a stream has started', () {
