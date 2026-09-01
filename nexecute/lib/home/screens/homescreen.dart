@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:nexecute/home/bottomsheets/item_editor.dart';
 import 'package:nexecute/home/widgets/quicxecs.dart';
@@ -9,6 +11,7 @@ import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/shared/adaptive_navigation_shell.dart';
 import 'package:nexecute/shared/app_shortcuts.dart';
 import 'package:nexecute/shared/drawer.dart';
+import 'package:nexecute/shared/macos_app_menu_bar.dart';
 import 'package:nexecute/tasks/tasks_page.dart';
 import 'package:nexecute/tasks/todo_editor_sheet.dart';
 import 'package:nexecute/ui/calendar/calendar.dart';
@@ -46,62 +49,97 @@ class HomeScreen extends StatelessWidget {
         actions: {
           SelectDestinationIntent: CallbackAction<SelectDestinationIntent>(
             onInvoke: (intent) {
-              if (canInvokeGlobalAppShortcut(context)) {
-                tab.select(intent.index);
-              }
+              _selectDestination(context, tab, intent.index);
               return null;
             },
           ),
           CreateItemIntent: CallbackAction<CreateItemIntent>(
             onInvoke: (_) {
-              if (canInvokeGlobalAppShortcut(context)) {
-                _createItem(context, tab.index);
-              }
+              _createItemIfAllowed(context, tab.index);
               return null;
             },
           ),
           OpenSearchIntent: CallbackAction<OpenSearchIntent>(
             onInvoke: (_) {
-              if (canInvokeGlobalAppShortcut(context)) {
-                Navigator.pushNamed(context, '/search');
-              }
+              _openRoute(context, '/search');
               return null;
             },
           ),
         },
-        child: FocusScope(
-          key: const Key('home-shortcut-focus'),
-          autofocus: true,
-          child: FocusTraversalGroup(
-            policy: OrderedTraversalPolicy(),
-            child: AdaptiveNavigationShell(
-              selectedIndex: tabIndex,
-              onDestinationSelected: tab.select,
-              destinations: _destinations,
-              appBar:
-                  tabIndex == 0
-                      ? null
-                      : AppBar(title: Text(_destinations[tabIndex].label)),
-              drawer: const MainDrawer(),
-              body: IndexedStack(
-                index: tabIndex,
-                children: const [CalendarPage(), TasksPage(), Quicxecs()],
-              ),
-              floatingActionButton: Semantics(
-                key: const Key('create-shortcut-semantics'),
-                container: true,
-                hint: 'Shortcut ${AppShortcutLabels.create}',
-                child: FloatingActionButton(
-                  onPressed: () => _createItem(context, tabIndex),
-                  tooltip: _fabLabel(tabIndex),
-                  child: Icon(_fabIcon(tabIndex)),
+        child: Builder(
+          builder:
+              (commandContext) => MacosAppMenuBar(
+                newItemLabel: _menuNewItemLabel(tabIndex),
+                onNewItem:
+                    () => _createItemIfAllowed(commandContext, tab.index),
+                onSelectDestination:
+                    (index) => _selectDestination(commandContext, tab, index),
+                onSearch: () => _openRoute(commandContext, '/search'),
+                onAssistant: () => _openRoute(commandContext, '/assistant'),
+                onSettings: () => _openRoute(commandContext, '/settings'),
+                onShowKeyboardShortcuts:
+                    () => _showKeyboardShortcuts(commandContext),
+                child: FocusScope(
+                  key: const Key('home-shortcut-focus'),
+                  autofocus: true,
+                  child: FocusTraversalGroup(
+                    policy: OrderedTraversalPolicy(),
+                    child: AdaptiveNavigationShell(
+                      selectedIndex: tabIndex,
+                      onDestinationSelected: tab.select,
+                      destinations: _destinations,
+                      appBar:
+                          tabIndex == 0
+                              ? null
+                              : AppBar(
+                                title: Text(_destinations[tabIndex].label),
+                              ),
+                      drawer: const MainDrawer(),
+                      body: IndexedStack(
+                        index: tabIndex,
+                        children: const [
+                          CalendarPage(),
+                          TasksPage(),
+                          Quicxecs(),
+                        ],
+                      ),
+                      floatingActionButton: Semantics(
+                        key: const Key('create-shortcut-semantics'),
+                        container: true,
+                        hint: 'Shortcut ${AppShortcutLabels.create}',
+                        child: FloatingActionButton(
+                          onPressed: () => _createItem(context, tabIndex),
+                          tooltip: _fabLabel(tabIndex),
+                          child: Icon(_fabIcon(tabIndex)),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
         ),
       ),
     );
+  }
+
+  void _selectDestination(BuildContext context, HomeTabIndex tab, int index) {
+    if (canInvokeGlobalAppShortcut(context)) tab.select(index);
+  }
+
+  void _openRoute(BuildContext context, String routeName) {
+    if (canInvokeGlobalAppShortcut(context)) {
+      Navigator.pushNamed(context, routeName);
+    }
+  }
+
+  void _showKeyboardShortcuts(BuildContext context) {
+    if (canInvokeGlobalAppShortcut(context)) {
+      unawaited(showKeyboardShortcutsDialog(context));
+    }
+  }
+
+  void _createItemIfAllowed(BuildContext context, int index) {
+    if (canInvokeGlobalAppShortcut(context)) _createItem(context, index);
   }
 
   void _createItem(BuildContext context, int index) {
@@ -146,6 +184,12 @@ class HomeScreen extends StatelessWidget {
     0 => 'New event',
     1 => 'New task',
     _ => 'New note',
+  };
+
+  String _menuNewItemLabel(int index) => switch (index) {
+    0 => 'New Event',
+    1 => 'New Task',
+    _ => 'New Note',
   };
 
   IconData _fabIcon(int index) => switch (index) {

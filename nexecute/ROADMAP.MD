@@ -376,7 +376,7 @@ initialization path.
 
 - [ ] Add native event notifications only after defining permission,
   rescheduling, recurrence, time-zone, restart, and series-edit behavior.
-- [ ] Add macOS menu commands and standard shortcut labels for supported app
+- [x] Add macOS menu commands and standard shortcut labels for supported app
   actions.
 - [ ] Consider right-click menus, drag and drop, file import/export, menu-bar
   access, and global shortcuts as separate opt-in tasks.
@@ -384,6 +384,15 @@ initialization path.
   signed packaging and update mechanism.
 - [ ] Keep every native enhancement optional so failure or denial of an
   operating-system permission cannot block core data access.
+
+The signed-in macOS shell now installs a native application menu without
+changing Android or other platforms. File exposes contextual New Event, Task,
+or Note; Navigate exposes Calendar, Tasks, Notes, Search, and Assistant; the
+application and Help menus expose Settings and the keyboard-shortcut reference.
+Standard About, Services, Hide, Quit, text-editing, minimize, zoom, full-screen,
+and window-order commands remain native macOS items. Menu commands reuse the
+shell's guarded actions, so an editor, dialog, or confirmation route prevents
+incompatible navigation and creation commands from firing.
 
 #### Phase 5: web follow-up
 
