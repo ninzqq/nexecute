@@ -226,6 +226,57 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('confirms an event deletion before deleting it', (tester) async {
+    final event = Event(
+      id: 'event-to-delete',
+      title: 'Desktop planning',
+      startTime: DateTime(2026, 9, 1, 13),
+      endTime: DateTime(2026, 9, 1, 14),
+    );
+    final repository = FakeEventRepository(events: [event]);
+    var deletedCallbackCount = 0;
+
+    await tester.pumpWidget(
+      Provider<EventRepository>.value(
+        value: repository,
+        child: MaterialApp(
+          theme: AppThemes.forPreset(AppThemePreset.midnight),
+          home: Scaffold(
+            body: EventDetailsPanel(
+              event: event,
+              onDeleted: () => deletedCallbackCount++,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Delete event'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Delete event?'), findsOneWidget);
+    expect(
+      find.text('Delete “Desktop planning”? This action cannot be undone.'),
+      findsOneWidget,
+    );
+    expect(repository.deletedEvent, isNull);
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(repository.deletedEvent, isNull);
+    expect(deletedCallbackCount, 0);
+
+    await tester.tap(find.byTooltip('Delete event'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+
+    expect(repository.deletedEvent, same(event));
+    expect(deletedCallbackCount, 1);
+    expect(find.text('Event deleted'), findsOneWidget);
+  });
+
   testWidgets('shows event failures instead of an empty agenda', (
     tester,
   ) async {

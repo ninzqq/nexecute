@@ -7,6 +7,7 @@ import 'package:nexecute/models/event_recurrence.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/shared/bottom_sheet_safe_area.dart';
 import 'package:nexecute/shared/adaptive_navigation_shell.dart';
+import 'package:nexecute/shared/event_delete_confirmation.dart';
 import 'package:nexecute/shared/event_reminder_labels.dart';
 import 'package:nexecute/shared/event_recurrence_labels.dart';
 import 'package:nexecute/themes.dart';
@@ -135,6 +136,9 @@ class EventDetailsPanel extends StatelessWidget {
   }
 
   Future<void> _deleteEvent(BuildContext context) async {
+    final confirmed = await confirmEventDeletion(context, event);
+    if (!confirmed || !context.mounted) return;
+
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     try {
