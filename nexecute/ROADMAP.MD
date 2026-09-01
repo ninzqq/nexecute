@@ -151,6 +151,21 @@ range on the client. Editing or deleting a displayed occurrence currently
 applies to the complete series; per-occurrence exceptions are not part of this
 scope.
 
+## Calendar week-view readability
+
+**Status:** ✅ Completed
+
+- [x] Use a fixed 56-logical-pixel hour scale instead of compressing all 24
+  hours into the available height.
+- [x] Keep the date and all-day headers fixed while the time grid scrolls
+  vertically from midnight through the end of the day.
+- [x] Open the week view at 07:00 and preserve the chosen vertical position
+  while moving between weeks.
+- [x] Keep 30-minute event titles visible without adding descriptions to the
+  narrow week-grid cards.
+- [x] Preserve horizontal week swipes, event selection, overlapping-event
+  lanes, and access to the earliest and latest hours with automated tests.
+
 ## Future roadmap
 
 The application should continue developing as a focused personal productivity

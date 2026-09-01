@@ -38,6 +38,7 @@ class _CalendarPageState extends State<CalendarPage> {
   final _monthCalculator = GregorianMonthCalculator();
   late final PageController _monthPageController;
   late final PageController _weekPageController;
+  late final TrackingScrollController _weekTimeScrollController;
   CalendarViewMode _viewMode = CalendarViewMode.month;
   late DateTime _pageAnchor;
   late DateTime _focusedDay;
@@ -60,12 +61,16 @@ class _CalendarPageState extends State<CalendarPage> {
     _selectedDay = _focusedDay;
     _monthPageController = PageController(initialPage: _initialPage);
     _weekPageController = PageController(initialPage: _initialPage);
+    _weekTimeScrollController = TrackingScrollController(
+      initialScrollOffset: weekInitialScrollOffset,
+    );
   }
 
   @override
   void dispose() {
     _monthPageController.dispose();
     _weekPageController.dispose();
+    _weekTimeScrollController.dispose();
     super.dispose();
   }
 
@@ -294,6 +299,7 @@ class _CalendarPageState extends State<CalendarPage> {
                   selectedDay: _selectedDay,
                   onDaySelected: _selectDay,
                   onEventSelected: _openEvent,
+                  timeScrollController: _weekTimeScrollController,
                 ),
               );
             },
@@ -462,7 +468,25 @@ class _CalendarPageState extends State<CalendarPage> {
         _focusedDay = _weekDateForPage(page);
       }
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _synchronizeWeekTimeScrollPositions();
+    });
     if (_viewMode == CalendarViewMode.week) _refreshEventStream();
+  }
+
+  void _synchronizeWeekTimeScrollPositions() {
+    final source = _weekTimeScrollController.mostRecentlyUpdatedPosition;
+    if (source == null) return;
+
+    final offset = source.pixels;
+    for (final position in _weekTimeScrollController.positions) {
+      if (identical(position, source)) continue;
+      final target = offset.clamp(
+        position.minScrollExtent,
+        position.maxScrollExtent,
+      );
+      if ((position.pixels - target).abs() > 0.5) position.jumpTo(target);
+    }
   }
 
   void _refreshEventStream({bool force = false}) {

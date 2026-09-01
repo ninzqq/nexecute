@@ -6,6 +6,7 @@ import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/themes.dart';
 import 'package:nexecute/ui/calendar/calendar.dart';
+import 'package:nexecute/ui/calendar/week_view.dart';
 import 'package:provider/provider.dart';
 
 import 'support/fake_event_repository.dart';
@@ -92,6 +93,22 @@ void main() {
     final nextWeekDate = DateTime(today.year, today.month, today.day + 7);
     final currentWeek = IsoWeekCalculator().fromDate(today);
     final nextWeek = IsoWeekCalculator().fromDate(nextWeekDate);
+    final currentWeekPage = find.byKey(
+      ValueKey('week-page-${currentWeek.year}-${currentWeek.weekNumber}'),
+    );
+    final currentWeekTimeScroll = find.descendant(
+      of: currentWeekPage,
+      matching: find.byType(Scrollable),
+    );
+    final currentWeekScrollState = tester.state<ScrollableState>(
+      currentWeekTimeScroll,
+    );
+    expect(currentWeekScrollState.position.pixels, weekInitialScrollOffset);
+
+    await tester.drag(currentWeekTimeScroll, const Offset(0, -120));
+    await tester.pumpAndSettle();
+    final preservedWeekOffset = currentWeekScrollState.position.pixels;
+    expect(preservedWeekOffset, greaterThan(weekInitialScrollOffset));
 
     await tester.drag(swipeArea, const Offset(-500, 0));
     await tester.pumpAndSettle();
@@ -106,6 +123,14 @@ void main() {
 
     final nextWeekPage = find.byKey(
       ValueKey('week-page-${nextWeek.year}-${nextWeek.weekNumber}'),
+    );
+    final nextWeekTimeScroll = find.descendant(
+      of: nextWeekPage,
+      matching: find.byType(Scrollable),
+    );
+    expect(
+      tester.state<ScrollableState>(nextWeekTimeScroll).position.pixels,
+      moreOrLessEquals(preservedWeekOffset, epsilon: 0.5),
     );
     final settledPageX = tester.getTopLeft(nextWeekPage).dx;
 

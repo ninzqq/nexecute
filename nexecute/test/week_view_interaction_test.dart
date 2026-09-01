@@ -133,6 +133,10 @@ void main() {
       startTime: DateTime(2026, 8, 25, 9, 30),
       endTime: DateTime(2026, 8, 25, 11),
     );
+    final timeScrollController = ScrollController(
+      initialScrollOffset: weekInitialScrollOffset,
+    );
+    addTearDown(timeScrollController.dispose);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -144,6 +148,7 @@ void main() {
             selectedDay: date,
             onDaySelected: (_) {},
             onEventSelected: (_) {},
+            timeScrollController: timeScrollController,
           ),
         ),
       ),
@@ -151,7 +156,8 @@ void main() {
 
     expect(find.byKey(const ValueKey('week-hour-0')), findsOneWidget);
     expect(find.byKey(const ValueKey('week-hour-23')), findsOneWidget);
-    expect(find.byKey(const Key('week-time-grid-scroll-view')), findsNothing);
+    expect(find.byKey(const Key('week-time-grid-scroll-view')), findsOneWidget);
+    expect(timeScrollController.offset, weekInitialScrollOffset);
 
     final areaFinder = find.byKey(const ValueKey('week-event-area-2026-8-25'));
     final areaTop = tester.getTopLeft(areaFinder).dy;
@@ -169,7 +175,97 @@ void main() {
       tester.getSize(eventFinder).height,
       moreOrLessEquals(1.5 * fittedHourHeight, epsilon: 0.01),
     );
-    expect(tester.getBottomRight(areaFinder).dy, 600);
+    expect(fittedHourHeight, weekHourHeight);
+    expect(tester.getSize(areaFinder).height, weekTimeGridHeight);
+  });
+
+  testWidgets('shows a title for a thirty-minute event', (tester) async {
+    final date = DateTime(2026, 8, 25);
+    final event = Event(
+      id: 'short-meeting',
+      title: 'Standup',
+      description: 'This stays in event details',
+      startTime: DateTime(2026, 8, 25, 9),
+      endTime: DateTime(2026, 8, 25, 9, 30),
+    );
+    final timeScrollController = ScrollController(
+      initialScrollOffset: weekInitialScrollOffset,
+    );
+    addTearDown(timeScrollController.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppThemes.forPreset(AppThemePreset.midnight),
+        home: Scaffold(
+          body: WeekView(
+            week: IsoWeekCalculator().fromDate(date),
+            events: [event],
+            selectedDay: date,
+            onDaySelected: (_) {},
+            onEventSelected: (_) {},
+            timeScrollController: timeScrollController,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Standup'), findsOneWidget);
+    expect(find.text('This stays in event details'), findsNothing);
+    expect(
+      tester
+          .getSize(
+            find.byKey(const ValueKey('week-event-short-meeting-2026-8-25')),
+          )
+          .height,
+      weekHourHeight / 2,
+    );
+  });
+
+  testWidgets('scrolls through the day while keeping date headers fixed', (
+    tester,
+  ) async {
+    final date = DateTime(2026, 8, 25);
+    final timeScrollController = ScrollController(
+      initialScrollOffset: weekInitialScrollOffset,
+    );
+    addTearDown(timeScrollController.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppThemes.forPreset(AppThemePreset.midnight),
+        home: Scaffold(
+          body: WeekView(
+            week: IsoWeekCalculator().fromDate(date),
+            events: const [],
+            selectedDay: date,
+            onDaySelected: (_) {},
+            onEventSelected: (_) {},
+            timeScrollController: timeScrollController,
+          ),
+        ),
+      ),
+    );
+
+    final scrollView = find.byKey(const Key('week-time-grid-scroll-view'));
+    final selectedHeader = find.text('Tue\n25');
+    final headerTop = tester.getTopLeft(selectedHeader).dy;
+
+    await tester.drag(scrollView, const Offset(0, -240));
+    await tester.pumpAndSettle();
+
+    expect(timeScrollController.offset, greaterThan(weekInitialScrollOffset));
+    expect(tester.getTopLeft(selectedHeader).dy, headerTop);
+
+    await tester.drag(scrollView, const Offset(0, 2000));
+    await tester.pumpAndSettle();
+    expect(timeScrollController.offset, 0);
+
+    await tester.drag(scrollView, const Offset(0, -3000));
+    await tester.pumpAndSettle();
+    expect(
+      timeScrollController.offset,
+      timeScrollController.position.maxScrollExtent,
+    );
   });
 
   testWidgets('places overlapping events in separate lanes', (tester) async {
@@ -275,6 +371,10 @@ void main() {
     );
     DateTime? selectedDay;
     Event? selectedEvent;
+    final timeScrollController = ScrollController(
+      initialScrollOffset: weekInitialScrollOffset,
+    );
+    addTearDown(timeScrollController.dispose);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -286,6 +386,7 @@ void main() {
             selectedDay: DateTime(2026, 8, 24),
             onDaySelected: (value) => selectedDay = value,
             onEventSelected: (value) => selectedEvent = value,
+            timeScrollController: timeScrollController,
           ),
         ),
       ),

@@ -8,6 +8,8 @@ import 'package:nexecute/ui/calendar/day_column.dart';
 import 'package:nexecute/ui/calendar/event_date_utils.dart';
 
 const _timeGutterWidth = 38.0;
+const weekInitialHour = 7;
+const weekInitialScrollOffset = weekHourHeight * weekInitialHour;
 
 class WeekView extends StatelessWidget {
   const WeekView({
@@ -17,6 +19,7 @@ class WeekView extends StatelessWidget {
     required this.selectedDay,
     required this.onDaySelected,
     required this.onEventSelected,
+    required this.timeScrollController,
   });
 
   final CalendarWeek week;
@@ -24,6 +27,7 @@ class WeekView extends StatelessWidget {
   final DateTime selectedDay;
   final ValueChanged<DateTime> onDaySelected;
   final ValueChanged<Event> onEventSelected;
+  final ScrollController timeScrollController;
 
   @override
   Widget build(BuildContext context) {
@@ -52,16 +56,18 @@ class WeekView extends StatelessWidget {
           ),
         const Divider(height: 1),
         Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final hourHeight = constraints.maxHeight / 24;
-              return Row(
+          child: SingleChildScrollView(
+            key: const Key('week-time-grid-scroll-view'),
+            controller: timeScrollController,
+            child: SizedBox(
+              height: weekTimeGridHeight,
+              child: Row(
                 key: const Key('week-time-grid'),
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(
                     width: _timeGutterWidth,
-                    child: _HourGutter(hourHeight: hourHeight),
+                    child: const _HourGutter(hourHeight: weekHourHeight),
                   ),
                   for (final day in week.days)
                     Expanded(
@@ -69,7 +75,7 @@ class WeekView extends StatelessWidget {
                         day: day,
                         events: eventsForDay(events, day.date),
                         isSelected: isSameCalendarDay(day.date, selectedDay),
-                        hourHeight: hourHeight,
+                        hourHeight: weekHourHeight,
                         onSelected: () => onDaySelected(day.date),
                         onEventSelected: (event) {
                           onDaySelected(day.date);
@@ -78,8 +84,8 @@ class WeekView extends StatelessWidget {
                       ),
                     ),
                 ],
-              );
-            },
+              ),
+            ),
           ),
         ),
       ],
