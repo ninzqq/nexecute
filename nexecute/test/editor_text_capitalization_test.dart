@@ -18,6 +18,7 @@ void main() {
     await _pumpItemEditor(
       tester,
       ItemEditorSheet(
+        key: const ValueKey('tall-note-editor'),
         quicxec: Quicxec(id: '', text: '', created: DateTime(2026, 8, 28)),
       ),
     );
@@ -26,6 +27,7 @@ void main() {
     await _pumpItemEditor(
       tester,
       ItemEditorSheet(
+        key: const ValueKey('tall-event-editor'),
         event: Event(
           id: '',
           title: '',
@@ -73,6 +75,39 @@ void main() {
       TextCapitalization.sentences,
     );
   });
+
+  testWidgets('note and event descriptions provide taller writing areas', (
+    tester,
+  ) async {
+    await _pumpItemEditor(
+      tester,
+      ItemEditorSheet(
+        key: const ValueKey('description-note-editor'),
+        quicxec: Quicxec(id: '', text: '', created: DateTime(2026, 8, 28)),
+      ),
+    );
+
+    var description = _descriptionField(tester);
+    expect(description.minLines, 6);
+    expect(description.maxLines, 18);
+
+    await _pumpItemEditor(
+      tester,
+      ItemEditorSheet(
+        key: const ValueKey('description-event-editor'),
+        event: Event(
+          id: '',
+          title: '',
+          startTime: DateTime(2026, 8, 28, 9),
+          endTime: DateTime(2026, 8, 28, 10),
+        ),
+      ),
+    );
+
+    description = _descriptionField(tester);
+    expect(description.minLines, 4);
+    expect(description.maxLines, 8);
+  });
 }
 
 Future<void> _pumpItemEditor(WidgetTester tester, Widget editor) {
@@ -96,4 +131,11 @@ void _expectSentenceCapitalization(WidgetTester tester) {
   for (final field in fields) {
     expect(field.textCapitalization, TextCapitalization.sentences);
   }
+}
+
+EditableText _descriptionField(WidgetTester tester) {
+  final descriptionField = find.widgetWithText(TextFormField, 'Description');
+  return tester.widget<EditableText>(
+    find.descendant(of: descriptionField, matching: find.byType(EditableText)),
+  );
 }

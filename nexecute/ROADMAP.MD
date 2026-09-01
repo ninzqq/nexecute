@@ -178,6 +178,8 @@ scope.
   Android phone widths.
 - [x] Cover keyboard insets, Save-button hit testing, persistence, and existing
   editor/navigation behavior with automated tests.
+- [x] Give plain-text notes and event descriptions taller bounded writing areas
+  while retaining independent field and editor scrolling for long content.
 
 ## Future roadmap
 

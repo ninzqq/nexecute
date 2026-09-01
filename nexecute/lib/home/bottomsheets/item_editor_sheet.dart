@@ -351,7 +351,8 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
             labelText: 'Description',
             border: OutlineInputBorder(),
           ),
-          maxLines: 3,
+          minLines: 4,
+          maxLines: 8,
         ),
         const SizedBox(height: 8),
         EventScheduleFields(

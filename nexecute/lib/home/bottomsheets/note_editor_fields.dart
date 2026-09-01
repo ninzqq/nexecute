@@ -68,7 +68,8 @@ class NoteEditorFields extends StatelessWidget {
               labelText: 'Description',
               border: OutlineInputBorder(),
             ),
-            maxLines: 9,
+            minLines: 6,
+            maxLines: 18,
           ),
       ],
     );
