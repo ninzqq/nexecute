@@ -88,12 +88,9 @@ class HomeScreen extends StatelessWidget {
                       selectedIndex: tabIndex,
                       onDestinationSelected: tab.select,
                       destinations: _destinations,
-                      appBar:
-                          tabIndex == 0
-                              ? null
-                              : AppBar(
-                                title: Text(_destinations[tabIndex].label),
-                              ),
+                      appBar: AppBar(
+                        title: Text(_destinations[tabIndex].label),
+                      ),
                       drawer: const MainDrawer(),
                       body: IndexedStack(
                         index: tabIndex,

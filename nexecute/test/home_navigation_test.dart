@@ -81,6 +81,7 @@ void main() {
     expect(rail.extended, isFalse);
     expect(rail.labelType, NavigationRailLabelType.all);
     expect(rail.selectedIndex, 2);
+    final notesRailTop = tester.getTopLeft(find.byType(NavigationRail)).dy;
     expect(find.text('Calendar'), findsWidgets);
     expect(find.text('Tasks'), findsWidgets);
     expect(find.text('Notes'), findsWidgets);
@@ -90,6 +91,27 @@ void main() {
 
     expect(find.byTooltip('New event'), findsOneWidget);
     expect(find.byTooltip('Open navigation menu'), findsOneWidget);
+    expect(tester.getTopLeft(find.byType(NavigationRail)).dy, notesRailTop);
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.byTooltip('Open navigation menu'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('calendar-toolbar')),
+        matching: find.byTooltip('Open navigation menu'),
+      ),
+      findsNothing,
+    );
+    expect(
+      tester.getBottomLeft(find.byType(AppBar)).dy,
+      lessThanOrEqualTo(
+        tester.getTopLeft(find.byKey(const Key('calendar-toolbar'))).dy,
+      ),
+    );
 
     await tester.tap(find.byTooltip('Open navigation menu'));
     await tester.pumpAndSettle();

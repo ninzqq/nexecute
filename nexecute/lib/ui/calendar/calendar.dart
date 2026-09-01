@@ -123,7 +123,6 @@ class _CalendarPageState extends State<CalendarPage> {
               onPrevious: _showPrevious,
               onNext: _showNext,
               onToday: _showToday,
-              onOpenNavigation: () => Scaffold.maybeOf(context)?.openDrawer(),
             ),
             const Divider(height: 1),
             Expanded(
@@ -591,7 +590,6 @@ class _CalendarToolbar extends StatelessWidget {
     required this.onPrevious,
     required this.onNext,
     required this.onToday,
-    required this.onOpenNavigation,
   });
 
   final String title;
@@ -600,7 +598,6 @@ class _CalendarToolbar extends StatelessWidget {
   final VoidCallback onPrevious;
   final VoidCallback onNext;
   final VoidCallback onToday;
-  final VoidCallback onOpenNavigation;
 
   @override
   Widget build(BuildContext context) {
@@ -612,22 +609,9 @@ class _CalendarToolbar extends StatelessWidget {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(4, 4, 8, 0),
+            padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
             child: Row(
               children: [
-                IconButton(
-                  tooltip: 'Open navigation menu',
-                  onPressed: onOpenNavigation,
-                  icon: const Icon(Icons.menu),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  'Calendar',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(width: 8),
                 IconButton(
                   tooltip: 'Previous',
                   visualDensity: VisualDensity.compact,
