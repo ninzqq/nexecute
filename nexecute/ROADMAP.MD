@@ -374,8 +374,12 @@ initialization path.
 
 #### Phase 4: native macOS enhancements
 
-- [ ] Add native event notifications only after defining permission,
-  rescheduling, recurrence, time-zone, restart, and series-edit behavior.
+- [x] Define native event-notification permission, rescheduling, recurrence,
+  time-zone, restart, synchronization, account, and series-edit behavior.
+- [ ] Implement the macOS notification scheduler and lifecycle reconciler behind
+  the existing optional-service boundary.
+- [ ] Replace the macOS reminder no-op only after the automated and native
+  notification verification gate passes.
 - [x] Add macOS menu commands and standard shortcut labels for supported app
   actions.
 - [ ] Consider right-click menus, drag and drop, file import/export, menu-bar
@@ -393,6 +397,14 @@ Standard About, Services, Hide, Quit, text-editing, minimize, zoom, full-screen,
 and window-order commands remain native macOS items. Menu commands reuse the
 shell's guarded actions, so an editor, dialog, or confirmation route prevents
 incompatible navigation and creation commands from firing.
+
+The macOS event-notification contract is recorded in
+`docs/macos_event_notifications.md`. It keeps permission explicitly
+user-initiated, treats pending requests as device-local derived state, defines
+whole-series and cross-device reconciliation, and uses explicit future
+occurrences where native repeating triggers cannot reproduce month-end or leap
+day behavior. macOS continues using the reminder no-op until the scheduler,
+reconciler, failure isolation, and native behavior pass the documented gate.
 
 #### Phase 5: web follow-up
 

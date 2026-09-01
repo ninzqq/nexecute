@@ -6,7 +6,7 @@ services and does not decide which operating system is running.
 
 | Service | Android | macOS | Web/unsupported |
 | --- | --- | --- | --- |
-| Event reminders | Android local notifications | Explicit no-op | Explicit no-op |
+| Event reminders | Android local notifications | Explicit no-op pending implementation | Explicit no-op |
 | Calendar home widget | Android Home Widget writer | Explicit no-op | Explicit no-op |
 | AI credentials | Flutter secure storage | Flutter secure storage (Keychain) | Explicitly unavailable |
 
@@ -31,6 +31,12 @@ errors stay within credential-dependent AI actions.
 macOS no-ops deliberately report reminders as unsupported and ignore widget
 updates. They let Calendar, Tasks, Notes, Tags, authentication, and Firestore
 operate without pretending that Android-only integrations are available.
+
+The permission, scheduling, recurrence, time-zone, restart, synchronization,
+account-lifecycle, and verification requirements for replacing the macOS
+reminder no-op are defined in `docs/macos_event_notifications.md`. Defining the
+contract does not enable notifications; the no-op remains selected until its
+implementation passes that document's automated and native verification gate.
 
 macOS AI credentials use the data-protection Keychain, are available only while
 the device is unlocked, do not synchronize through iCloud, and use a dedicated
