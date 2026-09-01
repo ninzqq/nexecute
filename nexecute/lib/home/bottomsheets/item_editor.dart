@@ -25,17 +25,17 @@ void showItemEditor(
     context: context,
     builder:
         (context) => BottomSheetSafeArea(
-          child: Padding(
+          child: AnimatedPadding(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
             padding: EdgeInsets.only(
               bottom: MediaQuery.of(context).viewInsets.bottom,
             ),
-            child: SingleChildScrollView(
-              child: ItemEditorSheet(
-                event: event,
-                quicxec: quicxec,
-                date: date,
-                isEditing: isEditing,
-              ),
+            child: ItemEditorSheet(
+              event: event,
+              quicxec: quicxec,
+              date: date,
+              isEditing: isEditing,
             ),
           ),
         ),

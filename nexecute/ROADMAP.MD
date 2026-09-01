@@ -166,6 +166,19 @@ scope.
 - [x] Preserve horizontal week swipes, event selection, overlapping-event
   lanes, and access to the earliest and latest hours with automated tests.
 
+## Mobile editor keyboard handling
+
+**Status:** ✅ Completed
+
+- [x] Keep the event/note editor action row pinned above the on-screen keyboard
+  while the form fields scroll independently.
+- [x] Allow an event to be saved while its title field still owns keyboard
+  focus, without first dismissing the keyboard or scrolling to the form end.
+- [x] Keep the Event/Quicxec selector and event date controls within narrow
+  Android phone widths.
+- [x] Cover keyboard insets, Save-button hit testing, persistence, and existing
+  editor/navigation behavior with automated tests.
+
 ## Future roadmap
 
 The application should continue developing as a focused personal productivity

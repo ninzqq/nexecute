@@ -84,21 +84,29 @@ class EventScheduleFields extends StatelessWidget {
           ),
         Row(
           children: [
-            const SizedBox(width: 8),
-            const Icon(Icons.calendar_today),
-            const SizedBox(width: 8),
-            TextButton(
-              onPressed: () => _pickStartDate(context),
-              child: Text(formatDate(selectedStartDate ?? startTime)),
+            Expanded(
+              child: TextButton.icon(
+                icon: const Icon(Icons.calendar_today, size: 18),
+                label: Text(
+                  formatDate(selectedStartDate ?? startTime),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                onPressed: () => _pickStartDate(context),
+              ),
             ),
-            const SizedBox(width: 8),
-            const Icon(Icons.arrow_right_alt),
-            const SizedBox(width: 16),
-            const Icon(Icons.calendar_today),
-            const SizedBox(width: 8),
-            TextButton(
-              onPressed: () => _pickEndDate(context),
-              child: Text(formatDate(endTime)),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4),
+              child: Icon(Icons.arrow_right_alt),
+            ),
+            Expanded(
+              child: TextButton.icon(
+                icon: const Icon(Icons.calendar_today, size: 18),
+                label: Text(
+                  formatDate(endTime),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                onPressed: () => _pickEndDate(context),
+              ),
             ),
           ],
         ),

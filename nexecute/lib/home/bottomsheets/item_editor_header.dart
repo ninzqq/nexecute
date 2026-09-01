@@ -20,27 +20,38 @@ class ItemEditorHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        DeleteButton(quicxec: note, event: event),
-        const Spacer(),
-        SegmentedButton<ItemType>(
-          segments: const [
-            ButtonSegment(
-              value: ItemType.event,
-              label: Text('Event'),
-              icon: Icon(Icons.event),
-            ),
-            ButtonSegment(
-              value: ItemType.quicxec,
-              label: Text('Quicxec'),
-              icon: Icon(Icons.note),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final showIcons = constraints.maxWidth >= 440;
+        return Row(
+          children: [
+            DeleteButton(quicxec: note, event: event),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: SegmentedButton<ItemType>(
+                  segments: [
+                    ButtonSegment(
+                      value: ItemType.event,
+                      label: const Text('Event'),
+                      icon: showIcons ? const Icon(Icons.event) : null,
+                    ),
+                    ButtonSegment(
+                      value: ItemType.quicxec,
+                      label: const Text('Quicxec'),
+                      icon: showIcons ? const Icon(Icons.note) : null,
+                    ),
+                  ],
+                  selected: {type},
+                  onSelectionChanged:
+                      (selection) => onTypeChanged(selection.first),
+                ),
+              ),
             ),
           ],
-          selected: {type},
-          onSelectionChanged: (selection) => onTypeChanged(selection.first),
-        ),
-      ],
+        );
+      },
     );
   }
 }
