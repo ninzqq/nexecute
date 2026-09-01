@@ -76,6 +76,48 @@ void main() {
     expect(services.aiCredentialStore, same(credentials));
   });
 
+  test('Android starts when every optional native service fails', () async {
+    var widgetFactoryCalled = false;
+    var credentialFactoryCalled = false;
+
+    final services = await createAppPlatformServices(
+      AppRuntimePlatform.android,
+      androidReminderInitializer:
+          () => Future.error(StateError('notifications unavailable')),
+      androidWidgetFactory: () {
+        widgetFactoryCalled = true;
+        throw StateError('home widget unavailable');
+      },
+      androidCredentialStoreFactory: () {
+        credentialFactoryCalled = true;
+        throw StateError('secure storage unavailable');
+      },
+    );
+
+    expect(widgetFactoryCalled, isTrue);
+    expect(credentialFactoryCalled, isTrue);
+    expect(services.platform, AppRuntimePlatform.android);
+    expect(services.reminderScheduler, isA<NoopEventReminderScheduler>());
+    expect(services.eventWidgetUpdater, isA<NoopEventWidgetUpdater>());
+    expect(services.aiCredentialStore, isA<UnavailableAiCredentialStore>());
+  });
+
+  test('one Android service failure preserves the other services', () async {
+    final reminder = _RecordingReminderScheduler();
+    final credentials = _MemoryCredentialStore();
+
+    final services = await createAppPlatformServices(
+      AppRuntimePlatform.android,
+      androidReminderInitializer: () async => reminder,
+      androidWidgetFactory: () => throw StateError('widget unavailable'),
+      androidCredentialStoreFactory: () => credentials,
+    );
+
+    expect(services.reminderScheduler, same(reminder));
+    expect(services.eventWidgetUpdater, isA<NoopEventWidgetUpdater>());
+    expect(services.aiCredentialStore, same(credentials));
+  });
+
   test('macOS receives no-op native services and secure credentials', () async {
     var androidFactoryCalled = false;
     final credentials = _MemoryCredentialStore();
@@ -120,6 +162,19 @@ void main() {
     );
     await services.eventWidgetUpdater.updateStatus('ignored');
     await services.eventWidgetUpdater.updateTheme(AppThemePreset.forest);
+  });
+
+  test('macOS starts when secure credential storage is unavailable', () async {
+    final services = await createAppPlatformServices(
+      AppRuntimePlatform.macOS,
+      macOSCredentialStoreFactory:
+          () => throw StateError('Keychain unavailable'),
+    );
+
+    expect(services.platform, AppRuntimePlatform.macOS);
+    expect(services.reminderScheduler, isA<NoopEventReminderScheduler>());
+    expect(services.eventWidgetUpdater, isA<NoopEventWidgetUpdater>());
+    expect(services.aiCredentialStore, isA<UnavailableAiCredentialStore>());
   });
 
   test(

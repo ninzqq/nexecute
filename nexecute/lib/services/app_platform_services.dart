@@ -68,10 +68,10 @@ Future<AppPlatformServices> createAppPlatformServices(
         platform: AppRuntimePlatform.macOS,
         reminderScheduler: const NoopEventReminderScheduler(),
         eventWidgetUpdater: const NoopEventWidgetUpdater(),
-        aiCredentialStore:
-            (macOSCredentialStoreFactory ??
-                    FlutterSecureAiCredentialStore.macOS)
-                .call(),
+        aiCredentialStore: _createOptionalService(
+          macOSCredentialStoreFactory ?? FlutterSecureAiCredentialStore.macOS,
+          fallback: const UnavailableAiCredentialStore(),
+        ),
       );
     case AppRuntimePlatform.web:
       return AppPlatformServices.web;
@@ -90,12 +90,27 @@ Future<AppPlatformServices> createAppPlatformServices(
     reminderScheduler = const NoopEventReminderScheduler();
   }
 
+  final eventWidgetUpdater = _createOptionalService(
+    androidWidgetFactory ?? EventWidgetService.new,
+    fallback: const NoopEventWidgetUpdater(),
+  );
+  final aiCredentialStore = _createOptionalService(
+    androidCredentialStoreFactory ?? FlutterSecureAiCredentialStore.new,
+    fallback: const UnavailableAiCredentialStore(),
+  );
+
   return AppPlatformServices(
     platform: AppRuntimePlatform.android,
     reminderScheduler: reminderScheduler,
-    eventWidgetUpdater: (androidWidgetFactory ?? EventWidgetService.new).call(),
-    aiCredentialStore:
-        (androidCredentialStoreFactory ?? FlutterSecureAiCredentialStore.new)
-            .call(),
+    eventWidgetUpdater: eventWidgetUpdater,
+    aiCredentialStore: aiCredentialStore,
   );
+}
+
+T _createOptionalService<T>(T Function() create, {required T fallback}) {
+  try {
+    return create();
+  } catch (_) {
+    return fallback;
+  }
 }

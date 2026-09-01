@@ -300,7 +300,7 @@ and repeatable test checklist.
   enable them separately only when their behavior is tested.
 - [x] Verify `flutter_secure_storage` on macOS, including save, replacement,
   deletion, duplicate-profile behavior, and sign-out expectations.
-- [ ] Ensure an unavailable optional native service cannot prevent Calendar,
+- [x] Ensure an unavailable optional native service cannot prevent Calendar,
   Tasks, Notes, Tags, authentication, or Firestore synchronization from
   starting.
 
@@ -318,6 +318,15 @@ verifies replacement cleanup, deletion with a profile, and credential-free
 duplication. Credentials and local AI profile settings intentionally survive
 Firebase sign-out on this personal device. The exact lifecycle and shared-device
 caveat are documented in `docs/platform_services.md`.
+
+**Phase 2B.3 complete:** Every optional native service now has an independent
+construction boundary. Notification, home-widget, or secure-storage failures
+degrade only that capability to its no-op or unavailable implementation, while
+the platform bundle and core application services can still start. Existing
+repository and theme guards isolate later reminder and widget operation errors;
+credential errors remain confined to credential-dependent AI actions. Tests
+cover simultaneous Android failures, per-service independence, and unavailable
+macOS Keychain construction.
 
 ##### Phase 2C: networking, entitlements, and first build
 

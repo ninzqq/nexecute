@@ -59,7 +59,9 @@ class WidgetSyncingEventRepository implements EventRepository {
   ) {
     if (state is DataUnauthenticated<List<Event>>) {
       _runSafely(
-        _widgetService.updateStatus('Sign in to Nexecute to refresh events'),
+        () => _widgetService.updateStatus(
+          'Sign in to Nexecute to refresh events',
+        ),
       );
       return;
     }
@@ -70,14 +72,16 @@ class WidgetSyncingEventRepository implements EventRepository {
       case DataReady<List<Event>>(:final value) ||
           DataEmpty<List<Event>>(:final value):
         _runSafely(
-          _widgetService.updateCurrentWeek(
+          () => _widgetService.updateCurrentWeek(
             value,
             theme: _themePreset(),
             now: _now(),
           ),
         );
       case DataFailure<List<Event>>():
-        _runSafely(_widgetService.updateStatus('Could not refresh events'));
+        _runSafely(
+          () => _widgetService.updateStatus('Could not refresh events'),
+        );
       case DataLoading<List<Event>>() || DataUnauthenticated<List<Event>>():
         break;
     }
@@ -94,10 +98,10 @@ class WidgetSyncingEventRepository implements EventRepository {
         !range.endExclusive.isBefore(endExclusive);
   }
 
-  void _runSafely(Future<void> operation) {
+  void _runSafely(Future<void> Function() operation) {
     unawaited(() async {
       try {
-        await operation;
+        await operation();
       } catch (_) {
         // Widget availability must never interrupt the event stream.
       }

@@ -108,6 +108,48 @@ void main() {
       expect(writer.values, isEmpty);
     },
   );
+
+  test(
+    'a synchronous widget failure does not interrupt event streams',
+    () async {
+      final repository = WidgetSyncingEventRepository(
+        delegate: FakeEventRepository(),
+        widgetService: _SynchronouslyThrowingEventWidgetUpdater(),
+        themePreset: () => AppThemePreset.midnight,
+        now: () => now,
+      );
+      final range = CalendarQueryRange(
+        startInclusive: DateTime(2026, 8, 24),
+        endExclusive: DateTime(2026, 8, 31),
+      );
+
+      final state = await repository.watchEvents(range).single;
+      await Future<void>.delayed(Duration.zero);
+
+      expect(state.valueOrNull, isEmpty);
+    },
+  );
+}
+
+class _SynchronouslyThrowingEventWidgetUpdater implements EventWidgetUpdater {
+  @override
+  Future<void> updateCurrentWeek(
+    List<Event> events, {
+    required AppThemePreset theme,
+    DateTime? now,
+  }) {
+    throw StateError('Widget unavailable');
+  }
+
+  @override
+  Future<void> updateStatus(String message) {
+    throw StateError('Widget unavailable');
+  }
+
+  @override
+  Future<void> updateTheme(AppThemePreset theme) {
+    throw StateError('Widget unavailable');
+  }
 }
 
 class _FakeEventWidgetDataWriter implements EventWidgetDataWriter {

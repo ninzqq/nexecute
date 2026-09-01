@@ -10,10 +10,23 @@ services and does not decide which operating system is running.
 | Calendar home widget | Android Home Widget writer | Explicit no-op | Explicit no-op |
 | AI credentials | Flutter secure storage | Flutter secure storage (Keychain) | Explicitly unavailable |
 
-The Android reminder initializer retains its existing fallback: if notification
-or timezone initialization fails, startup receives a no-op scheduler and the
-rest of the application can continue. Calendar widget synchronization also
-continues to isolate widget failures from event streams.
+Each optional service is constructed behind its own failure boundary. Android
+notification or timezone initialization falls back to a no-op reminder
+scheduler; Android home-widget construction falls back to a no-op updater; and
+Android or macOS secure-storage construction falls back to an unavailable
+credential store. One failure does not prevent the remaining optional services
+from being constructed.
+
+These fallbacks preserve startup for Calendar, Tasks, Notes, Tags,
+authentication, and Firestore synchronization. They expose only the affected
+capability as unsupported: reminders return an unsupported result, widget calls
+do nothing, and AI settings report that secure credential storage is
+unavailable.
+
+Operational failures are isolated too. Reminder scheduling or cancellation
+cannot turn a successful Firestore event mutation into a failure, widget update
+errors cannot interrupt event streams or theme changes, and secure-storage
+errors stay within credential-dependent AI actions.
 
 macOS no-ops deliberately report reminders as unsupported and ignore widget
 updates. They let Calendar, Tasks, Notes, Tags, authentication, and Firestore
@@ -38,5 +51,6 @@ Credential lifecycle is intentionally device-local:
 `integration_test/flutter_secure_storage_macos_test.dart` exercises native
 Keychain save, replacement, read, and deletion on a development-signed macOS
 build. Controller tests cover replacement cleanup, profile deletion, and
-credential-free duplication. Phase 2B.3 will broaden startup failure isolation
-beyond the existing reminder and widget safeguards.
+credential-free duplication. Platform-service tests inject failures into every
+optional constructor, including simultaneous Android failures, and verify that
+a complete degraded service bundle is still returned.
