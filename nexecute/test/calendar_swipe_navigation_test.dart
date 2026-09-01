@@ -12,6 +12,51 @@ import 'package:provider/provider.dart';
 import 'support/fake_event_repository.dart';
 
 void main() {
+  testWidgets('calendar pager survives fractional desktop width changes', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(574.36, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<EventRepository>.value(value: FakeEventRepository()),
+          ChangeNotifierProvider(create: (_) => SelectedDay()),
+        ],
+        child: MaterialApp(
+          theme: AppThemes.forPreset(AppThemePreset.midnight),
+          home: const CalendarPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    tester.view.physicalSize = const Size(574.4, 900);
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+
+    final originalController =
+        tester.widget<PageView>(find.byType(PageView).first).controller!;
+    originalController.jumpToPage(20);
+    await tester.pumpAndSettle();
+
+    final recenteredController =
+        tester.widget<PageView>(find.byType(PageView).first).controller!;
+    expect(recenteredController, isNot(same(originalController)));
+    expect(recenteredController.page, 120);
+
+    final today = DateTime.now();
+    final expectedMonth = DateTime(today.year, today.month - 100);
+    expect(
+      find.text(DateFormat('MMMM yyyy').format(expectedMonth)),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('horizontal swipes navigate months and weeks', (tester) async {
     tester.view.physicalSize = const Size(800, 1200);
     tester.view.devicePixelRatio = 1;

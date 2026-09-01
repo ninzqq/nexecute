@@ -31,13 +31,15 @@ class CalendarPage extends StatefulWidget {
 }
 
 class _CalendarPageState extends State<CalendarPage> {
-  static const _initialPage = 12000;
+  static const _initialPage = 120;
+  static const _pageCount = _initialPage * 2 + 1;
+  static const _recenterThreshold = 20;
   static const _pageAnimationDuration = Duration(milliseconds: 280);
 
   final _weekCalculator = IsoWeekCalculator();
   final _monthCalculator = GregorianMonthCalculator();
-  late final PageController _monthPageController;
-  late final PageController _weekPageController;
+  late PageController _monthPageController;
+  late PageController _weekPageController;
   late final TrackingScrollController _weekTimeScrollController;
   CalendarViewMode _viewMode = CalendarViewMode.month;
   late DateTime _pageAnchor;
@@ -45,6 +47,7 @@ class _CalendarPageState extends State<CalendarPage> {
   late DateTime _selectedDay;
   int _monthPage = _initialPage;
   int _weekPage = _initialPage;
+  int _pageControllerGeneration = 0;
   EventRepository? _eventRepository;
   CalendarQueryRange? _eventRange;
   Stream<DataState<List<Event>>>? _eventsStream;
@@ -59,8 +62,8 @@ class _CalendarPageState extends State<CalendarPage> {
     _pageAnchor = DateTime(today.year, today.month, today.day);
     _focusedDay = _pageAnchor;
     _selectedDay = _focusedDay;
-    _monthPageController = PageController(initialPage: _initialPage);
-    _weekPageController = PageController(initialPage: _initialPage);
+    _monthPageController = _createPageController();
+    _weekPageController = _createPageController();
     _weekTimeScrollController = TrackingScrollController(
       initialScrollOffset: weekInitialScrollOffset,
     );
@@ -260,9 +263,11 @@ class _CalendarPageState extends State<CalendarPage> {
         index: _viewMode == CalendarViewMode.month ? 0 : 1,
         children: [
           PageView.builder(
+            key: ValueKey('month-pager-$_pageControllerGeneration'),
             controller: _monthPageController,
             allowImplicitScrolling: true,
             onPageChanged: _onMonthPageChanged,
+            itemCount: _pageCount,
             itemBuilder: (context, page) {
               final pageMonth = _monthCalculator.fromDate(
                 _monthDateForPage(page),
@@ -283,9 +288,11 @@ class _CalendarPageState extends State<CalendarPage> {
             },
           ),
           PageView.builder(
+            key: ValueKey('week-pager-$_pageControllerGeneration'),
             controller: _weekPageController,
             allowImplicitScrolling: true,
             onPageChanged: _onWeekPageChanged,
+            itemCount: _pageCount,
             itemBuilder: (context, page) {
               final pageWeek = _weekCalculator.fromDate(_weekDateForPage(page));
               return KeyedSubtree(
@@ -451,26 +458,66 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   void _onMonthPageChanged(int page) {
+    final pageDate = _monthDateForPage(page);
+    if (_shouldRecenter(page)) {
+      _recenterPagesOn(pageDate);
+      return;
+    }
+
     setState(() {
       _monthPage = page;
       if (_viewMode == CalendarViewMode.month) {
-        _focusedDay = _monthDateForPage(page);
+        _focusedDay = pageDate;
       }
     });
     if (_viewMode == CalendarViewMode.month) _refreshEventStream();
   }
 
   void _onWeekPageChanged(int page) {
+    final pageDate = _weekDateForPage(page);
+    if (_shouldRecenter(page)) {
+      _recenterPagesOn(pageDate);
+      return;
+    }
+
     setState(() {
       _weekPage = page;
       if (_viewMode == CalendarViewMode.week) {
-        _focusedDay = _weekDateForPage(page);
+        _focusedDay = pageDate;
       }
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _synchronizeWeekTimeScrollPositions();
     });
     if (_viewMode == CalendarViewMode.week) _refreshEventStream();
+  }
+
+  PageController _createPageController() =>
+      PageController(initialPage: _initialPage, keepPage: false);
+
+  bool _shouldRecenter(int page) =>
+      page <= _recenterThreshold || page >= _pageCount - 1 - _recenterThreshold;
+
+  void _recenterPagesOn(DateTime date) {
+    final oldMonthController = _monthPageController;
+    final oldWeekController = _weekPageController;
+    final normalized = DateTime(date.year, date.month, date.day);
+
+    setState(() {
+      _pageAnchor = normalized;
+      _focusedDay = normalized;
+      _monthPage = _initialPage;
+      _weekPage = _initialPage;
+      _pageControllerGeneration += 1;
+      _monthPageController = _createPageController();
+      _weekPageController = _createPageController();
+    });
+    _refreshEventStream();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      oldMonthController.dispose();
+      oldWeekController.dispose();
+    });
   }
 
   void _synchronizeWeekTimeScrollPositions() {
