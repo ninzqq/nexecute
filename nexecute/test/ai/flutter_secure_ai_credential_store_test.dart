@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/ai/ai.dart';
@@ -7,12 +8,15 @@ void main() {
 
   const channel = MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
   final values = <String, String>{};
+  Map<Object?, Object?>? lastOptions;
 
   setUp(() {
     values.clear();
+    lastOptions = null;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
           final arguments = Map<Object?, Object?>.from(call.arguments as Map);
+          lastOptions = Map<Object?, Object?>.from(arguments['options'] as Map);
           final key = arguments['key'] as String?;
           switch (call.method) {
             case 'write':
@@ -64,5 +68,23 @@ void main() {
     expect(error, isA<AiCredentialStoreException>());
     expect(error.toString(), isNot(contains('secret-value')));
     expect(values, isEmpty);
+  });
+
+  test('uses device-local macOS Keychain options', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    final store = FlutterSecureAiCredentialStore.macOS(
+      referenceFactory: () => 'secure-storage:macos-reference',
+    );
+
+    await store.saveCredential('private-token');
+
+    expect(
+      lastOptions,
+      containsPair('accountName', 'com.jndevworks.nexecute.ai-credentials'),
+    );
+    expect(lastOptions, containsPair('accessibility', 'unlocked_this_device'));
+    expect(lastOptions, containsPair('synchronizable', 'false'));
+    expect(lastOptions, containsPair('usesDataProtectionKeychain', 'true'));
   });
 }

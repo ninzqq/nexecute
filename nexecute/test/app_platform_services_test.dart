@@ -76,8 +76,9 @@ void main() {
     expect(services.aiCredentialStore, same(credentials));
   });
 
-  test('macOS receives explicit no-op native services', () async {
+  test('macOS receives no-op native services and secure credentials', () async {
     var androidFactoryCalled = false;
+    final credentials = _MemoryCredentialStore();
 
     final services = await createAppPlatformServices(
       AppRuntimePlatform.macOS,
@@ -93,13 +94,14 @@ void main() {
         androidFactoryCalled = true;
         return _MemoryCredentialStore();
       },
+      macOSCredentialStoreFactory: () => credentials,
     );
 
     expect(androidFactoryCalled, isFalse);
     expect(services.platform, AppRuntimePlatform.macOS);
     expect(services.reminderScheduler, isA<NoopEventReminderScheduler>());
     expect(services.eventWidgetUpdater, isA<NoopEventWidgetUpdater>());
-    expect(services.aiCredentialStore, isA<UnavailableAiCredentialStore>());
+    expect(services.aiCredentialStore, same(credentials));
 
     final reminderStatus = await services.reminderScheduler.schedule(
       Event(

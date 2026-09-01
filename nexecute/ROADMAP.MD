@@ -298,7 +298,7 @@ and repeatable test checklist.
 - [x] Keep Android reminder and home-widget behavior unchanged.
 - [x] Start macOS with a documented no-op for unsupported native features, then
   enable them separately only when their behavior is tested.
-- [ ] Verify `flutter_secure_storage` on macOS, including save, replacement,
+- [x] Verify `flutter_secure_storage` on macOS, including save, replacement,
   deletion, duplicate-profile behavior, and sign-out expectations.
 - [ ] Ensure an unavailable optional native service cannot prevent Calendar,
   Tasks, Notes, Tags, authentication, or Firestore synchronization from
@@ -310,6 +310,14 @@ AI credentials. macOS uses explicit no-op reminder and widget implementations
 and keeps AI credential storage unavailable until its keychain lifecycle is
 verified in Phase 2B.2. The service matrix and boundaries are documented in
 `docs/platform_services.md`.
+
+**Phase 2B.2 complete:** macOS now stores optional AI bearer tokens in its
+data-protection Keychain under Nexecute's own access group. Native integration
+coverage verifies save, replacement, read, and deletion; controller coverage
+verifies replacement cleanup, deletion with a profile, and credential-free
+duplication. Credentials and local AI profile settings intentionally survive
+Firebase sign-out on this personal device. The exact lifecycle and shared-device
+caveat are documented in `docs/platform_services.md`.
 
 ##### Phase 2C: networking, entitlements, and first build
 
@@ -629,7 +637,7 @@ system message.
   - [x] Present the diagnostics consistently in connection tests, chat, and
     structured proposal workflows.
 
-Bearer tokens are stored on the current Android client through
+Bearer tokens are stored on the current Android and macOS clients through
 `flutter_secure_storage`; only opaque credential references remain in local
 connection-profile metadata. OpenAI-compatible model discovery, connection
 tests, and chat resolve the token per request and send it through the

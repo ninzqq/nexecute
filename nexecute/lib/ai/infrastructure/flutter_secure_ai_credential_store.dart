@@ -9,6 +9,25 @@ class FlutterSecureAiCredentialStore implements AiCredentialStore {
   }) : _storage = storage ?? const FlutterSecureStorage(),
        _referenceFactory = referenceFactory ?? _newReference;
 
+  factory FlutterSecureAiCredentialStore.macOS({
+    FlutterSecureStorage? storage,
+    String Function()? referenceFactory,
+  }) {
+    return FlutterSecureAiCredentialStore(
+      storage:
+          storage ??
+          const FlutterSecureStorage(
+            mOptions: MacOsOptions(
+              accountName: 'com.jndevworks.nexecute.ai-credentials',
+              accessibility: KeychainAccessibility.unlocked_this_device,
+              synchronizable: false,
+              label: 'Nexecute AI credential',
+            ),
+          ),
+      referenceFactory: referenceFactory,
+    );
+  }
+
   static const _referencePrefix = 'secure-storage:';
   static const _storageKeyPrefix = 'nexecute.ai.credential.';
 

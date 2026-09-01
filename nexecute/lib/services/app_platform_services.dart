@@ -14,13 +14,6 @@ final class AppPlatformServices {
     required this.aiCredentialStore,
   });
 
-  static const macOS = AppPlatformServices(
-    platform: AppRuntimePlatform.macOS,
-    reminderScheduler: NoopEventReminderScheduler(),
-    eventWidgetUpdater: NoopEventWidgetUpdater(),
-    aiCredentialStore: UnavailableAiCredentialStore(),
-  );
-
   static const web = AppPlatformServices(
     platform: AppRuntimePlatform.web,
     reminderScheduler: NoopEventReminderScheduler(),
@@ -67,10 +60,19 @@ Future<AppPlatformServices> createAppPlatformServices(
   Future<EventReminderScheduler> Function()? androidReminderInitializer,
   EventWidgetUpdater Function()? androidWidgetFactory,
   AiCredentialStore Function()? androidCredentialStoreFactory,
+  AiCredentialStore Function()? macOSCredentialStoreFactory,
 }) async {
   switch (platform) {
     case AppRuntimePlatform.macOS:
-      return AppPlatformServices.macOS;
+      return AppPlatformServices(
+        platform: AppRuntimePlatform.macOS,
+        reminderScheduler: const NoopEventReminderScheduler(),
+        eventWidgetUpdater: const NoopEventWidgetUpdater(),
+        aiCredentialStore:
+            (macOSCredentialStoreFactory ??
+                    FlutterSecureAiCredentialStore.macOS)
+                .call(),
+      );
     case AppRuntimePlatform.web:
       return AppPlatformServices.web;
     case AppRuntimePlatform.unsupported:
