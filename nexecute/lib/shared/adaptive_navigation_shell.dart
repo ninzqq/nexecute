@@ -131,6 +131,8 @@ class AdaptiveNavigationShell extends StatelessWidget {
     required this.body,
     this.appBar,
     this.drawer,
+    this.persistentMenu,
+    this.persistentMenuWidth = 240,
     this.floatingActionButton,
     this.resizeToAvoidBottomInset = true,
   }) : assert(destinations.length >= 2),
@@ -142,6 +144,8 @@ class AdaptiveNavigationShell extends StatelessWidget {
   final Widget body;
   final PreferredSizeWidget? appBar;
   final Widget? drawer;
+  final Widget? persistentMenu;
+  final double persistentMenuWidth;
   final Widget? floatingActionButton;
   final bool resizeToAvoidBottomInset;
 
@@ -153,16 +157,20 @@ class AdaptiveNavigationShell extends StatelessWidget {
           final layoutClass = AppLayoutBreakpoints.fromWidth(
             constraints.maxWidth,
           );
-          final usesRail = layoutClass.usesNavigationRail;
+          final usesPersistentMenu =
+              layoutClass == AppLayoutClass.expanded && persistentMenu != null;
+          final usesRail =
+              layoutClass.usesNavigationRail && !usesPersistentMenu;
 
           return AppLayoutScope(
             layoutClass: layoutClass,
             child: Scaffold(
-              appBar: appBar,
-              drawer: drawer,
+              appBar: usesPersistentMenu ? _desktopAppBar(context) : appBar,
+              drawer: usesPersistentMenu ? null : drawer,
               resizeToAvoidBottomInset: resizeToAvoidBottomInset,
               body: Row(
                 children: [
+                  if (usesPersistentMenu) _persistentMenu(),
                   if (usesRail) _navigationRail(context, layoutClass),
                   Expanded(
                     key: const Key('adaptive-navigation-content'),
@@ -178,7 +186,10 @@ class AdaptiveNavigationShell extends StatelessWidget {
                   ),
                 ],
               ),
-              bottomNavigationBar: usesRail ? null : _bottomNavigation(context),
+              bottomNavigationBar:
+                  layoutClass == AppLayoutClass.compact
+                      ? _bottomNavigation(context)
+                      : null,
               floatingActionButton:
                   floatingActionButton == null
                       ? null
@@ -194,6 +205,61 @@ class AdaptiveNavigationShell extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+
+  PreferredSizeWidget _desktopAppBar(BuildContext context) {
+    return AppBar(
+      automaticallyImplyLeading: false,
+      leadingWidth: persistentMenuWidth,
+      leading: Align(
+        alignment: Alignment.centerLeft,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Text(
+            'Nexecute',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+        ),
+      ),
+      titleSpacing: 16,
+      title: Align(
+        alignment: Alignment.centerLeft,
+        child: SegmentedButton<int>(
+          key: const Key('desktop-destination-selector'),
+          showSelectedIcon: false,
+          style: const ButtonStyle(visualDensity: VisualDensity.compact),
+          segments: [
+            for (var index = 0; index < destinations.length; index++)
+              ButtonSegment<int>(
+                value: index,
+                icon: Icon(
+                  index == selectedIndex
+                      ? destinations[index].selectedIcon
+                      : destinations[index].icon,
+                ),
+                label: Text(destinations[index].label),
+              ),
+          ],
+          selected: {selectedIndex},
+          onSelectionChanged:
+              (selection) => onDestinationSelected(selection.first),
+        ),
+      ),
+    );
+  }
+
+  Widget _persistentMenu() {
+    return FocusTraversalOrder(
+      key: const Key('navigation-focus-order'),
+      order: const NumericFocusOrder(1),
+      child: Semantics(
+        container: true,
+        sortKey: const OrdinalSortKey(1),
+        child: SizedBox(width: persistentMenuWidth, child: persistentMenu),
       ),
     );
   }

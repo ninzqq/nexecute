@@ -120,17 +120,28 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('expanded layout uses an extended navigation rail', (
+  testWidgets('expanded layout keeps the app menu visible beside content', (
     tester,
   ) async {
     _setViewport(tester, const Size(1200, 900));
     await _pumpHome(tester);
 
     expect(find.byType(NavigationBar), findsNothing);
-    final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
-    expect(rail.extended, isTrue);
-    expect(rail.labelType, NavigationRailLabelType.none);
-    expect(rail.selectedIndex, 2);
+    expect(find.byType(NavigationRail), findsNothing);
+    expect(find.byKey(const Key('persistent-main-menu')), findsOneWidget);
+    expect(
+      find.byKey(const Key('desktop-destination-selector')),
+      findsOneWidget,
+    );
+    expect(find.byTooltip('Open navigation menu'), findsNothing);
+    expect(find.text('Profile'), findsOneWidget);
+    expect(find.text('Search'), findsOneWidget);
+    expect(find.text('Assistant'), findsOneWidget);
+    expect(find.text('Tags'), findsOneWidget);
+    expect(find.text('Trash'), findsOneWidget);
+    expect(find.text('Keyboard shortcuts'), findsOneWidget);
+    expect(find.text('Settings'), findsOneWidget);
+    expect(_selectedDestination(tester), 2);
     expect(find.text('Calendar'), findsOneWidget);
     expect(find.text('Tasks'), findsOneWidget);
     expect(find.text('Notes'), findsWidgets);
@@ -138,6 +149,10 @@ void main() {
     await tester.tap(find.byIcon(Icons.calendar_month_outlined));
     await tester.pumpAndSettle();
 
+    expect(_selectedDestination(tester), 0);
+    expect(find.byKey(const Key('persistent-main-menu')), findsOneWidget);
+    expect(find.text('Profile'), findsOneWidget);
+    expect(find.text('Settings'), findsOneWidget);
     expect(find.byKey(const Key('calendar-side-by-side-layout')), findsOne);
     final calendar = tester.getRect(
       find.byKey(const Key('calendar-swipe-area')),
@@ -146,6 +161,16 @@ void main() {
       find.byKey(const Key('selected-day-agenda-container')),
     );
     expect(calendar.right, lessThanOrEqualTo(agenda.left));
+
+    await tester.tap(find.text('Search'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('shortcut-search-route')), findsOneWidget);
+
+    Navigator.pop(
+      tester.element(find.byKey(const Key('shortcut-search-route'))),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('persistent-main-menu')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -175,10 +200,9 @@ void main() {
     tester.view.physicalSize = const Size(1200, 900);
     await tester.pumpAndSettle();
 
-    expect(
-      tester.widget<NavigationRail>(find.byType(NavigationRail)).extended,
-      isTrue,
-    );
+    expect(find.byType(NavigationRail), findsNothing);
+    expect(find.byKey(const Key('persistent-main-menu')), findsOneWidget);
+    expect(_selectedDestination(tester), 0);
     expect(find.byKey(const Key('calendar-side-by-side-layout')), findsOne);
     _expectCalendarWeekSelected(tester);
 
@@ -247,8 +271,6 @@ void main() {
     );
     expect(createSemantics.getSemanticsData().hint, contains('Ctrl+N'));
 
-    await tester.tap(find.byTooltip('Open navigation menu'));
-    await tester.pumpAndSettle();
     expect(find.text('Keyboard shortcuts'), findsOneWidget);
     expect(find.text(AppShortcutLabels.search), findsOneWidget);
 
@@ -331,8 +353,15 @@ Future<void> _pumpHome(
   );
 }
 
-int _selectedDestination(WidgetTester tester) =>
-    tester.widget<NavigationRail>(find.byType(NavigationRail)).selectedIndex!;
+int _selectedDestination(WidgetTester tester) {
+  final desktopSelector = find.byKey(const Key('desktop-destination-selector'));
+  if (desktopSelector.evaluate().isNotEmpty) {
+    return tester.widget<SegmentedButton<int>>(desktopSelector).selected.single;
+  }
+  return tester
+      .widget<NavigationRail>(find.byType(NavigationRail))
+      .selectedIndex!;
+}
 
 double _focusOrder(WidgetTester tester, String key) =>
     (tester.widget<FocusTraversalOrder>(find.byKey(Key(key))).order

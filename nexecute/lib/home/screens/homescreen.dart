@@ -92,6 +92,8 @@ class HomeScreen extends StatelessWidget {
                         title: Text(_destinations[tabIndex].label),
                       ),
                       drawer: const MainDrawer(),
+                      persistentMenu: const PersistentMainMenu(),
+                      persistentMenuWidth: PersistentMainMenu.width,
                       body: IndexedStack(
                         index: tabIndex,
                         children: const [
