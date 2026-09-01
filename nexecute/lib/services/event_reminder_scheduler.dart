@@ -15,7 +15,13 @@ enum EventReminderScheduleStatus {
   failed,
 }
 
+enum EventReminderPermissionStatus { authorized, denied, unsupported, failed }
+
 abstract interface class EventReminderScheduler {
+  Future<EventReminderPermissionStatus> checkPermissionStatus();
+
+  Future<EventReminderPermissionStatus> requestPermission();
+
   Future<EventReminderScheduleStatus> schedule(Event event);
 
   Future<void> cancel(String eventId);
@@ -23,6 +29,16 @@ abstract interface class EventReminderScheduler {
 
 class NoopEventReminderScheduler implements EventReminderScheduler {
   const NoopEventReminderScheduler();
+
+  @override
+  Future<EventReminderPermissionStatus> checkPermissionStatus() async {
+    return EventReminderPermissionStatus.unsupported;
+  }
+
+  @override
+  Future<EventReminderPermissionStatus> requestPermission() async {
+    return EventReminderPermissionStatus.unsupported;
+  }
 
   @override
   Future<EventReminderScheduleStatus> schedule(Event event) async {
@@ -70,6 +86,54 @@ class AndroidEventReminderScheduler implements EventReminderScheduler {
   }
 
   @override
+  Future<EventReminderPermissionStatus> checkPermissionStatus() async {
+    try {
+      final android =
+          _notifications
+              .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin
+              >();
+      if (android == null) return EventReminderPermissionStatus.unsupported;
+
+      final notificationsAllowed =
+          await android.areNotificationsEnabled() == true;
+      final exactAlarmsAllowed =
+          await android.canScheduleExactNotifications() == true;
+      return notificationsAllowed && exactAlarmsAllowed
+          ? EventReminderPermissionStatus.authorized
+          : EventReminderPermissionStatus.denied;
+    } catch (_) {
+      return EventReminderPermissionStatus.failed;
+    }
+  }
+
+  @override
+  Future<EventReminderPermissionStatus> requestPermission() async {
+    try {
+      final android =
+          _notifications
+              .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin
+              >();
+      if (android == null) return EventReminderPermissionStatus.unsupported;
+
+      final notificationsAllowed =
+          await android.areNotificationsEnabled() == true ||
+          await android.requestNotificationsPermission() == true;
+      if (!notificationsAllowed) return EventReminderPermissionStatus.denied;
+
+      final exactAlarmsAllowed =
+          await android.canScheduleExactNotifications() == true ||
+          await android.requestExactAlarmsPermission() == true;
+      return exactAlarmsAllowed
+          ? EventReminderPermissionStatus.authorized
+          : EventReminderPermissionStatus.denied;
+    } catch (_) {
+      return EventReminderPermissionStatus.failed;
+    }
+  }
+
+  @override
   Future<EventReminderScheduleStatus> schedule(Event event) async {
     try {
       await cancel(event.id);
@@ -82,26 +146,9 @@ class AndroidEventReminderScheduler implements EventReminderScheduler {
         return EventReminderScheduleStatus.triggerInPast;
       }
 
-      final android =
-          _notifications
-              .resolvePlatformSpecificImplementation<
-                AndroidFlutterLocalNotificationsPlugin
-              >();
-      if (android == null) return EventReminderScheduleStatus.unsupported;
-
-      final notificationsAllowed =
-          await android.areNotificationsEnabled() == true ||
-          await android.requestNotificationsPermission() == true;
-      if (!notificationsAllowed) {
-        return EventReminderScheduleStatus.permissionDenied;
-      }
-
-      final exactAlarmsAllowed =
-          await android.canScheduleExactNotifications() == true ||
-          await android.requestExactAlarmsPermission() == true;
-      if (!exactAlarmsAllowed) {
-        return EventReminderScheduleStatus.permissionDenied;
-      }
+      final permissionStatus = await requestPermission();
+      final unavailableStatus = _scheduleStatusForPermission(permissionStatus);
+      if (unavailableStatus != null) return unavailableStatus;
 
       await _notifications.zonedSchedule(
         id: eventReminderNotificationId(event.id),
@@ -144,6 +191,17 @@ class AndroidEventReminderScheduler implements EventReminderScheduler {
         : 'Starting soon';
   }
 }
+
+EventReminderScheduleStatus? _scheduleStatusForPermission(
+  EventReminderPermissionStatus status,
+) => switch (status) {
+  EventReminderPermissionStatus.authorized => null,
+  EventReminderPermissionStatus.denied =>
+    EventReminderScheduleStatus.permissionDenied,
+  EventReminderPermissionStatus.unsupported =>
+    EventReminderScheduleStatus.unsupported,
+  EventReminderPermissionStatus.failed => EventReminderScheduleStatus.failed,
+};
 
 DateTimeComponents? eventReminderDateTimeComponents(
   EventRecurrence recurrence,

@@ -60,13 +60,23 @@ Future<AppPlatformServices> createAppPlatformServices(
   Future<EventReminderScheduler> Function()? androidReminderInitializer,
   EventWidgetUpdater Function()? androidWidgetFactory,
   AiCredentialStore Function()? androidCredentialStoreFactory,
+  Future<EventReminderScheduler> Function()? macOSReminderInitializer,
   AiCredentialStore Function()? macOSCredentialStoreFactory,
 }) async {
   switch (platform) {
     case AppRuntimePlatform.macOS:
+      EventReminderScheduler reminderScheduler =
+          const NoopEventReminderScheduler();
+      if (macOSReminderInitializer != null) {
+        try {
+          reminderScheduler = await macOSReminderInitializer();
+        } catch (_) {
+          reminderScheduler = const NoopEventReminderScheduler();
+        }
+      }
       return AppPlatformServices(
         platform: AppRuntimePlatform.macOS,
-        reminderScheduler: const NoopEventReminderScheduler(),
+        reminderScheduler: reminderScheduler,
         eventWidgetUpdater: const NoopEventWidgetUpdater(),
         aiCredentialStore: _createOptionalService(
           macOSCredentialStoreFactory ?? FlutterSecureAiCredentialStore.macOS,

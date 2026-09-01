@@ -406,6 +406,16 @@ occurrences where native repeating triggers cannot reproduce month-end or leap
 day behavior. macOS continues using the reminder no-op until the scheduler,
 reconciler, failure isolation, and native behavior pass the documented gate.
 
+**Notification implementation slice 1 complete:** A macOS scheduler adapter
+now initializes the local-notifications plugin without prompting, can inspect
+permission or explicitly request alert and sound access, and can build a
+privacy-bounded one-shot event notification. Scheduling never requests access
+implicitly. Recurring reminders remain deferred to the lifecycle reconciler,
+and production macOS composition deliberately continues selecting the no-op
+scheduler until the remaining implementation and verification slices are
+complete. The adapter has an injectable initialization boundary so construction
+failure remains isolated from Keychain and core services.
+
 #### Phase 5: web follow-up
 
 - [ ] Configure the Flutter Web Firebase application, authorized authentication

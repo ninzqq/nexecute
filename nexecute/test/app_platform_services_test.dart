@@ -177,6 +177,32 @@ void main() {
     expect(services.aiCredentialStore, isA<UnavailableAiCredentialStore>());
   });
 
+  test('macOS accepts a separately initialized reminder service', () async {
+    final reminder = _RecordingReminderScheduler();
+
+    final services = await createAppPlatformServices(
+      AppRuntimePlatform.macOS,
+      macOSReminderInitializer: () async => reminder,
+    );
+
+    expect(services.reminderScheduler, same(reminder));
+    expect(services.eventWidgetUpdater, isA<NoopEventWidgetUpdater>());
+  });
+
+  test('macOS reminder initialization failure retains its no-op', () async {
+    final credentials = _MemoryCredentialStore();
+
+    final services = await createAppPlatformServices(
+      AppRuntimePlatform.macOS,
+      macOSReminderInitializer:
+          () => Future.error(StateError('notifications unavailable')),
+      macOSCredentialStoreFactory: () => credentials,
+    );
+
+    expect(services.reminderScheduler, isA<NoopEventReminderScheduler>());
+    expect(services.aiCredentialStore, same(credentials));
+  });
+
   test(
     'web and unsupported platforms use explicit unavailable bundles',
     () async {
@@ -197,6 +223,16 @@ void main() {
 }
 
 class _RecordingReminderScheduler implements EventReminderScheduler {
+  @override
+  Future<EventReminderPermissionStatus> checkPermissionStatus() async {
+    return EventReminderPermissionStatus.authorized;
+  }
+
+  @override
+  Future<EventReminderPermissionStatus> requestPermission() async {
+    return EventReminderPermissionStatus.authorized;
+  }
+
   @override
   Future<void> cancel(String eventId) async {}
 

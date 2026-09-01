@@ -197,6 +197,16 @@ class _RecordingEventRepository implements EventRepository {
 }
 
 class _RecordingReminderScheduler implements EventReminderScheduler {
+  @override
+  Future<EventReminderPermissionStatus> checkPermissionStatus() async {
+    return EventReminderPermissionStatus.authorized;
+  }
+
+  @override
+  Future<EventReminderPermissionStatus> requestPermission() async {
+    return EventReminderPermissionStatus.authorized;
+  }
+
   final scheduledEvents = <Event>[];
   final cancelledIds = <String>[];
 
@@ -213,6 +223,16 @@ class _RecordingReminderScheduler implements EventReminderScheduler {
 }
 
 class _ThrowingReminderScheduler implements EventReminderScheduler {
+  @override
+  Future<EventReminderPermissionStatus> checkPermissionStatus() async {
+    throw StateError('Reminder permissions unavailable');
+  }
+
+  @override
+  Future<EventReminderPermissionStatus> requestPermission() async {
+    throw StateError('Reminder permissions unavailable');
+  }
+
   @override
   Future<EventReminderScheduleStatus> schedule(Event event) {
     throw StateError('Notifications unavailable');

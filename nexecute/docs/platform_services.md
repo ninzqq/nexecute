@@ -38,6 +38,14 @@ reminder no-op are defined in `docs/macos_event_notifications.md`. Defining the
 contract does not enable notifications; the no-op remains selected until its
 implementation passes that document's automated and native verification gate.
 
+The staged `MacOSEventReminderScheduler` initializes Darwin notifications with
+every permission request disabled. It exposes separate permission inspection
+and explicit alert-and-sound request operations, and currently supports only
+one-shot event requests. It is injectable into platform composition for tests,
+but is not yet the production macOS default. Recurring scheduling, lifecycle
+reconciliation, device-level enablement, and the remaining verification gate
+must land before that selection changes.
+
 macOS AI credentials use the data-protection Keychain, are available only while
 the device is unlocked, do not synchronize through iCloud, and use a dedicated
 Nexecute service name. Both macOS entitlement files include Nexecute's own
