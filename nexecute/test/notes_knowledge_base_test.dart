@@ -40,6 +40,14 @@ void main() {
     expect(find.byKey(const Key('quick-notes-location')), findsOneWidget);
     expect(find.byKey(const Key('all-notes-location')), findsOneWidget);
     expect(find.byKey(const ValueKey('note-folder-projects')), findsOneWidget);
+    final folderBadge = tester.widget<Badge>(
+      find.descendant(
+        of: find.byKey(const ValueKey('note-folder-projects')),
+        matching: find.byType(Badge),
+      ),
+    );
+    expect(folderBadge.largeSize, 20);
+    expect(folderBadge.padding, const EdgeInsets.symmetric(horizontal: 6));
 
     await tester.tap(find.byKey(const ValueKey('note-folder-projects')));
     await tester.pumpAndSettle();

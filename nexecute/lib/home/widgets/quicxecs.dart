@@ -616,8 +616,13 @@ class _CountBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Badge(
       label: Text('$count'),
+      largeSize: 20,
+      padding: const EdgeInsets.symmetric(horizontal: 6),
       backgroundColor: Theme.of(context).colorScheme.primaryContainer,
       textColor: Theme.of(context).colorScheme.onPrimaryContainer,
+      textStyle: Theme.of(
+        context,
+      ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
     );
   }
 }
