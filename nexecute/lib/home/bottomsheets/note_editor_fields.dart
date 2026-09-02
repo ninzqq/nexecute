@@ -7,6 +7,7 @@ class NoteEditorFields extends StatelessWidget {
     super.key,
     required this.contentType,
     required this.descriptionController,
+    this.descriptionHeight,
     required this.checklistItems,
     required this.onContentTypeChanged,
     required this.onChecklistItemChanged,
@@ -16,6 +17,7 @@ class NoteEditorFields extends StatelessWidget {
 
   final NoteContentType contentType;
   final TextEditingController descriptionController;
+  final double? descriptionHeight;
   final List<NoteChecklistItem> checklistItems;
   final ValueChanged<NoteContentType> onContentTypeChanged;
   final ValueChanged<NoteChecklistItem> onChecklistItemChanged;
@@ -61,15 +63,20 @@ class NoteEditorFields extends StatelessWidget {
             onItemAdded: onChecklistItemAdded,
           )
         else
-          TextFormField(
-            controller: descriptionController,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(
-              labelText: 'Description',
-              border: OutlineInputBorder(),
+          SizedBox(
+            height: descriptionHeight,
+            child: TextFormField(
+              key: const Key('note-description-field'),
+              controller: descriptionController,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Description',
+                border: OutlineInputBorder(),
+              ),
+              minLines: descriptionHeight == null ? 6 : null,
+              maxLines: descriptionHeight == null ? 18 : null,
+              expands: descriptionHeight != null,
             ),
-            minLines: 6,
-            maxLines: 18,
           ),
       ],
     );

@@ -310,7 +310,10 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
     }
   }
 
-  List<Widget> _editorFields(BuildContext context) {
+  List<Widget> _editorFields(
+    BuildContext context, {
+    double? noteDescriptionHeight,
+  }) {
     return [
       ItemEditorHeader(
         title: _editorTitle,
@@ -340,6 +343,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
         NoteEditorFields(
           contentType: _noteContentType,
           descriptionController: _descriptionController,
+          descriptionHeight: noteDescriptionHeight,
           checklistItems: _checklistItems,
           onContentTypeChanged: _setNoteContentType,
           onChecklistItemChanged: _updateChecklistItem,
@@ -450,7 +454,16 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
           key: _formKey,
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final fields = _editorFields(context);
+              final noteDescriptionHeight =
+                  widget.desktopPresentation && constraints.hasBoundedHeight
+                      ? (constraints.maxHeight * 0.46)
+                          .clamp(240.0, 360.0)
+                          .toDouble()
+                      : null;
+              final fields = _editorFields(
+                context,
+                noteDescriptionHeight: noteDescriptionHeight,
+              );
               if (!constraints.hasBoundedHeight) {
                 return Padding(
                   padding: const EdgeInsets.all(16),

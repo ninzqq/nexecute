@@ -190,6 +190,32 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('desktop note editor gives spare height to the description', (
+    tester,
+  ) async {
+    _setViewport(tester, const Size(1200, 900));
+    await _pumpHome(tester);
+
+    await tester.tap(find.byKey(const Key('desktop-create-command')));
+    await tester.pumpAndSettle();
+
+    final description = find.byKey(const Key('note-description-field'));
+    final editableText = tester.widget<EditableText>(
+      find.descendant(of: description, matching: find.byType(EditableText)),
+    );
+    final editorSurface = tester.getRect(
+      find.byKey(const Key('desktop-item-editor-surface')),
+    );
+    final actionBar = tester.getRect(
+      find.byKey(const Key('item-editor-sticky-actions')),
+    );
+
+    expect(editableText.expands, isTrue);
+    expect(tester.getSize(description).height, greaterThan(300));
+    expect(actionBar.bottom, editorSurface.bottom);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('destination and calendar state survive live resizing', (
     tester,
   ) async {
