@@ -25,7 +25,7 @@ class PersistentMainMenu extends StatelessWidget {
     required this.onSearch,
   });
 
-  static const width = 240.0;
+  static const width = 180.0;
 
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
