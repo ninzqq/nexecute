@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:nexecute/home/widgets/quicxecitem.dart';
 import 'package:nexecute/models/data_state.dart';
+import 'package:nexecute/shared/adaptive_navigation_shell.dart';
 import 'package:nexecute/shared/data_state_placeholder.dart';
 import 'package:provider/provider.dart';
 import 'package:nexecute/buttons/emtpytrashpermanentlybutton.dart';
@@ -83,27 +85,20 @@ class _TrashGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisExtent: 120,
-      ),
+    final columnCount =
+        AppLayoutBreakpoints.fromContext(context).notesColumnCount;
+    return MasonryGridView.count(
+      key: const Key('trash-notes-grid'),
+      padding: const EdgeInsets.all(8),
+      crossAxisCount: columnCount,
+      mainAxisSpacing: 8,
+      crossAxisSpacing: 8,
       itemCount: notes.length,
       itemBuilder: (context, index) {
         final quicxec = notes[index];
         return QuicxecItem(
-          quicxec: Quicxec(
-            id: quicxec.id,
-            text: quicxec.text,
-            title: quicxec.title,
-            trashed: quicxec.trashed,
-            tags: quicxec.tags,
-            created: quicxec.created,
-            updatedAt: quicxec.updatedAt,
-            folderId: quicxec.folderId,
-            contentType: quicxec.contentType,
-            checklistItems: quicxec.checklistItems,
-          ),
+          key: ValueKey('trash-note-${quicxec.id}'),
+          quicxec: quicxec,
         );
       },
     );
