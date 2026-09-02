@@ -162,15 +162,30 @@ class _DestinationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final palette = context.appPalette;
+    final navigationTheme = theme.navigationRailTheme;
+    final selectedBackground =
+        navigationTheme.indicatorColor ??
+        palette.primary.withValues(alpha: 0.16);
+    final selectedIconColor =
+        navigationTheme.selectedIconTheme?.color ?? palette.primary;
+    final selectedLabelColor =
+        navigationTheme.selectedLabelTextStyle?.color ?? palette.primary;
+    final indicatorShape = navigationTheme.indicatorShape;
+    final selectedSide =
+        indicatorShape is StadiumBorder
+            ? indicatorShape.side
+            : BorderSide(color: palette.outline);
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
       child: Material(
-        color:
-            selected
-                ? palette.primary.withValues(alpha: 0.16)
-                : Colors.transparent,
-        borderRadius: BorderRadius.circular(7),
+        color: selected ? selectedBackground : Colors.transparent,
+        shape: RoundedRectangleBorder(
+          side: selected ? selectedSide : BorderSide.none,
+          borderRadius: BorderRadius.circular(7),
+        ),
+        clipBehavior: Clip.antiAlias,
         child: InkWell(
           borderRadius: BorderRadius.circular(7),
           onTap: onTap,
@@ -184,7 +199,7 @@ class _DestinationTile extends StatelessWidget {
                   Icon(
                     selected ? destination.selectedIcon : destination.icon,
                     size: 19,
-                    color: selected ? palette.primary : null,
+                    color: selected ? selectedIconColor : null,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -193,7 +208,7 @@ class _DestinationTile extends StatelessWidget {
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight:
                             selected ? FontWeight.w700 : FontWeight.w500,
-                        color: selected ? palette.primary : null,
+                        color: selected ? selectedLabelColor : null,
                       ),
                     ),
                   ),

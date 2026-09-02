@@ -47,6 +47,7 @@ void main() {
   test('Cyberpunk uses cyan as its primary interactive accent', () {
     final theme = AppThemes.forPreset(AppThemePreset.cyberpunk);
     final navigationTheme = theme.navigationBarTheme;
+    final navigationRailTheme = theme.navigationRailTheme;
 
     expect(theme.colorScheme.primary, const Color(0xFF00E7F0));
     expect(theme.colorScheme.secondary, const Color(0xFFFF3BD4));
@@ -66,6 +67,20 @@ void main() {
     );
     expect(
       (navigationTheme.indicatorShape as StadiumBorder).side.color,
+      const Color(0xFFFF3BD4).withValues(alpha: 0.75),
+    );
+    expect(navigationRailTheme.backgroundColor, const Color(0xFF120A25));
+    expect(navigationRailTheme.indicatorColor, const Color(0xFF102A35));
+    expect(
+      navigationRailTheme.selectedIconTheme?.color,
+      const Color(0xFF00E7F0),
+    );
+    expect(
+      navigationRailTheme.selectedLabelTextStyle?.color,
+      const Color(0xFFFF3BD4),
+    );
+    expect(
+      (navigationRailTheme.indicatorShape as StadiumBorder).side.color,
       const Color(0xFFFF3BD4).withValues(alpha: 0.75),
     );
     expect(

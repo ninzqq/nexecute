@@ -183,6 +183,30 @@ abstract final class AppThemes {
           );
         }),
       ),
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: palette.chrome,
+        indicatorColor: navigationIndicator,
+        indicatorShape: StadiumBorder(
+          side: BorderSide(
+            color:
+                isCyberpunk
+                    ? palette.secondary.withValues(alpha: 0.75)
+                    : palette.outline,
+          ),
+        ),
+        selectedIconTheme: IconThemeData(color: navigationIconAccent),
+        unselectedIconTheme: IconThemeData(
+          color: palette.onSurface.withValues(alpha: 0.65),
+        ),
+        selectedLabelTextStyle: baseTextTheme.labelMedium?.copyWith(
+          color: navigationLabelAccent,
+          fontWeight: FontWeight.w700,
+        ),
+        unselectedLabelTextStyle: baseTextTheme.labelMedium?.copyWith(
+          color: palette.onSurface.withValues(alpha: 0.65),
+          fontWeight: FontWeight.w500,
+        ),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: palette.surfaceRaised,
