@@ -86,6 +86,16 @@ void main() {
     expect(writer.values['event_fri_0'], '14:00 Friday review');
   });
 
+  test('writes the Cyberpunk Mega identifier for the Android widget', () async {
+    final writer = _FakeEventWidgetDataWriter();
+    final service = EventWidgetService(writer: writer);
+
+    await service.updateTheme(AppThemePreset.cyberpunkMega);
+
+    expect(writer.values['widget_theme'], 'cyberpunkMega');
+    expect(writer.refreshCount, 1);
+  });
+
   test(
     'repository streams outside the current week leave widget data alone',
     () async {

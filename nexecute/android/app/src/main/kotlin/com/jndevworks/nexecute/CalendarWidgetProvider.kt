@@ -30,6 +30,14 @@ private data class NexecuteWidgetTheme(
                 secondaryText = 0xFFFF3BD4.toInt(),
                 accent = 0xFF00E7F0.toInt(),
             )
+            "cyberpunkMega" -> NexecuteWidgetTheme(
+                headerBackground = 0xFF100E18.toInt(),
+                gridBackground = 0xFF05070C.toInt(),
+                columnBackground = 0xFF0D0C14.toInt(),
+                primaryText = 0xFF00D7E5.toInt(),
+                secondaryText = 0xFFD83ADB.toInt(),
+                accent = 0xFF00D7E5.toInt(),
+            )
             "forest" -> NexecuteWidgetTheme(
                 headerBackground = 0xFF0B1913.toInt(),
                 gridBackground = 0xFF07110D.toInt(),

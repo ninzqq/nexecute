@@ -35,6 +35,15 @@ void main() {
     expect(restoredController.preset, AppThemePreset.neutral);
   });
 
+  test('restores the Cyberpunk Mega theme', () async {
+    final controller = await AppThemeController.load();
+
+    await controller.select(AppThemePreset.cyberpunkMega);
+    final restoredController = await AppThemeController.load();
+
+    expect(restoredController.preset, AppThemePreset.cyberpunkMega);
+  });
+
   test('each preset has a distinct primary color', () {
     final primaryColors = {
       for (final preset in AppThemePreset.values)
@@ -89,5 +98,31 @@ void main() {
     );
     expect(navigationTheme.elevation, 8);
     expect(navigationTheme.shadowColor, isNot(Colors.transparent));
+  });
+
+  test('Cyberpunk Mega uses the graphite neon reference palette', () {
+    final theme = AppThemes.forPreset(AppThemePreset.cyberpunkMega);
+    final palette = theme.extension<AppPalette>()!;
+    final navigationTheme = theme.navigationBarTheme;
+
+    expect(palette.background, const Color(0xFF05070C));
+    expect(palette.surface, const Color(0xFF0D0C14));
+    expect(palette.surfaceRaised, const Color(0xFF111821));
+    expect(palette.chrome, const Color(0xFF100E18));
+    expect(theme.colorScheme.primary, const Color(0xFF00D7E5));
+    expect(theme.colorScheme.secondary, const Color(0xFFD83ADB));
+    expect(theme.colorScheme.tertiary, const Color(0xFF7928CA));
+    expect(theme.colorScheme.onSurface, const Color(0xFF00D7E5));
+    expect(theme.colorScheme.onSurfaceVariant, const Color(0xFF008E98));
+    expect(palette.outline, const Color(0xFF7226A8));
+    expect(navigationTheme.indicatorColor, const Color(0xFF21102D));
+    expect(
+      navigationTheme.labelTextStyle?.resolve({WidgetState.selected})?.color,
+      const Color(0xFFD83ADB),
+    );
+    expect(
+      (navigationTheme.indicatorShape as StadiumBorder).side.color,
+      const Color(0xFFD83ADB).withValues(alpha: 0.75),
+    );
   });
 }

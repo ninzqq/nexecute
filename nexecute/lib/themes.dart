@@ -1,11 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-enum AppThemePreset { cyberpunk, midnight, forest, neutral }
+enum AppThemePreset { cyberpunk, cyberpunkMega, midnight, forest, neutral }
 
 extension AppThemePresetDetails on AppThemePreset {
   String get label => switch (this) {
     AppThemePreset.cyberpunk => 'Cyberpunk',
+    AppThemePreset.cyberpunkMega => 'Cyberpunk Mega',
     AppThemePreset.midnight => 'Midnight',
     AppThemePreset.forest => 'Forest',
     AppThemePreset.neutral => 'Neutral',
@@ -13,6 +14,8 @@ extension AppThemePresetDetails on AppThemePreset {
 
   String get description => switch (this) {
     AppThemePreset.cyberpunk => 'Electric magenta and cyan on deep violet',
+    AppThemePreset.cyberpunkMega =>
+      'Neon cyan, magenta, and ultraviolet on near-black graphite',
     AppThemePreset.midnight => 'Calm blue accents on a dark navy canvas',
     AppThemePreset.forest => 'Soft green and amber with earthy contrast',
     AppThemePreset.neutral => 'Charcoal and soft gray with minimal color',
@@ -20,6 +23,7 @@ extension AppThemePresetDetails on AppThemePreset {
 
   IconData get icon => switch (this) {
     AppThemePreset.cyberpunk => Icons.bolt_rounded,
+    AppThemePreset.cyberpunkMega => Icons.grid_4x4_rounded,
     AppThemePreset.midnight => Icons.nightlight_round,
     AppThemePreset.forest => Icons.forest_rounded,
     AppThemePreset.neutral => Icons.contrast_rounded,
@@ -40,20 +44,27 @@ abstract final class AppThemes {
       tertiary: palette.tertiary,
       surface: palette.surface,
       onSurface: palette.onSurface,
+      onSurfaceVariant:
+          preset == AppThemePreset.cyberpunkMega
+              ? const Color(0xFF008E98)
+              : null,
     );
 
     final baseTextTheme = ThemeData.dark().textTheme.apply(
       bodyColor: palette.onSurface,
       displayColor: palette.onSurface,
     );
-    final isCyberpunk = preset == AppThemePreset.cyberpunk;
+    final isCyberpunk =
+        preset == AppThemePreset.cyberpunk ||
+        preset == AppThemePreset.cyberpunkMega;
     final navigationIconAccent = palette.primary;
     final navigationLabelAccent =
         isCyberpunk ? palette.secondary : palette.primary;
-    final navigationIndicator =
-        isCyberpunk
-            ? const Color(0xFF102A35)
-            : palette.primary.withValues(alpha: 0.18);
+    final navigationIndicator = switch (preset) {
+      AppThemePreset.cyberpunk => const Color(0xFF102A35),
+      AppThemePreset.cyberpunkMega => const Color(0xFF21102D),
+      _ => palette.primary.withValues(alpha: 0.18),
+    };
     final desktopPlatform = switch (defaultTargetPlatform) {
       TargetPlatform.macOS ||
       TargetPlatform.windows ||
@@ -74,7 +85,7 @@ abstract final class AppThemes {
         displayLarge: baseTextTheme.displayLarge?.copyWith(
           fontSize: 26,
           fontWeight: FontWeight.w700,
-          letterSpacing: preset == AppThemePreset.cyberpunk ? 1.2 : 0.2,
+          letterSpacing: isCyberpunk ? 1.2 : 0.2,
         ),
         titleLarge: baseTextTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.w700,
@@ -88,7 +99,7 @@ abstract final class AppThemes {
         titleTextStyle: baseTextTheme.titleLarge?.copyWith(
           color: palette.onSurface,
           fontWeight: FontWeight.w700,
-          letterSpacing: preset == AppThemePreset.cyberpunk ? 1.4 : 0.2,
+          letterSpacing: isCyberpunk ? 1.4 : 0.2,
         ),
       ),
       drawerTheme: DrawerThemeData(backgroundColor: palette.chrome),
@@ -270,6 +281,19 @@ abstract final class AppThemes {
       onSurface: Color(0xFFF5EEFF),
       outline: Color(0xFF32556B),
       success: Color(0xFF55F991),
+    ),
+    AppThemePreset.cyberpunkMega => const AppPalette(
+      background: Color(0xFF05070C),
+      surface: Color(0xFF0D0C14),
+      surfaceRaised: Color(0xFF111821),
+      chrome: Color(0xFF100E18),
+      primary: Color(0xFF00D7E5),
+      onPrimary: Color(0xFF001E21),
+      secondary: Color(0xFFD83ADB),
+      tertiary: Color(0xFF7928CA),
+      onSurface: Color(0xFF00D7E5),
+      outline: Color(0xFF7226A8),
+      success: Color(0xFF56D47B),
     ),
     AppThemePreset.midnight => const AppPalette(
       background: Color(0xFF080D17),
