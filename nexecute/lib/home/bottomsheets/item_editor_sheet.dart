@@ -30,6 +30,7 @@ class ItemEditorSheet extends StatefulWidget {
     this.date,
     this.isEditing = false,
     this.onSaveQuicxec,
+    this.desktopPresentation = false,
   });
 
   final Event? event;
@@ -37,6 +38,7 @@ class ItemEditorSheet extends StatefulWidget {
   final DateTime? date;
   final bool isEditing;
   final SaveQuicxecCallback? onSaveQuicxec;
+  final bool desktopPresentation;
 
   @override
   State<ItemEditorSheet> createState() => _ItemEditorSheetState();
@@ -311,6 +313,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
   List<Widget> _editorFields(BuildContext context) {
     return [
       ItemEditorHeader(
+        title: _editorTitle,
         type: _type,
         event: widget.event,
         note: widget.quicxec,
@@ -398,18 +401,50 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
     );
   }
 
+  String get _editorTitle {
+    final editing =
+        widget.isEditing ||
+        widget.event?.id.isNotEmpty == true ||
+        widget.quicxec?.id.isNotEmpty == true;
+    final noun = _type == ItemType.event ? 'event' : 'note';
+    return '${editing ? 'Edit' : 'New'} $noun';
+  }
+
+  Widget _actionBar() {
+    if (!widget.desktopPresentation) return _submitButton();
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        TextButton(
+          onPressed: _isSaving ? null : () => Navigator.maybePop(context),
+          child: const Text('Cancel'),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(width: 120, child: _submitButton()),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppEditorShortcutRegion(
       onSave: _submit,
       onCancel: () => Navigator.maybePop(context),
       child: Container(
+        key:
+            widget.desktopPresentation
+                ? const Key('desktop-item-editor-surface')
+                : null,
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(16),
-            topRight: Radius.circular(16),
-          ),
+          borderRadius:
+              widget.desktopPresentation
+                  ? BorderRadius.circular(12)
+                  : const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
         ),
         child: Form(
           key: _formKey,
@@ -438,7 +473,12 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                   Flexible(
                     child: SingleChildScrollView(
                       key: const Key('item-editor-fields-scroll-view'),
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                      padding: EdgeInsets.fromLTRB(
+                        widget.desktopPresentation ? 24 : 16,
+                        widget.desktopPresentation ? 24 : 16,
+                        widget.desktopPresentation ? 24 : 16,
+                        0,
+                      ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -455,8 +495,13 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                       ),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                      child: _submitButton(),
+                      padding: EdgeInsets.fromLTRB(
+                        widget.desktopPresentation ? 24 : 16,
+                        12,
+                        widget.desktopPresentation ? 24 : 16,
+                        widget.desktopPresentation ? 16 : 16,
+                      ),
+                      child: _actionBar(),
                     ),
                   ),
                 ],

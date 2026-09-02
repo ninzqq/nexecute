@@ -134,6 +134,7 @@ class AdaptiveNavigationShell extends StatelessWidget {
     this.persistentMenu,
     this.persistentMenuWidth = 240,
     this.floatingActionButton,
+    this.desktopPrimaryAction,
     this.resizeToAvoidBottomInset = true,
   }) : assert(destinations.length >= 2),
        assert(selectedIndex >= 0 && selectedIndex < destinations.length);
@@ -147,6 +148,7 @@ class AdaptiveNavigationShell extends StatelessWidget {
   final Widget? persistentMenu;
   final double persistentMenuWidth;
   final Widget? floatingActionButton;
+  final Widget? desktopPrimaryAction;
   final bool resizeToAvoidBottomInset;
 
   @override
@@ -191,7 +193,7 @@ class AdaptiveNavigationShell extends StatelessWidget {
                       ? _bottomNavigation(context)
                       : null,
               floatingActionButton:
-                  floatingActionButton == null
+                  floatingActionButton == null || usesPersistentMenu
                       ? null
                       : FocusTraversalOrder(
                         key: const Key('create-focus-order'),
@@ -211,6 +213,7 @@ class AdaptiveNavigationShell extends StatelessWidget {
 
   PreferredSizeWidget _desktopAppBar(BuildContext context) {
     return AppBar(
+      toolbarHeight: 58,
       automaticallyImplyLeading: false,
       leadingWidth: persistentMenuWidth,
       leading: Align(
@@ -226,29 +229,26 @@ class AdaptiveNavigationShell extends StatelessWidget {
         ),
       ),
       titleSpacing: 16,
-      title: Align(
-        alignment: Alignment.centerLeft,
-        child: SegmentedButton<int>(
-          key: const Key('desktop-destination-selector'),
-          showSelectedIcon: false,
-          style: const ButtonStyle(visualDensity: VisualDensity.compact),
-          segments: [
-            for (var index = 0; index < destinations.length; index++)
-              ButtonSegment<int>(
-                value: index,
-                icon: Icon(
-                  index == selectedIndex
-                      ? destinations[index].selectedIcon
-                      : destinations[index].icon,
-                ),
-                label: Text(destinations[index].label),
-              ),
-          ],
-          selected: {selectedIndex},
-          onSelectionChanged:
-              (selection) => onDestinationSelected(selection.first),
-        ),
+      title: Text(
+        destinations[selectedIndex].label,
+        key: const Key('desktop-page-title'),
       ),
+      actions:
+          desktopPrimaryAction == null
+              ? null
+              : [
+                FocusTraversalOrder(
+                  key: const Key('create-focus-order'),
+                  order: const NumericFocusOrder(3),
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: desktopPrimaryAction!,
+                    ),
+                  ),
+                ),
+              ],
     );
   }
 

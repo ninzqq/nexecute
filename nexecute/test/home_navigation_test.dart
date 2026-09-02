@@ -14,6 +14,7 @@ import 'package:nexecute/models/todo_item.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/shared/adaptive_navigation_shell.dart';
 import 'package:nexecute/shared/app_shortcuts.dart';
+import 'package:nexecute/shared/drawer.dart';
 import 'package:nexecute/themes.dart';
 import 'package:nexecute/ui/calendar/calendar.dart';
 import 'package:provider/provider.dart';
@@ -129,10 +130,11 @@ void main() {
     expect(find.byType(NavigationBar), findsNothing);
     expect(find.byType(NavigationRail), findsNothing);
     expect(find.byKey(const Key('persistent-main-menu')), findsOneWidget);
-    expect(
-      find.byKey(const Key('desktop-destination-selector')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('desktop-destination-selector')), findsNothing);
+    expect(find.byKey(const Key('desktop-source-list')), findsOneWidget);
+    expect(find.byKey(const Key('desktop-page-title')), findsOneWidget);
+    expect(find.byKey(const Key('desktop-create-command')), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsNothing);
     expect(find.byTooltip('Open navigation menu'), findsNothing);
     expect(find.text('Profile'), findsOneWidget);
     expect(find.text('Search'), findsOneWidget);
@@ -146,7 +148,7 @@ void main() {
     expect(find.text('Tasks'), findsOneWidget);
     expect(find.text('Notes'), findsWidgets);
 
-    await tester.tap(find.byIcon(Icons.calendar_month_outlined));
+    await tester.tap(find.byKey(const ValueKey('desktop-destination-0')));
     await tester.pumpAndSettle();
 
     expect(_selectedDestination(tester), 0);
@@ -243,6 +245,7 @@ void main() {
     await tester.pump();
     await _pressControlShortcut(tester, LogicalKeyboardKey.keyN);
     expect(find.byType(ItemEditorSheet), findsOneWidget);
+    expect(find.byKey(const Key('desktop-item-editor-dialog')), findsOneWidget);
 
     await _pressControlShortcut(tester, LogicalKeyboardKey.digit1);
     expect(_selectedDestination(tester), 2);
@@ -354,9 +357,9 @@ Future<void> _pumpHome(
 }
 
 int _selectedDestination(WidgetTester tester) {
-  final desktopSelector = find.byKey(const Key('desktop-destination-selector'));
-  if (desktopSelector.evaluate().isNotEmpty) {
-    return tester.widget<SegmentedButton<int>>(desktopSelector).selected.single;
+  final desktopMenu = find.byType(PersistentMainMenu);
+  if (desktopMenu.evaluate().isNotEmpty) {
+    return tester.widget<PersistentMainMenu>(desktopMenu).selectedIndex;
   }
   return tester
       .widget<NavigationRail>(find.byType(NavigationRail))

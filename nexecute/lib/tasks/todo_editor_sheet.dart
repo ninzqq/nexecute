@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:nexecute/models/todo_item.dart';
 import 'package:nexecute/repositories/todo_repository.dart';
@@ -7,6 +9,26 @@ import 'package:nexecute/shared/bottom_sheet_safe_area.dart';
 import 'package:provider/provider.dart';
 
 Future<void> showTodoEditor(BuildContext context, {TodoItem? todo}) {
+  if (AppLayoutBreakpoints.fromContext(context) == AppLayoutClass.expanded) {
+    return showDialog<void>(
+      context: context,
+      builder:
+          (dialogContext) => Dialog(
+            key: const Key('desktop-task-editor-dialog'),
+            clipBehavior: Clip.antiAlias,
+            insetPadding: const EdgeInsets.all(40),
+            child: SizedBox(
+              width: 520,
+              height: math.min(
+                280,
+                MediaQuery.sizeOf(dialogContext).height - 80,
+              ),
+              child: _TodoEditorSheet(todo: todo, desktopPresentation: true),
+            ),
+          ),
+    );
+  }
+
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -25,9 +47,10 @@ Future<void> showTodoEditor(BuildContext context, {TodoItem? todo}) {
 }
 
 class _TodoEditorSheet extends StatefulWidget {
-  const _TodoEditorSheet({this.todo});
+  const _TodoEditorSheet({this.todo, this.desktopPresentation = false});
 
   final TodoItem? todo;
+  final bool desktopPresentation;
 
   @override
   State<_TodoEditorSheet> createState() => _TodoEditorSheetState();
@@ -58,7 +81,12 @@ class _TodoEditorSheetState extends State<_TodoEditorSheet> {
       onSave: _save,
       onCancel: () => Navigator.maybePop(context),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        padding: EdgeInsets.fromLTRB(
+          widget.desktopPresentation ? 24 : 20,
+          widget.desktopPresentation ? 24 : 8,
+          widget.desktopPresentation ? 24 : 20,
+          24,
+        ),
         child: Form(
           key: _formKey,
           child: Column(
@@ -87,21 +115,39 @@ class _TodoEditorSheetState extends State<_TodoEditorSheet> {
                 onFieldSubmitted: (_) => _save(),
               ),
               const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: _isSaving ? null : _save,
-                icon:
-                    _isSaving
-                        ? const SizedBox.square(
-                          dimension: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                        : Icon(_isEditing ? Icons.check : Icons.add),
-                label: Text(_isEditing ? 'Save changes' : 'Add task'),
-              ),
+              if (widget.desktopPresentation)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed:
+                          _isSaving ? null : () => Navigator.maybePop(context),
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 8),
+                    _saveButton(),
+                  ],
+                )
+              else
+                _saveButton(),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _saveButton() {
+    return FilledButton.icon(
+      onPressed: _isSaving ? null : _save,
+      icon:
+          _isSaving
+              ? const SizedBox.square(
+                dimension: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+              : Icon(_isEditing ? Icons.check : Icons.add),
+      label: Text(_isEditing ? 'Save changes' : 'Add task'),
     );
   }
 

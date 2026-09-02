@@ -133,7 +133,27 @@ void main() {
     );
     expect(listRect.width, 840);
     expect(listRect.center.dx, 700);
+    expect(find.byType(Dismissible), findsNothing);
+    expect(find.byTooltip('Delete task'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('opens task editing in a desktop dialog', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1400, 900);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      appWith([todo(id: 'Desktop task', completed: false)]),
+    );
+
+    await tester.tap(find.byTooltip('Edit task'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('desktop-task-editor-dialog')), findsOneWidget);
+    expect(find.text('Cancel'), findsOneWidget);
+    expect(find.text('Save changes'), findsOneWidget);
   });
 
   testWidgets('completion uses the injected task repository', (tester) async {

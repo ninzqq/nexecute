@@ -215,7 +215,8 @@ void main() {
 
     await tester.tap(find.byTooltip('Edit event'));
     await tester.pumpAndSettle();
-    expect(tester.getSize(find.byType(ItemEditorSheet)).width, 640);
+    expect(find.byKey(const Key('desktop-item-editor-dialog')), findsOneWidget);
+    expect(tester.getSize(find.byType(ItemEditorSheet)).width, 680);
     Navigator.of(tester.element(find.byType(ItemEditorSheet))).pop();
     await tester.pumpAndSettle();
 

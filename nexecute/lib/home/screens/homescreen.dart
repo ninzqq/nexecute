@@ -92,7 +92,11 @@ class HomeScreen extends StatelessWidget {
                         title: Text(_destinations[tabIndex].label),
                       ),
                       drawer: const MainDrawer(),
-                      persistentMenu: const PersistentMainMenu(),
+                      persistentMenu: PersistentMainMenu(
+                        selectedIndex: tabIndex,
+                        onDestinationSelected: tab.select,
+                        destinations: _destinations,
+                      ),
                       persistentMenuWidth: PersistentMainMenu.width,
                       body: IndexedStack(
                         index: tabIndex,
@@ -110,6 +114,17 @@ class HomeScreen extends StatelessWidget {
                           onPressed: () => _createItem(context, tabIndex),
                           tooltip: _fabLabel(tabIndex),
                           child: Icon(_fabIcon(tabIndex)),
+                        ),
+                      ),
+                      desktopPrimaryAction: Semantics(
+                        key: const Key('create-shortcut-semantics'),
+                        hint: 'Shortcut ${AppShortcutLabels.create}',
+                        button: true,
+                        child: FilledButton.icon(
+                          key: const Key('desktop-create-command'),
+                          onPressed: () => _createItem(context, tabIndex),
+                          icon: Icon(_fabIcon(tabIndex), size: 18),
+                          label: Text(_fabLabel(tabIndex)),
                         ),
                       ),
                     ),

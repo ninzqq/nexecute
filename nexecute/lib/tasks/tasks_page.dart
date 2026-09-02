@@ -47,10 +47,15 @@ class TasksPage extends StatelessWidget {
   Widget _buildTasks(BuildContext context, List<TodoItem> todos) {
     final active = activeTodos(todos);
     final completed = completedTodos(todos);
+    final desktop =
+        AppLayoutBreakpoints.fromContext(context) == AppLayoutClass.expanded;
 
     return ListView(
       key: const PageStorageKey('tasks-page'),
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 96),
+      padding:
+          desktop
+              ? const EdgeInsets.fromLTRB(24, 20, 24, 32)
+              : const EdgeInsets.fromLTRB(12, 12, 12, 96),
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
@@ -123,6 +128,18 @@ class _DismissibleTodo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final desktop =
+        AppLayoutBreakpoints.fromContext(context) == AppLayoutClass.expanded;
+    final row = _TodoRow(
+      todo: todo,
+      completed: completed,
+      onDelete: desktop ? () => _delete(context) : null,
+    );
+
+    if (desktop) {
+      return Padding(padding: const EdgeInsets.only(bottom: 6), child: row);
+    }
+
     return Padding(
       padding: EdgeInsets.fromLTRB(completed ? 8 : 0, 0, completed ? 8 : 0, 8),
       child: Dismissible(
@@ -141,7 +158,7 @@ class _DismissibleTodo extends StatelessWidget {
           ),
         ),
         confirmDismiss: (_) => _delete(context),
-        child: _TodoRow(todo: todo, completed: completed),
+        child: row,
       ),
     );
   }
@@ -184,15 +201,19 @@ class _DismissibleTodo extends StatelessWidget {
 }
 
 class _TodoRow extends StatelessWidget {
-  const _TodoRow({required this.todo, required this.completed});
+  const _TodoRow({required this.todo, required this.completed, this.onDelete});
 
   final TodoItem todo;
   final bool completed;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.appPalette;
+    final desktop =
+        AppLayoutBreakpoints.fromContext(context) == AppLayoutClass.expanded;
+    final radius = desktop ? 8.0 : 14.0;
 
     return Opacity(
       opacity: completed ? 0.62 : 1,
@@ -200,7 +221,7 @@ class _TodoRow extends StatelessWidget {
         key: ValueKey('todo-surface-${todo.id}'),
         decoration: BoxDecoration(
           color: palette.surfaceRaised,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(radius),
           border: Border.all(
             color:
                 completed
@@ -208,7 +229,7 @@ class _TodoRow extends StatelessWidget {
                     : palette.outline,
           ),
           boxShadow:
-              completed
+              completed || desktop
                   ? const []
                   : [
                     BoxShadow(
@@ -221,7 +242,7 @@ class _TodoRow extends StatelessWidget {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(radius),
             onTap: () => showTodoEditor(context, todo: todo),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(10, 8, 6, 8),
@@ -266,6 +287,15 @@ class _TodoRow extends StatelessWidget {
                     onPressed: () => showTodoEditor(context, todo: todo),
                     icon: const Icon(Icons.edit_outlined, size: 19),
                   ),
+                  if (onDelete != null) ...[
+                    const SizedBox(width: 2),
+                    IconButton(
+                      tooltip: 'Delete task',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: onDelete,
+                      icon: const Icon(Icons.delete_outline_rounded, size: 19),
+                    ),
+                  ],
                 ],
               ),
             ),

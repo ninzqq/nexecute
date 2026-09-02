@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 enum AppThemePreset { cyberpunk, midnight, forest, neutral }
@@ -53,11 +54,19 @@ abstract final class AppThemes {
         isCyberpunk
             ? const Color(0xFF102A35)
             : palette.primary.withValues(alpha: 0.18);
+    final desktopPlatform = switch (defaultTargetPlatform) {
+      TargetPlatform.macOS ||
+      TargetPlatform.windows ||
+      TargetPlatform.linux => true,
+      _ => false,
+    };
 
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
       colorScheme: colorScheme,
+      visualDensity:
+          desktopPlatform ? VisualDensity.compact : VisualDensity.standard,
       scaffoldBackgroundColor: palette.background,
       canvasColor: palette.surface,
       dividerColor: palette.outline,
@@ -91,12 +100,36 @@ abstract final class AppThemes {
           borderRadius: BorderRadius.circular(14),
         ),
       ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: palette.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          side: BorderSide(color: palette.outline),
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: palette.chrome,
         modalBackgroundColor: palette.chrome,
         showDragHandle: true,
       ),
       popupMenuTheme: PopupMenuThemeData(color: palette.surfaceRaised),
+      menuTheme: MenuThemeData(
+        style: MenuStyle(
+          backgroundColor: WidgetStatePropertyAll(palette.surfaceRaised),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(
+              side: BorderSide(color: palette.outline),
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+      ),
+      listTileTheme: ListTileThemeData(
+        dense: desktopPlatform,
+        minVerticalPadding: desktopPlatform ? 4 : null,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: palette.primary,
         contentTextStyle: TextStyle(
@@ -154,11 +187,11 @@ abstract final class AppThemes {
         filled: true,
         fillColor: palette.surfaceRaised,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(desktopPlatform ? 8 : 12),
           borderSide: BorderSide(color: palette.outline),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(desktopPlatform ? 8 : 12),
           borderSide: BorderSide(color: palette.primary, width: 1.5),
         ),
       ),
@@ -189,6 +222,12 @@ abstract final class AppThemes {
             ),
           ),
         ),
+      ),
+      tooltipTheme: TooltipThemeData(
+        waitDuration:
+            desktopPlatform
+                ? const Duration(milliseconds: 450)
+                : const Duration(milliseconds: 1500),
       ),
       extensions: [palette],
     );
