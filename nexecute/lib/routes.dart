@@ -13,6 +13,7 @@ var appRoutes = {
   "/profile": (context) => const ProfileScreen(),
   "/settings": (context) => const SettingsScreen(),
   "/trash": (context) => const TrashScreen(),
+  "/archive": (context) => const TrashScreen(),
   "/tags": (context) => const TagsScreen(),
   "/search": (context) => const UnifiedSearchPage(),
   "/assistant": (context) => const AssistantPage(),

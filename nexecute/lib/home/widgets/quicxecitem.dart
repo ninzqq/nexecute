@@ -148,9 +148,7 @@ class QuicxecItem extends StatelessWidget {
       if (!context.mounted) return;
       messenger.showSnackBar(
         SnackBar(
-          content: Text(
-            quicxec.trashed ? 'Note restored' : 'Note moved to trash',
-          ),
+          content: Text(quicxec.trashed ? 'Note restored' : 'Note archived'),
         ),
       );
     } catch (_) {
@@ -160,7 +158,7 @@ class QuicxecItem extends StatelessWidget {
           content: Text(
             quicxec.trashed
                 ? 'Could not restore note'
-                : 'Could not move note to trash',
+                : 'Could not archive note',
           ),
         ),
       );

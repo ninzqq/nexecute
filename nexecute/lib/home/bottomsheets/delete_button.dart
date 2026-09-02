@@ -21,9 +21,9 @@ class DeleteButton extends StatelessWidget {
       onPressed: () async {
         if (quicxec != null && existsQuicxec) {
           context.read<NoteRepository>().toggleTrashed(quicxec!);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Quicxec moved to trash')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Note archived')));
           Navigator.popUntil(context, (route) => route.isFirst);
         } else if (event != null && existsEvent) {
           final confirmed = await confirmEventDeletion(context, event!);
@@ -38,9 +38,15 @@ class DeleteButton extends StatelessWidget {
         }
       },
       icon: Icon(
-        Icons.delete_forever,
-        color: existsQuicxec || existsEvent ? Colors.red : Colors.white12,
+        existsQuicxec ? Icons.archive_outlined : Icons.delete_forever,
+        color:
+            existsQuicxec
+                ? Theme.of(context).colorScheme.primary
+                : existsEvent
+                ? Colors.red
+                : Colors.white12,
       ),
+      tooltip: existsQuicxec ? 'Archive note' : 'Delete event',
     );
   }
 }

@@ -107,12 +107,12 @@ class NoteActionsSheet extends StatelessWidget {
             icon:
                 note.trashed
                     ? Icons.restore_from_trash_rounded
-                    : Icons.delete_outline_rounded,
-            label: note.trashed ? 'Restore note' : 'Move note to trash',
+                    : Icons.archive_outlined,
+            label: note.trashed ? 'Restore note' : 'Archive note',
             description:
                 note.trashed
                     ? 'Return this note to your notes'
-                    : 'You can restore it later from Trash',
+                    : 'You can restore it later from Archive',
             color: note.trashed ? palette.success : palette.secondary,
             onTap: onToggleTrash,
           ),

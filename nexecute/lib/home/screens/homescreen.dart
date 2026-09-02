@@ -62,9 +62,9 @@ class _HomeScreenState extends State<HomeScreen> {
       selectedIcon: Icons.label_rounded,
     ),
     AdaptiveNavigationItem(
-      label: 'Trash',
-      icon: Icons.delete_outline_rounded,
-      selectedIcon: Icons.delete_rounded,
+      label: 'Archive',
+      icon: Icons.archive_outlined,
+      selectedIcon: Icons.archive_rounded,
     ),
     AdaptiveNavigationItem(
       label: 'Profile',

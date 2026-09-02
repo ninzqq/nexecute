@@ -50,9 +50,9 @@ void main() {
     expect(find.text('Propose tasks with AI'), findsOneWidget);
     expect(find.text('Move to folder'), findsOneWidget);
     expect(find.text('Quick Notes'), findsOneWidget);
-    expect(find.text('Move note to trash'), findsOneWidget);
-    expect(find.text('You can restore it later from Trash'), findsOneWidget);
-    expect(find.byIcon(Icons.delete_outline_rounded), findsOneWidget);
+    expect(find.text('Archive note'), findsOneWidget);
+    expect(find.text('You can restore it later from Archive'), findsOneWidget);
+    expect(find.byIcon(Icons.archive_outlined), findsOneWidget);
   });
 
   testWidgets('trashed notes show restore and permanent-delete actions', (

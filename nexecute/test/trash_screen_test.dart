@@ -7,7 +7,7 @@ import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
 
 void main() {
-  testWidgets('desktop trash cards grow to fit long note previews', (
+  testWidgets('desktop archive cards grow to fit long note previews', (
     tester,
   ) async {
     tester.view.devicePixelRatio = 1;

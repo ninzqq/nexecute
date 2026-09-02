@@ -150,7 +150,7 @@ void main() {
     expect(find.text('Search'), findsOneWidget);
     expect(find.text('Assistant'), findsOneWidget);
     expect(find.text('Tags'), findsOneWidget);
-    expect(find.text('Trash'), findsOneWidget);
+    expect(find.text('Archive'), findsOneWidget);
     expect(find.text('Keyboard shortcuts'), findsOneWidget);
     expect(find.text('Settings'), findsOneWidget);
     expect(_selectedDestination(tester), 2);

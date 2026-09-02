@@ -296,9 +296,9 @@ class MainMenuContent extends StatelessWidget {
               ),
               _routeTile(
                 context,
-                label: 'Trash',
-                icon: Icons.delete_forever,
-                routeName: '/trash',
+                label: 'Archive',
+                icon: Icons.archive_outlined,
+                routeName: '/archive',
               ),
               ListTile(
                 leading: const Icon(Icons.keyboard_outlined),

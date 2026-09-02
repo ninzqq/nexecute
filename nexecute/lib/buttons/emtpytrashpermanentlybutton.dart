@@ -16,9 +16,9 @@ class EmptyTrashPermanentlyButton extends StatelessWidget {
                 context: context,
                 builder:
                     (context) => AlertDialog(
-                      title: const Text('Warning'),
+                      title: const Text('Delete all archived notes?'),
                       content: const Text(
-                        'Are you sure you want to delete all the items in trash permanently?\nNote: This action cannot be undone.',
+                        'Every note in the archive will be permanently deleted. This action cannot be undone.',
                       ),
                       actions: <Widget>[
                         TextButton(
@@ -32,18 +32,18 @@ class EmptyTrashPermanentlyButton extends StatelessWidget {
                                 Navigator.pop(context, 'Yes'),
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Trash emptied'),
+                                    content: Text('Archived notes deleted'),
                                   ),
                                 ),
                               },
-                          child: const Text('Yes'),
+                          child: const Text('Delete all'),
                         ),
                       ],
                     ),
               )
               : null,
       icon: const Icon(Icons.delete_forever),
-      tooltip: 'Empty trash permanently',
+      tooltip: 'Delete all archived notes',
     );
   }
 }

@@ -22,24 +22,24 @@ class TrashScreen extends StatelessWidget {
     final content = switch (state) {
       DataLoading<List<Quicxec>>() => const DataStatePlaceholder(
         presentation: DataStatePresentation.loading,
-        title: 'Loading trash…',
+        title: 'Loading archive…',
       ),
       DataUnauthenticated<List<Quicxec>>() => const DataStatePlaceholder(
         presentation: DataStatePresentation.unauthenticated,
-        message: 'Sign in to access your trash.',
+        message: 'Sign in to access your archive.',
       ),
       DataFailure<List<Quicxec>>() => const DataStatePlaceholder(
         presentation: DataStatePresentation.failure,
-        title: 'Could not load trash',
+        title: 'Could not load archive',
       ),
       DataEmpty<List<Quicxec>>() => const DataStatePlaceholder(
         presentation: DataStatePresentation.empty,
-        title: 'Trash is empty',
+        title: 'Archive is empty',
       ),
       DataReady<List<Quicxec>>() when trashedQuicxecs.isEmpty =>
         const DataStatePlaceholder(
           presentation: DataStatePresentation.empty,
-          title: 'Trash is empty',
+          title: 'Archive is empty',
         ),
       DataReady<List<Quicxec>>() => _TrashGrid(notes: trashedQuicxecs),
     };
@@ -68,7 +68,7 @@ class TrashScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Trashed quicxecs'),
+        title: const Text('Archive'),
         actions: [
           EmptyTrashPermanentlyButton(enabled: trashedQuicxecs.isNotEmpty),
         ],
