@@ -2,36 +2,46 @@ import 'package:flutter/material.dart';
 import 'package:nexecute/home/widgets/taglisttile.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/repositories/tag_repository.dart';
+import 'package:nexecute/shared/adaptive_navigation_shell.dart';
 import 'package:nexecute/shared/data_state_placeholder.dart';
 import 'package:provider/provider.dart';
 import 'package:nexecute/models/tag.dart';
 
 class TagsScreen extends StatelessWidget {
-  const TagsScreen({super.key});
+  const TagsScreen({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<DataState<Tags>>();
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Tags')),
-      body: switch (state) {
-        DataLoading<Tags>() => const DataStatePlaceholder(
-          presentation: DataStatePresentation.loading,
-          title: 'Loading tags…',
-        ),
-        DataUnauthenticated<Tags>() => const DataStatePlaceholder(
-          presentation: DataStatePresentation.unauthenticated,
-          message: 'Sign in to access your tags.',
-        ),
-        DataFailure<Tags>() => const DataStatePlaceholder(
-          presentation: DataStatePresentation.failure,
-          title: 'Could not load tags',
-        ),
-        DataEmpty<Tags>(:final value) => _TagsContent(tags: value),
-        DataReady<Tags>(:final value) => _TagsContent(tags: value),
-      },
-    );
+    final content = switch (state) {
+      DataLoading<Tags>() => const DataStatePlaceholder(
+        presentation: DataStatePresentation.loading,
+        title: 'Loading tags…',
+      ),
+      DataUnauthenticated<Tags>() => const DataStatePlaceholder(
+        presentation: DataStatePresentation.unauthenticated,
+        message: 'Sign in to access your tags.',
+      ),
+      DataFailure<Tags>() => const DataStatePlaceholder(
+        presentation: DataStatePresentation.failure,
+        title: 'Could not load tags',
+      ),
+      DataEmpty<Tags>(:final value) => _TagsContent(tags: value),
+      DataReady<Tags>(:final value) => _TagsContent(tags: value),
+    };
+
+    if (embedded) {
+      return Material(
+        key: const Key('desktop-tags-tab'),
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: AdaptiveContentFrame(maxWidth: 840, child: content),
+      );
+    }
+
+    return Scaffold(appBar: AppBar(title: const Text('Tags')), body: content);
   }
 }
 

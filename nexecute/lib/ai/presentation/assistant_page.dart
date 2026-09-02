@@ -9,7 +9,10 @@ import 'package:nexecute/shared/bottom_sheet_safe_area.dart';
 import 'package:provider/provider.dart';
 
 class AssistantPage extends StatefulWidget {
-  const AssistantPage({super.key});
+  const AssistantPage({super.key, this.embedded = false, this.onOpenSettings});
+
+  final bool embedded;
+  final VoidCallback? onOpenSettings;
 
   @override
   State<AssistantPage> createState() => _AssistantPageState();
@@ -57,6 +60,62 @@ class _AssistantPageState extends State<AssistantPage> {
   @override
   Widget build(BuildContext context) {
     final profile = _controller.activeProfile;
+    final actions = [
+      IconButton(
+        key: const Key('assistant-new-conversation'),
+        tooltip: 'New conversation',
+        onPressed: () => unawaited(_controller.startNewConversation()),
+        icon: const Icon(Icons.add_comment_outlined),
+      ),
+      IconButton(
+        key: const Key('assistant-conversation-list'),
+        tooltip: 'Conversations',
+        onPressed: _showConversations,
+        icon: const Icon(Icons.history_rounded),
+      ),
+    ];
+    final assistantBody = SafeArea(
+      child: FocusTraversalGroup(
+        child: AdaptiveContentFrame(
+          contentKey: const Key('assistant-content-frame'),
+          child: Column(
+            children: [
+              if (_controller.errorMessage case final error?)
+                _ErrorBanner(message: error, onDismiss: _controller.clearError),
+              Expanded(child: _buildConversation()),
+              if (_applicationContext case final applicationContext?)
+                _ApplicationContextBar(
+                  contextEnvelope: applicationContext,
+                  noteTitles: [
+                    for (final envelope in _noteContexts.values)
+                      (envelope.attachments.single
+                              as AiSelectedNotesContextAttachment)
+                          .notes
+                          .single
+                          .title,
+                  ],
+                  hasTasks: _taskContext != null,
+                  hasEvents: _eventContext != null,
+                  onRemoveNote: _removeNoteAt,
+                  onRemoveTasks: _removeTasks,
+                  onRemoveEvents: _removeEvents,
+                  onPreview: () => _showContextPreview(applicationContext),
+                ),
+              _Composer(
+                controller: _composerController,
+                focusNode: _composerFocusNode,
+                enabled: !_controller.isLoading && profile != null,
+                isGenerating: _controller.isGenerating,
+                onSend: _send,
+                onStop: () => unawaited(_controller.stopResponse()),
+                onAttach: _isLoadingContext ? null : _showAttachmentMenu,
+                isLoadingContext: _isLoadingContext,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
     return Shortcuts(
       shortcuts: AppShortcutBindings.assistant,
       child: Actions(
@@ -86,7 +145,7 @@ class _AssistantPageState extends State<AssistantPage> {
               if (!isCurrentAppRoute(context)) return null;
               if (_composerFocusNode.hasFocus) {
                 _composerFocusNode.unfocus();
-              } else {
+              } else if (!widget.embedded) {
                 Navigator.maybePop(context);
               }
               return null;
@@ -95,85 +154,61 @@ class _AssistantPageState extends State<AssistantPage> {
         },
         child: Focus(
           autofocus: true,
-          child: Scaffold(
-            appBar: AppBar(
-              title: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Assistant'),
-                  if (profile != null)
-                    Text(
-                      '${profile.name} · ${profile.modelId}',
-                      key: const Key('assistant-active-connection'),
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall,
+          child:
+              widget.embedded
+                  ? Material(
+                    key: const Key('desktop-assistant-tab'),
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          height: 48,
+                          child: Row(
+                            children: [
+                              const SizedBox(width: 16),
+                              if (profile != null)
+                                Expanded(
+                                  child: Text(
+                                    '${profile.name} · ${profile.modelId}',
+                                    key: const Key(
+                                      'assistant-active-connection',
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                    style:
+                                        Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                )
+                              else
+                                const Spacer(),
+                              ...actions,
+                              const SizedBox(width: 8),
+                            ],
+                          ),
+                        ),
+                        const Divider(height: 1),
+                        Expanded(child: assistantBody),
+                      ],
                     ),
-                ],
-              ),
-              actions: [
-                IconButton(
-                  key: const Key('assistant-new-conversation'),
-                  tooltip: 'New conversation',
-                  onPressed:
-                      () => unawaited(_controller.startNewConversation()),
-                  icon: const Icon(Icons.add_comment_outlined),
-                ),
-                IconButton(
-                  key: const Key('assistant-conversation-list'),
-                  tooltip: 'Conversations',
-                  onPressed: _showConversations,
-                  icon: const Icon(Icons.history_rounded),
-                ),
-              ],
-            ),
-            body: SafeArea(
-              child: FocusTraversalGroup(
-                child: AdaptiveContentFrame(
-                  contentKey: const Key('assistant-content-frame'),
-                  child: Column(
-                    children: [
-                      if (_controller.errorMessage case final error?)
-                        _ErrorBanner(
-                          message: error,
-                          onDismiss: _controller.clearError,
-                        ),
-                      Expanded(child: _buildConversation()),
-                      if (_applicationContext case final applicationContext?)
-                        _ApplicationContextBar(
-                          contextEnvelope: applicationContext,
-                          noteTitles: [
-                            for (final envelope in _noteContexts.values)
-                              (envelope.attachments.single
-                                      as AiSelectedNotesContextAttachment)
-                                  .notes
-                                  .single
-                                  .title,
-                          ],
-                          hasTasks: _taskContext != null,
-                          hasEvents: _eventContext != null,
-                          onRemoveNote: _removeNoteAt,
-                          onRemoveTasks: _removeTasks,
-                          onRemoveEvents: _removeEvents,
-                          onPreview:
-                              () => _showContextPreview(applicationContext),
-                        ),
-                      _Composer(
-                        controller: _composerController,
-                        focusNode: _composerFocusNode,
-                        enabled: !_controller.isLoading && profile != null,
-                        isGenerating: _controller.isGenerating,
-                        onSend: _send,
-                        onStop: () => unawaited(_controller.stopResponse()),
-                        onAttach:
-                            _isLoadingContext ? null : _showAttachmentMenu,
-                        isLoadingContext: _isLoadingContext,
+                  )
+                  : Scaffold(
+                    appBar: AppBar(
+                      title: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Assistant'),
+                          if (profile != null)
+                            Text(
+                              '${profile.name} · ${profile.modelId}',
+                              key: const Key('assistant-active-connection'),
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                        ],
                       ),
-                    ],
+                      actions: actions,
+                    ),
+                    body: assistantBody,
                   ),
-                ),
-              ),
-            ),
-          ),
         ),
       ),
     );
@@ -190,7 +225,7 @@ class _AssistantPageState extends State<AssistantPage> {
         message:
             'Create and select a connection profile before starting a chat.',
         actionLabel: 'Open Settings',
-        onAction: () => Navigator.pushNamed(context, '/settings'),
+        onAction: _openSettings,
       );
     }
     if (_controller.messages.isEmpty) {
@@ -211,6 +246,7 @@ class _AssistantPageState extends State<AssistantPage> {
         return _MessageBubble(
           message: message,
           reasoning: _controller.reasoningForMessage(message.id),
+          onOpenSettings: _openSettings,
           onRetry:
               message.role == AiMessageRole.assistant &&
                       (message.status == AiMessageStatus.failed ||
@@ -220,6 +256,14 @@ class _AssistantPageState extends State<AssistantPage> {
         );
       },
     );
+  }
+
+  void _openSettings() {
+    if (widget.onOpenSettings case final callback?) {
+      callback();
+    } else {
+      Navigator.pushNamed(context, '/settings');
+    }
   }
 
   AiApplicationContextEnvelope? get _applicationContext {
@@ -835,11 +879,17 @@ class _NoteContextPickerState extends State<_NoteContextPicker> {
 }
 
 class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({required this.message, this.reasoning, this.onRetry});
+  const _MessageBubble({
+    required this.message,
+    this.reasoning,
+    this.onRetry,
+    this.onOpenSettings,
+  });
 
   final AiChatMessage message;
   final String? reasoning;
   final VoidCallback? onRetry;
+  final VoidCallback? onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -909,7 +959,9 @@ class _MessageBubble extends StatelessWidget {
               AiDiagnosticPanel(
                 diagnostic: diagnostic,
                 compact: true,
-                onAction: () => Navigator.pushNamed(context, '/settings'),
+                onAction:
+                    onOpenSettings ??
+                    () => Navigator.pushNamed(context, '/settings'),
               ),
             ],
             if (onRetry != null) ...[

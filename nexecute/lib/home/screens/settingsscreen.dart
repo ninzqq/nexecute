@@ -2,21 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:nexecute/ai/presentation/ai_settings_section.dart';
 import 'package:nexecute/models/app_theme_controller.dart';
 import 'package:nexecute/models/calendar_settings_controller.dart';
+import 'package:nexecute/shared/adaptive_navigation_shell.dart';
 import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<AppThemeController>();
     final calendarSettings = context.watch<CalendarSettingsController>();
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
-      body: SafeArea(
-        top: false,
+    final content = SafeArea(
+      top: false,
+      child: AdaptiveContentFrame(
+        maxWidth: 960,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
           children: [
@@ -60,6 +63,19 @@ class SettingsScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+
+    if (embedded) {
+      return Material(
+        key: const Key('desktop-settings-tab'),
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: content,
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Settings')),
+      body: content,
     );
   }
 }

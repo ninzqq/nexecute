@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -20,8 +21,95 @@ import 'package:provider/provider.dart';
 
 enum _EventSearchStatus { idle, loading, ready, failure }
 
+Future<void> showDesktopGlobalSearch(
+  BuildContext context, {
+  VoidCallback? onOpenTags,
+}) {
+  return showDialog<void>(
+    context: context,
+    builder: (dialogContext) {
+      final availableHeight = MediaQuery.sizeOf(dialogContext).height - 80;
+      return Dialog(
+        key: const Key('desktop-global-search-dialog'),
+        clipBehavior: Clip.antiAlias,
+        insetPadding: const EdgeInsets.all(40),
+        child: SizedBox(
+          width: 760,
+          height: math.min(720, math.max(360, availableHeight)),
+          child: UnifiedSearchPage(
+            embedded: true,
+            onOpenTags:
+                onOpenTags == null
+                    ? null
+                    : () {
+                      Navigator.of(dialogContext).pop();
+                      onOpenTags();
+                    },
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class DesktopGlobalSearchField extends StatelessWidget {
+  const DesktopGlobalSearchField({super.key, required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SizedBox(
+      width: 280,
+      height: 36,
+      child: Material(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+        shape: RoundedRectangleBorder(
+          side: BorderSide(color: theme.colorScheme.outline),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: InkWell(
+          key: const Key('desktop-global-search-field'),
+          borderRadius: BorderRadius.circular(8),
+          onTap: onPressed,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Row(
+              children: [
+                const Icon(Icons.search_rounded, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Search everything',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  AppShortcutLabels.search,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class UnifiedSearchPage extends StatefulWidget {
-  const UnifiedSearchPage({super.key});
+  const UnifiedSearchPage({super.key, this.embedded = false, this.onOpenTags});
+
+  final bool embedded;
+  final VoidCallback? onOpenTags;
 
   @override
   State<UnifiedSearchPage> createState() => _UnifiedSearchPageState();
@@ -51,6 +139,54 @@ class _UnifiedSearchPageState extends State<UnifiedSearchPage> {
     final todoState = context.watch<DataState<List<TodoItem>>>();
     final tagState = context.watch<DataState<Tags>>();
     final folderState = context.watch<DataState<List<NoteFolder>>>();
+    final searchBody = Column(
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            widget.embedded ? 16 : 12,
+            widget.embedded ? 16 : 12,
+            widget.embedded ? 16 : 12,
+            8,
+          ),
+          child: TextField(
+            key: const Key('unified-search-field'),
+            controller: _controller,
+            focusNode: _focusNode,
+            autofocus: true,
+            textInputAction: TextInputAction.search,
+            onChanged: _onQueryChanged,
+            decoration: InputDecoration(
+              hintText: 'Search everything',
+              prefixIcon: const Icon(Icons.search_rounded),
+              suffixIcon:
+                  _query.isEmpty
+                      ? null
+                      : IconButton(
+                        tooltip: 'Clear search',
+                        onPressed: () {
+                          _controller.clear();
+                          _onQueryChanged('');
+                        },
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+              border: const OutlineInputBorder(),
+            ),
+          ),
+        ),
+        Expanded(
+          child:
+              _query.isEmpty
+                  ? const _SearchPrompt()
+                  : _buildResults(
+                    context,
+                    noteState,
+                    todoState,
+                    tagState,
+                    folderState,
+                  ),
+        ),
+      ],
+    );
 
     return Shortcuts(
       shortcuts: AppShortcutBindings.search,
@@ -65,7 +201,9 @@ class _UnifiedSearchPageState extends State<UnifiedSearchPage> {
           CancelAppIntent: CallbackAction<CancelAppIntent>(
             onInvoke: (_) {
               if (!isCurrentAppRoute(context)) return null;
-              if (_focusNode.hasFocus) {
+              if (widget.embedded) {
+                Navigator.maybePop(context);
+              } else if (_focusNode.hasFocus) {
                 _focusNode.unfocus();
               } else {
                 Navigator.maybePop(context);
@@ -76,52 +214,17 @@ class _UnifiedSearchPageState extends State<UnifiedSearchPage> {
         },
         child: FocusScope(
           autofocus: true,
-          child: Scaffold(
-            appBar: AppBar(title: const Text('Search')),
-            body: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-                  child: TextField(
-                    key: const Key('unified-search-field'),
-                    controller: _controller,
-                    focusNode: _focusNode,
-                    autofocus: true,
-                    textInputAction: TextInputAction.search,
-                    onChanged: _onQueryChanged,
-                    decoration: InputDecoration(
-                      hintText: 'Search everything',
-                      prefixIcon: const Icon(Icons.search_rounded),
-                      suffixIcon:
-                          _query.isEmpty
-                              ? null
-                              : IconButton(
-                                tooltip: 'Clear search',
-                                onPressed: () {
-                                  _controller.clear();
-                                  _onQueryChanged('');
-                                },
-                                icon: const Icon(Icons.close_rounded),
-                              ),
-                      border: const OutlineInputBorder(),
-                    ),
+          child:
+              widget.embedded
+                  ? Material(
+                    key: const Key('desktop-global-search-surface'),
+                    color: Theme.of(context).colorScheme.surface,
+                    child: searchBody,
+                  )
+                  : Scaffold(
+                    appBar: AppBar(title: const Text('Search')),
+                    body: searchBody,
                   ),
-                ),
-                Expanded(
-                  child:
-                      _query.isEmpty
-                          ? const _SearchPrompt()
-                          : _buildResults(
-                            context,
-                            noteState,
-                            todoState,
-                            tagState,
-                            folderState,
-                          ),
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );
@@ -286,7 +389,9 @@ class _UnifiedSearchPageState extends State<UnifiedSearchPage> {
                   leading: const Icon(Icons.label_outline_rounded),
                   title: Text(tag),
                   subtitle: const Text('Tag'),
-                  onTap: () => Navigator.pushNamed(context, '/tags'),
+                  onTap:
+                      widget.onOpenTags ??
+                      () => Navigator.pushNamed(context, '/tags'),
                 ),
             ],
           ),

@@ -134,7 +134,9 @@ class AdaptiveNavigationShell extends StatelessWidget {
     this.persistentMenu,
     this.persistentMenuWidth = 240,
     this.floatingActionButton,
+    this.desktopToolbarSearch,
     this.desktopPrimaryAction,
+    this.desktopTitle,
     this.resizeToAvoidBottomInset = true,
   }) : assert(destinations.length >= 2),
        assert(selectedIndex >= 0 && selectedIndex < destinations.length);
@@ -148,7 +150,9 @@ class AdaptiveNavigationShell extends StatelessWidget {
   final Widget? persistentMenu;
   final double persistentMenuWidth;
   final Widget? floatingActionButton;
+  final Widget? desktopToolbarSearch;
   final Widget? desktopPrimaryAction;
+  final String? desktopTitle;
   final bool resizeToAvoidBottomInset;
 
   @override
@@ -230,24 +234,33 @@ class AdaptiveNavigationShell extends StatelessWidget {
       ),
       titleSpacing: 16,
       title: Text(
-        destinations[selectedIndex].label,
+        desktopTitle ?? destinations[selectedIndex].label,
         key: const Key('desktop-page-title'),
       ),
       actions:
-          desktopPrimaryAction == null
+          desktopToolbarSearch == null && desktopPrimaryAction == null
               ? null
               : [
-                FocusTraversalOrder(
-                  key: const Key('create-focus-order'),
-                  order: const NumericFocusOrder(3),
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 16),
+                if (desktopToolbarSearch != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 12),
                     child: Align(
                       alignment: Alignment.center,
-                      child: desktopPrimaryAction!,
+                      child: desktopToolbarSearch!,
                     ),
                   ),
-                ),
+                if (desktopPrimaryAction != null)
+                  FocusTraversalOrder(
+                    key: const Key('create-focus-order'),
+                    order: const NumericFocusOrder(3),
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: Align(
+                        alignment: Alignment.center,
+                        child: desktopPrimaryAction!,
+                      ),
+                    ),
+                  ),
               ],
     );
   }

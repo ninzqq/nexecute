@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nexecute/ai/ai.dart';
 import 'package:nexecute/home/bottomsheets/item_editor_sheet.dart';
 import 'package:nexecute/home/screens/homescreen.dart';
+import 'package:nexecute/models/app_theme_controller.dart';
+import 'package:nexecute/models/calendar_settings_controller.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/home_tab_index.dart';
 import 'package:nexecute/models/note_folder.dart';
@@ -15,11 +18,14 @@ import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/shared/adaptive_navigation_shell.dart';
 import 'package:nexecute/shared/app_shortcuts.dart';
 import 'package:nexecute/shared/drawer.dart';
+import 'package:nexecute/services/auth.dart';
 import 'package:nexecute/themes.dart';
 import 'package:nexecute/ui/calendar/calendar.dart';
 import 'package:provider/provider.dart';
 
 import 'support/fake_event_repository.dart';
+import 'support/fake_ai_dependencies.dart';
+import 'support/fake_auth_clients.dart';
 
 void main() {
   test('classifies compact, medium, and expanded widths', () {
@@ -134,6 +140,10 @@ void main() {
     expect(find.byKey(const Key('desktop-source-list')), findsOneWidget);
     expect(find.byKey(const Key('desktop-page-title')), findsOneWidget);
     expect(find.byKey(const Key('desktop-create-command')), findsOneWidget);
+    expect(
+      find.byKey(const Key('desktop-global-search-field')),
+      findsOneWidget,
+    );
     expect(find.byType(FloatingActionButton), findsNothing);
     expect(find.byTooltip('Open navigation menu'), findsNothing);
     expect(find.text('Profile'), findsOneWidget);
@@ -164,12 +174,16 @@ void main() {
     );
     expect(calendar.right, lessThanOrEqualTo(agenda.left));
 
-    await tester.tap(find.text('Search'));
+    await tester.tap(find.byKey(const Key('desktop-global-search-field')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('shortcut-search-route')), findsOneWidget);
+    expect(
+      find.byKey(const Key('desktop-global-search-dialog')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('unified-search-field')), findsOneWidget);
 
     Navigator.pop(
-      tester.element(find.byKey(const Key('shortcut-search-route'))),
+      tester.element(find.byKey(const Key('desktop-global-search-dialog'))),
     );
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('persistent-main-menu')), findsOneWidget);
@@ -220,6 +234,65 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('desktop secondary destinations switch tabs without routes', (
+    tester,
+  ) async {
+    _setViewport(tester, const Size(1200, 900));
+    await _pumpHome(tester);
+    final navigator = Navigator.of(
+      tester.element(find.byKey(const Key('desktop-tab-host'))),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('desktop-destination-3')));
+    await tester.pumpAndSettle();
+
+    expect(_selectedDestination(tester), 3);
+    expect(
+      find.byKey(const Key('desktop-assistant-tab')).hitTestable(),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('persistent-main-menu')), findsOneWidget);
+    expect(find.byKey(const Key('desktop-create-command')), findsNothing);
+    expect(navigator.canPop(), isFalse);
+
+    await tester.tap(find.byKey(const ValueKey('desktop-destination-4')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('desktop-tags-tab')).hitTestable(),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('desktop-destination-5')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('desktop-trash-tab')).hitTestable(),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('desktop-destination-6')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('desktop-profile-tab')).hitTestable(),
+      findsOneWidget,
+    );
+    expect(find.text('Not signed in'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('desktop-destination-3')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Open Settings'));
+    await tester.pumpAndSettle();
+
+    expect(_selectedDestination(tester), 7);
+    expect(
+      find.byKey(const Key('desktop-settings-tab')).hitTestable(),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('persistent-main-menu')), findsOneWidget);
+    expect(navigator.canPop(), isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('desktop shortcuts navigate, create, search, and respect focus', (
     tester,
   ) async {
@@ -255,7 +328,10 @@ void main() {
     expect(find.byType(ItemEditorSheet), findsNothing);
 
     await _pressControlShortcut(tester, LogicalKeyboardKey.keyK);
-    expect(find.byKey(const Key('shortcut-search-route')), findsOneWidget);
+    expect(
+      find.byKey(const Key('desktop-global-search-dialog')),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -335,7 +411,31 @@ Future<void> _pumpHome(
         ChangeNotifierProvider(create: (_) => HomeTabIndex()),
         ChangeNotifierProvider(create: (_) => SelectedDay()),
         ChangeNotifierProvider(create: (_) => NotesController()),
+        ChangeNotifierProvider(create: (_) => AppThemeController()),
+        ChangeNotifierProvider(create: (_) => CalendarSettingsController()),
         Provider<EventRepository>.value(value: FakeEventRepository()),
+        Provider<AuthService>(
+          create:
+              (_) => AuthService(
+                firebaseAuthClient: FakeFirebaseAuthClient(),
+                googleAuthClient: FakeGoogleAuthClient(),
+              ),
+        ),
+        Provider<AiAssistantRepository>(
+          create: (_) => FakeAiAssistantRepository(),
+        ),
+        Provider<AiConnectionProfileStore>(
+          create: (_) => FakeAiConnectionProfileStore(),
+          dispose: (_, store) => store.dispose(),
+        ),
+        Provider<AiConversationStore>(
+          create: (_) => FakeAiConversationStore(),
+          dispose: (_, store) => store.dispose(),
+        ),
+        Provider<AiApplicationContextReadService>(
+          create: (_) => FakeAiApplicationContextReadService(),
+        ),
+        Provider<AiCredentialStore>(create: (_) => FakeAiCredentialStore()),
         Provider<DataState<List<TodoItem>>>.value(value: const DataEmpty([])),
         Provider<DataState<List<Quicxec>>>.value(value: const DataEmpty([])),
         Provider<DataState<List<NoteFolder>>>.value(value: const DataEmpty([])),

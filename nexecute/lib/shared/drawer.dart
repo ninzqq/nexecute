@@ -22,6 +22,7 @@ class PersistentMainMenu extends StatelessWidget {
     required this.selectedIndex,
     required this.onDestinationSelected,
     required this.destinations,
+    required this.onSearch,
   });
 
   static const width = 240.0;
@@ -29,6 +30,7 @@ class PersistentMainMenu extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
   final List<AdaptiveNavigationItem> destinations;
+  final VoidCallback onSearch;
 
   @override
   Widget build(BuildContext context) {
@@ -48,6 +50,7 @@ class PersistentMainMenu extends StatelessWidget {
             selectedIndex: selectedIndex,
             onDestinationSelected: onDestinationSelected,
             destinations: destinations,
+            onSearch: onSearch,
           ),
         ),
       ),
@@ -60,11 +63,13 @@ class _DesktopMainMenuContent extends StatelessWidget {
     required this.selectedIndex,
     required this.onDestinationSelected,
     required this.destinations,
+    required this.onSearch,
   });
 
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
   final List<AdaptiveNavigationItem> destinations;
+  final VoidCallback onSearch;
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +79,7 @@ class _DesktopMainMenuContent extends StatelessWidget {
       children: [
         const _MenuSectionLabel('Workspace'),
         const SizedBox(height: 4),
-        for (var index = 0; index < destinations.length; index++)
+        for (var index = 0; index < 3; index++)
           _DestinationTile(
             key: ValueKey('desktop-destination-$index'),
             destination: destinations[index],
@@ -87,41 +92,31 @@ class _DesktopMainMenuContent extends StatelessWidget {
         ),
         const _MenuSectionLabel('Tools'),
         const SizedBox(height: 4),
-        _DesktopRouteTile(
+        _DesktopMenuTile(
           label: 'Search',
           icon: Icons.search_rounded,
-          routeName: '/search',
-          shortcut: AppShortcutLabels.search,
+          onTap: onSearch,
         ),
-        const _DesktopRouteTile(
-          label: 'Assistant',
-          icon: Icons.auto_awesome_outlined,
-          routeName: '/assistant',
-        ),
-        const _DesktopRouteTile(
-          label: 'Tags',
-          icon: Icons.label_outline_rounded,
-          routeName: '/tags',
-        ),
-        const _DesktopRouteTile(
-          label: 'Trash',
-          icon: Icons.delete_outline_rounded,
-          routeName: '/trash',
-        ),
+        for (var index = 3; index < 6; index++)
+          _DestinationTile(
+            key: ValueKey('desktop-destination-$index'),
+            destination: destinations[index],
+            selected: selectedIndex == index,
+            onTap: () => onDestinationSelected(index),
+          ),
         const Padding(
           padding: EdgeInsets.symmetric(vertical: 10),
           child: Divider(height: 1),
         ),
-        const _DesktopRouteTile(
-          label: 'Profile',
-          icon: Icons.person_outline_rounded,
-          routeName: '/profile',
-        ),
-        const _DesktopRouteTile(
-          label: 'Settings',
-          icon: Icons.settings_outlined,
-          routeName: '/settings',
-        ),
+        const _MenuSectionLabel('Account'),
+        const SizedBox(height: 4),
+        for (var index = 6; index < destinations.length; index++)
+          _DestinationTile(
+            key: ValueKey('desktop-destination-$index'),
+            destination: destinations[index],
+            selected: selectedIndex == index,
+            onTap: () => onDestinationSelected(index),
+          ),
         _DesktopMenuTile(
           label: 'Keyboard shortcuts',
           icon: Icons.keyboard_outlined,
@@ -212,42 +207,16 @@ class _DestinationTile extends StatelessWidget {
   }
 }
 
-class _DesktopRouteTile extends StatelessWidget {
-  const _DesktopRouteTile({
-    required this.label,
-    required this.icon,
-    required this.routeName,
-    this.shortcut,
-  });
-
-  final String label;
-  final IconData icon;
-  final String routeName;
-  final String? shortcut;
-
-  @override
-  Widget build(BuildContext context) {
-    return _DesktopMenuTile(
-      label: label,
-      icon: icon,
-      trailing: shortcut,
-      onTap: () => Navigator.pushNamed(context, routeName),
-    );
-  }
-}
-
 class _DesktopMenuTile extends StatelessWidget {
   const _DesktopMenuTile({
     required this.label,
     required this.icon,
     required this.onTap,
-    this.trailing,
   });
 
   final String label;
   final IconData icon;
   final VoidCallback onTap;
-  final String? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -263,13 +232,6 @@ class _DesktopMenuTile extends StatelessWidget {
               Icon(icon, size: 19),
               const SizedBox(width: 10),
               Expanded(child: Text(label)),
-              if (trailing != null)
-                Text(
-                  trailing!,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
             ],
           ),
         ),
