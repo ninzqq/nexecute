@@ -1134,6 +1134,253 @@ and immutable model version or digest are supplied to the quality runner.
   inference remains disabled until explicitly enabled.
 - The app's Calendar, Tasks, and Notes remain usable without an AI endpoint.
 
+### Permanent AI memory / user-owned knowledge base
+
+**Status:** Planned
+
+Give the assistant durable, user-owned knowledge that survives conversations,
+application restarts, model changes, and device changes. A user should be able
+to enter plain text such as:
+
+- "Motorcycle oil change done 14.08.2026 at 21000 km."
+- "Front axle: 65 Nm. Axle pinch bolts: 22 Nm."
+
+The connected model should then be able to answer questions such as "When was
+the motorcycle oil changed?" or "What is the torque for the front axle?" from
+that stored knowledge.
+
+Permanent memory does not mean changing, training, or fine-tuning the model.
+Nexecute owns a durable knowledge store, retrieves the small set of records
+relevant to the current question, and supplies those records to the selected
+model. The stored user record remains the source of truth; an AI response is
+only an interpretation of that record.
+
+#### Recommended direction
+
+- Store memory separately from ordinary Notes so casual notes do not silently
+  become permanently available to AI. The memory interface may reuse note
+  editor components or appear within the Notes area, but it should have its own
+  domain model, repository, lifecycle, and AI-access controls.
+- Keep the authoritative records under the authenticated user in Firestore so
+  they synchronize across devices and retain the existing offline-cache
+  behavior.
+- Build a derived local search index on each device. The index and any future
+  embeddings are disposable and must be rebuildable from the authoritative
+  records.
+- Start with deterministic lexical search. Add replaceable, local-first
+  semantic embeddings later behind the same retrieval interface, coordinated
+  with the existing semantic-search roadmap work.
+- Support tool-capable and chat-only models. A tool-capable model may refine a
+  bounded memory search, while Nexecute must prefetch relevant records for a
+  model that cannot call tools.
+- Never use a model provider's conversation memory or vector store as the only
+  copy of user knowledge. Provider-managed data may be considered only as an
+  explicitly enabled derived index in a later design.
+- Do not use fine-tuning for user facts. It cannot provide reliable updates,
+  deletion, citations, conflict handling, or portability between connection
+  profiles.
+
+#### Initial domain model
+
+Organize entries into named spaces so otherwise ambiguous facts can be scoped
+to a person, vehicle, home, project, or other subject. For example, "front
+axle" must not silently match the wrong motorcycle when a user owns more than
+one.
+
+```text
+MemorySpace
+- id
+- name
+- createdAt
+- updatedAt
+- schemaVersion
+
+MemoryEntry
+- id
+- spaceId
+- title
+- body
+- kind (fact | serviceRecord | referenceDocument)
+- occurredAt (nullable)
+- tags
+- status (active | archived | trashed)
+- createdAt
+- updatedAt
+- schemaVersion
+```
+
+Version 1 remains text-first. `occurredAt` is optional metadata for facts such
+as maintenance history; the exact user-entered `body` remains authoritative.
+Structured specifications, canonical subject keys, imports, attachments, and
+relationships between entries can be introduced only after the text workflow
+is proven.
+
+#### Retrieval and answer contract
+
+1. The user asks a question while permanent memory is enabled.
+2. Nexecute searches only the enabled memory spaces and ranks matching entries
+   or document sections locally.
+3. Nexecute sends a bounded set of relevant snippets with temporary opaque
+   references to the selected model. It does not send the complete library.
+4. The model answers from those snippets and identifies the references it used.
+5. Nexecute maps the opaque references back to visible, tappable source
+   entries without exposing Firestore document paths or application IDs.
+
+Long entries must be divided into deterministic search chunks along headings,
+paragraphs, lists, or table rows where practical. Chunks are derived artifacts,
+not independent facts. Editing, archiving, trashing, or deleting an entry must
+remove every stale chunk before it can appear in another answer.
+
+Memory returned to a model is authoritative for user-specific facts but remains
+untrusted as instructions. Pasted content must never override the system
+prompt, request authorization, tool schemas, or application rules.
+
+Answer behavior must follow these rules:
+
+- Prefer applicable user memory over the model's general knowledge for
+  user-specific facts.
+- Show the source entries used for an answer.
+- If memory contains conflicting values, show the conflict and relevant dates
+  rather than silently choosing one.
+- If no relevant record is found, say that the answer was not found in memory.
+- Do not silently complete missing safety-critical values from general model
+  knowledge.
+- Never claim that a memory entry was created, changed, or deleted unless the
+  application confirms that operation.
+
+#### Authorization, privacy, and portability
+
+- Permanent memory is disabled until the user explicitly enables it.
+- Let users enable or disable individual memory spaces for AI access.
+- Show in the Assistant composer when memory retrieval is active and allow it
+  to be disabled for one message.
+- Keep the selected connection and model visible before memory is transmitted.
+- Preview the exact bounded snippets when practical and expose the sources
+  used after generation.
+- Continue executing Firestore reads inside the authenticated Nexecute client.
+  Never give a model provider Firebase credentials, Firebase user tokens, a
+  service account, unrestricted collection access, or raw document paths.
+- Send only the fields and snippets needed for the current question. Keep
+  unrelated entries, tags, internal metadata, and the complete memory library
+  out of the provider request.
+- Keep lexical indexes, embeddings, and vector databases local first. Define
+  explicit consent, deletion, retention, cost, and re-indexing behavior before
+  synchronizing derived indexes or sending them to another service.
+- Keep the memory format provider-neutral so switching between Ollama, a
+  private gateway, OpenAI, Anthropic, or another future adapter does not change
+  or lose the user's records.
+- Include permanent memory in the future documented export and restore format.
+
+#### Delivery plan
+
+##### Phase 1: contract and storage without AI
+
+- [ ] Define memory terminology, size limits, source precedence, conflict
+  behavior, space-level authorization, and the meaning of permanent deletion.
+- [ ] Add provider-neutral `MemorySpace` and `MemoryEntry` domain types,
+  repository interfaces, Firestore mappers, schema migrations, and
+  user-specific security-rule coverage.
+- [ ] Build memory-space and entry CRUD, archive/trash behavior, and a
+  text-first editor without making an AI endpoint a dependency.
+- [ ] Verify Firestore offline behavior and cross-device synchronization before
+  connecting memory to the assistant.
+
+##### Phase 2: deterministic local retrieval
+
+- [ ] Define a provider-neutral `MemoryRetrievalService` returning bounded
+  snippets and trusted application-local source mappings.
+- [ ] Add deterministic chunking and ranked lexical matching over titles,
+  bodies, tags, space names, and optional occurrence dates.
+- [ ] Set explicit query, entry, chunk, result-count, and complete-payload
+  limits before exposing retrieval to AI code.
+- [ ] Ensure edits, moves, archive/trash operations, and deletions cannot leave
+  stale index results.
+- [ ] Verify exact fact lookup, longer torque/reference documents, ambiguous
+  spaces, conflicting records, and missing results without contacting a model.
+
+##### Phase 3: bounded Assistant integration
+
+- [ ] Extend the provider-neutral application-context contract with versioned
+  memory-search results and opaque source references.
+- [ ] Add narrow `searchMemory` and `getMemoryEntry` read tools through the
+  existing application read service and tool coordinator rather than granting
+  a model direct storage access.
+- [ ] Convert the user's durable memory preference into a fresh, bounded
+  request authorization for each Assistant message.
+- [ ] Prefetch relevant memory for chat-only models and let confirmed
+  tool-capable models refine searches within the same authorized spaces and
+  limits.
+- [ ] Add memory-active, retrieval-preview, source, no-result, conflict, and
+  failure states to the Assistant interface.
+- [ ] Keep retrieved snippets, tool calls, and tool results out of synchronized
+  conversation history; persist only ordinary user and final assistant
+  messages under the existing conversation policy.
+
+##### Phase 4: trust and quality verification
+
+- [ ] Add deterministic Finnish and English cases for service history,
+  tightening torques, paraphrased questions, long entries, ambiguous subjects,
+  conflicting facts, missing facts, and irrelevant matches.
+- [ ] Test prompt injection embedded in memory, malformed or excessive tool
+  calls, unauthorized spaces, stale entries, and fabricated citations.
+- [ ] Add wire-level assertions proving that disabled or unrelated memory,
+  Firestore paths, credentials, application IDs, and complete-library dumps do
+  not reach the provider.
+- [ ] Verify the workflow with both a real chat-only model and a confirmed
+  tool-capable model before enabling permanent retrieval by default for an
+  opted-in user.
+
+##### Phase 5: local semantic retrieval
+
+- [ ] Select a replaceable local embedding provider only after the lexical
+  retrieval contract and evaluation baseline are stable.
+- [ ] Version embeddings by model, chunking contract, and source revision so
+  incompatible or stale vectors are deterministically rebuilt.
+- [ ] Define per-device storage, battery, background work, deletion, and full
+  re-index behavior before selecting a vector database.
+- [ ] Combine lexical and semantic candidates behind `MemoryRetrievalService`
+  without changing the model-facing context contract.
+- [ ] Measure semantic retrieval against the deterministic baseline and retain
+  lexical fallback when an embedding model or index is unavailable.
+
+##### Later memory capabilities
+
+- [ ] Add an explicit "Remember this" flow that produces an editable proposal
+  and requires confirmation before writing through the memory repository.
+- [ ] Consider structured maintenance records and specifications only after
+  text entries are reliable; preserve the original source text alongside any
+  extracted fields.
+- [ ] Add user-reviewed supersession or replacement of outdated facts rather
+  than letting the model silently overwrite existing entries.
+- [ ] Consider imports from Markdown, manuals, and other documents after text
+  entry limits, chunking, provenance, and deletion semantics are established.
+- [ ] Defer automatic fact extraction from conversations and background
+  profiling until explicit capture, privacy, and correction workflows are
+  proven.
+
+#### Permanent-memory acceptance criteria
+
+- A stored oil-change fact survives restart, offline use, and cross-device
+  synchronization and answers with the recorded date and mileage.
+- A question about front-axle torque returns the exact stored value and a
+  visible source entry.
+- The same memory library works when the active AI connection or model changes.
+- A chat-only model and a tool-capable model can both use bounded memory.
+- Disabling permanent memory or an individual space prevents its content from
+  reaching the provider.
+- Editing, archiving, trashing, or deleting an entry changes subsequent
+  retrieval immediately and leaves no stale result.
+- Conflicting entries are surfaced with their sources and dates rather than
+  resolved by guessing.
+- Missing information is reported as absent from memory, and safety-critical
+  values are not invented.
+- Memory content cannot override system instructions, authorization, tool
+  limits, or application write confirmation.
+- No provider receives Firebase credentials, raw document paths, unrestricted
+  database access, unrelated records, or the complete memory library.
+- Calendar, Tasks, Notes, memory CRUD, and ordinary search remain usable when
+  every AI endpoint and embedding provider is unavailable.
+
 ### Today dashboard and universal quick capture
 
 **Status:** Deferred
