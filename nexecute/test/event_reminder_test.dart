@@ -2,6 +2,10 @@ import 'package:nexecute/models/event_reminder.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('defaults new events to a reminder fifteen minutes before', () {
+    expect(defaultEventReminder, EventReminder.fifteenMinutesBefore);
+  });
+
   test('calculates the reminder time from the event start', () {
     final start = DateTime(2026, 9, 1, 10);
 

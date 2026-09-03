@@ -64,6 +64,10 @@ void main() {
         'The note gives a specific date and time range.',
       );
       expect(controller.reviewDraft?.title, 'Dentist');
+      expect(
+        controller.reviewDraft?.reminder,
+        EventReminder.fifteenMinutesBefore,
+      );
       expect(controller.canContinue, isTrue);
       final request = repository.startedRequests.single;
       expect(request.conversationId, 'note-event-extraction:note-1');

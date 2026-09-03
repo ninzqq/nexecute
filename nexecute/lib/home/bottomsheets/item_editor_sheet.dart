@@ -51,7 +51,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
   DateTime _startTime = DateTime.now();
   DateTime _endTime = DateTime.now().add(const Duration(hours: 1));
   bool _isAllDay = false;
-  EventReminder _eventReminder = EventReminder.none;
+  EventReminder _eventReminder = defaultEventReminder;
   EventRecurrence _eventRecurrence = EventRecurrence.none;
   DateTime? _selectedDate;
   ItemType _type = ItemType.quicxec;

@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/event.dart';
+import 'package:nexecute/models/event_reminder.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/domain/calendar/calendar_query_range.dart';
 import 'package:nexecute/repositories/event_repository.dart';
@@ -28,6 +29,7 @@ void main() {
     expect(events.addedEvent?.title, 'Planning');
     expect(events.addedEvent?.description, 'Prepare the release');
     expect(events.addedEvent?.tags, const ['Work']);
+    expect(events.addedEvent?.reminder, EventReminder.fifteenMinutesBefore);
     expect(notes.deletedNote, same(note));
   });
 

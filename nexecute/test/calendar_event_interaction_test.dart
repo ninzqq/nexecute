@@ -106,6 +106,7 @@ void main() {
       startTime: DateTime(now.year, now.month, now.day, 9),
       endTime: DateTime(now.year, now.month, now.day, 10),
       tags: const ['Work'],
+      reminder: EventReminder.none,
       recurrence: EventRecurrence.yearly,
       recurrenceSeriesStartTime: DateTime(now.year - 1, now.month, now.day, 9),
       recurrenceSeriesEndTime: DateTime(now.year - 1, now.month, now.day, 10),

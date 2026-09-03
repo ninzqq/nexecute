@@ -38,7 +38,7 @@ class AiEventProposalReviewDraft {
     required this.endTime,
     required this.isAllDay,
     this.tags = const [],
-    this.reminder = EventReminder.none,
+    this.reminder = defaultEventReminder,
   });
 
   final String title;

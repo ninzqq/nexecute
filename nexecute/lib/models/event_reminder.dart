@@ -29,3 +29,5 @@ enum EventReminder {
     );
   }
 }
+
+const defaultEventReminder = EventReminder.fifteenMinutesBefore;

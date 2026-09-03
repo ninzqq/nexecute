@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/home/bottomsheets/item_editor.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/event.dart';
+import 'package:nexecute/models/event_reminder.dart';
 import 'package:nexecute/models/note_folder.dart';
 import 'package:nexecute/models/tag.dart' as models;
 import 'package:nexecute/repositories/event_repository.dart';
@@ -84,6 +85,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repository.addedEvent?.title, 'Keyboard-safe event');
+    expect(repository.addedEvent?.reminder, EventReminder.fifteenMinutesBefore);
     expect(find.text('Save'), findsNothing);
   });
 }

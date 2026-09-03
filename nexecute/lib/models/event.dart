@@ -22,7 +22,7 @@ class Event {
     required this.endTime,
     this.isAllDay = false,
     this.tags = const [],
-    this.reminder = EventReminder.none,
+    this.reminder = defaultEventReminder,
     this.recurrence = EventRecurrence.none,
     this.recurrenceSeriesStartTime,
     this.recurrenceSeriesEndTime,
