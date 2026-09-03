@@ -62,7 +62,7 @@ abstract final class AppThemes {
         isCyberpunk ? palette.secondary : palette.primary;
     final navigationIndicator = switch (preset) {
       AppThemePreset.cyberpunk => const Color(0xFF102A35),
-      AppThemePreset.cyberpunkMega => const Color(0xFF21102D),
+      AppThemePreset.cyberpunkMega => const Color(0xFF281538),
       _ => palette.primary.withValues(alpha: 0.18),
     };
     final desktopPlatform = switch (defaultTargetPlatform) {
@@ -283,16 +283,16 @@ abstract final class AppThemes {
       success: Color(0xFF55F991),
     ),
     AppThemePreset.cyberpunkMega => const AppPalette(
-      background: Color(0xFF05070C),
-      surface: Color(0xFF0D0C14),
-      surfaceRaised: Color(0xFF111821),
-      chrome: Color(0xFF100E18),
+      background: Color(0xFF080A10),
+      surface: Color(0xFF12101A),
+      surfaceRaised: Color(0xFF17202A),
+      chrome: Color(0xFF15121F),
       primary: Color(0xFF00D7E5),
       onPrimary: Color(0xFF001E21),
       secondary: Color(0xFFD83ADB),
       tertiary: Color(0xFF7928CA),
       onSurface: Color(0xFF00D7E5),
-      outline: Color(0xFF7226A8),
+      outline: Color(0xFF7F2EB8),
       success: Color(0xFF56D47B),
     ),
     AppThemePreset.midnight => const AppPalette(
