@@ -1084,7 +1084,193 @@ and immutable model version or digest are supplied to the quality runner.
   target selection, current-version checks, conflict handling, and a final
   confirmation showing the exact before-and-after values.
 
-#### Step 11: semantic-search design and prototype
+#### Step 11: user-defined prompt skills
+
+Let users create, import, manage, and selectively activate reusable instruction
+sets independently from AI connection profiles. The first version is deliberately
+prompt-only: a skill may influence how the assistant reasons about and formats a
+response, but it cannot provide executable code, implement tools, grant itself
+access to application data, or write through an application repository.
+
+Use three distinct lifecycle terms throughout the implementation and interface:
+
+- **Installed** means that the complete skill is stored in Nexecute.
+- **Enabled** means that the skill is available for selection.
+- **Active** means that its complete instructions are included in the current
+  request. Inactive skill bodies must never be added to the model context merely
+  because they are installed or enabled.
+
+This separation must allow a user to accumulate hundreds of locally stored
+skills without increasing the token cost of ordinary requests. Usually one
+primary skill and at most a few compatible supporting skills should be active.
+
+##### Step 11A: skill contract and trust boundary
+
+- [ ] Add a versioned, provider-neutral `AiSkill` domain model containing an ID,
+  name, description, instruction body, enabled state, output mode, creation and
+  update timestamps, and an immutable revision or content hash.
+- [ ] Keep skills independent from connection profiles so the same skill can be
+  used with any compatible endpoint and model.
+- [ ] Support text output only in version 1. Reserve versioned fields for later
+  app-owned tool and structured-output identifiers without accepting arbitrary
+  schemas, executors, scripts, network requests, or filesystem access.
+- [ ] Define conservative validation for UTF-8 input, identifiers, names,
+  descriptions, frontmatter fields, and instruction size. Permit at least 16,000
+  instruction characters so an approximately 11,000-character Finnish language
+  skill can be imported intact.
+- [ ] Treat imported skill instructions as user-authored configuration that may
+  refine assistant behavior but can never remove or supersede immutable Nexecute
+  policies, request-scoped data authorization, output validation, or confirmed
+  write requirements.
+- [ ] Warn users not to place credentials or secrets in skills. Never copy a
+  skill body into diagnostics, analytics, logs, or conversation messages.
+
+Suggested version 1 `SKILL.md` representation:
+
+```markdown
+---
+schemaVersion: 1
+id: suomen-kieli
+name: Suomen kieli
+description: Suomenkielisen tekstin tuottaminen ja tarkistaminen.
+outputMode: text
+---
+
+Skill instructions begin here.
+```
+
+Also accept a body-only Markdown file by asking the user for the missing name
+and description during import. Do not interpret links, Markdown includes, paths,
+or code blocks as dependencies or executable content.
+
+##### Step 11B: local storage and import/export
+
+- [ ] Add an `AiSkillStore` interface and a local implementation designed for
+  many multi-kilobyte documents. Do not store the complete catalog as one large
+  shared-preferences value; keep a small searchable metadata index separate from
+  bounded skill bodies and use atomic replacement for edits and imports.
+- [ ] Register the store as an optional AI dependency so corrupt or unavailable
+  skill storage cannot prevent Calendar, Tasks, Notes, or ordinary AI chat from
+  starting.
+- [ ] Add versioned decoding and migration, duplicate-ID conflict handling,
+  deterministic filename normalization, and protection against path traversal,
+  symbolic-link traversal, and oversized imports.
+- [ ] Keep skills local in the first release, matching connection-profile
+  privacy. Provide explicit `SKILL.md` import and export before considering a
+  synchronized Firestore collection, security rules, conflict resolution, and
+  cross-device active-skill semantics.
+- [ ] Load and search skill metadata without loading every instruction body into
+  memory. Load the complete body only for viewing, editing, exporting, or request
+  activation.
+
+##### Step 11C: prompt composition and request semantics
+
+- [ ] Introduce one `AiPromptComposer` used by ordinary chat requests. Compose
+  instructions in deterministic precedence order: immutable Nexecute policy,
+  profile-level preferences, active skill instructions, and trusted
+  request-specific workflow constraints.
+- [ ] Stop using the editable connection-profile prompt as the only system-level
+  safety instruction. Preserve backward compatibility by treating existing
+  profile prompts as user preferences beneath the immutable policy.
+- [ ] Add immutable resolved skill invocations to `AiChatRequest`, including the
+  skill ID, display name, revision or hash, and validated instruction body.
+  Provider adapters should receive only the already composed instruction text.
+- [ ] Define active skills per conversation, with an explicit option to apply a
+  change only to the next request. Persist only the minimal skill IDs and
+  revisions needed for interface continuity; never persist instruction bodies
+  in Firestore conversation messages or tool transcripts.
+- [ ] Specify recovery when a synchronized conversation refers to a local skill
+  that is missing or has changed on the current device. Show the mismatch and
+  require an explicit replacement, import, or skill-free continuation rather
+  than silently using different instructions.
+- [ ] Keep dedicated Note-to-Task, Note-to-Event, and later structured workflows
+  on their fixed prompts unless each workflow explicitly defines how a skill can
+  participate without weakening its schema and confirmation contract.
+
+##### Step 11D: management and activation interface
+
+- [ ] Add a Skills area under AI Settings with create, import, inspect, edit,
+  duplicate, enable/disable, export, and delete actions.
+- [ ] Show validation and conflict errors before saving. For a body-only import,
+  collect the required metadata without modifying the original instruction body.
+- [ ] Add an assistant skill picker and persistent active-skill chips near the
+  composer. Make the exact active set visible before every request and allow
+  individual skills or the complete set to be deactivated quickly.
+- [ ] Support an optional default-active set, subject to the same prompt budget
+  and conflict checks, but never make newly imported skills active automatically.
+- [ ] Preview the composed instruction sources and their order without including
+  credentials, attached application data, or hidden provider payloads.
+- [ ] Clearly distinguish an unavailable skill from a disabled or inactive one
+  and preserve ordinary chat when skill loading fails.
+
+##### Step 11E: context budgeting and conflict handling
+
+- [ ] Add provider-neutral request-budget accounting before allowing multiple
+  active skills. Reserve space for the model output, conversation history,
+  attached context, tool continuations, and fixed policy before allocating space
+  to skill instructions.
+- [ ] Add an explicit context-window setting when a trustworthy model-reported
+  value is unavailable. Use a conservative fallback for unconfigured models and
+  never silently exceed, truncate, or discard an active skill.
+- [ ] Enforce both a per-skill character limit and a combined active-instruction
+  budget. Block sending with actionable guidance when the active set cannot fit.
+- [ ] Send no inactive skill bodies and avoid sending even the complete skill
+  catalog to the model. Initial selection and catalog search should remain local
+  and deterministic rather than relying on model-selected automatic activation.
+- [ ] Add optional skill categories such as language, domain, workflow, and
+  output style. Warn about multiple active skills in a mutually exclusive
+  category and show their deterministic precedence rather than guessing which
+  instruction should win.
+- [ ] Define a bounded conversation-history policy so a long conversation does
+  not eventually crowd out fixed policy and active skills. Make any omission or
+  local summary visible instead of silently changing request semantics.
+
+##### Step 11F: later tool-aware skills
+
+- [ ] After prompt-only skills are reliable, allow a skill to reference only
+  stable, app-owned capability identifiers registered by Nexecute. A skill file
+  must never define a tool executor or arbitrary JSON-to-repository binding.
+- [ ] Generalize the existing read-tool catalog and coordinator into a registry
+  whose definitions, validators, executors, limits, and authorization predicates
+  remain application code.
+- [ ] Compute effective tool access as the intersection of the skill allow-list,
+  confirmed model capability, explicit per-request user authorization, and
+  installed application capability. A skill declaration is never authorization.
+- [ ] Preserve bounded reads, opaque record references, execution timeouts,
+  continuation limits, cancellation, and persistence exclusion for every
+  skill-assisted tool session.
+- [ ] Keep writes outside the skill runtime. Skills may opt into an existing
+  app-owned proposal workflow only when its strict parser, editable review,
+  explicit confirmation, and idempotent command path already exist.
+
+##### Step 11G: verification and rollout
+
+- [ ] Add domain, codec, migration, store-contract, and import/export tests for
+  valid, body-only, malformed, duplicate, unsupported-version, path-traversal,
+  and oversized skill files.
+- [ ] Test prompt precedence, exact wire serialization, multiple active skills,
+  deterministic ordering, missing revisions, context-budget boundaries, and
+  the exclusion of inactive skill bodies.
+- [ ] Add controller and widget coverage for management, activation, default
+  activation, failed loading, conflict warnings, budget errors, all themes, and
+  narrow phone layouts.
+- [ ] Verify that skill bodies, attached application data, tool transcripts,
+  endpoint credentials, and provider reasoning do not enter unintended local or
+  Firestore persistence paths.
+- [ ] Extend the quality suite with a representative long Finnish-language
+  skill, conflicting style skills, adversarial imported instructions, chat-only
+  models, and tool-capability fallback.
+- [ ] Validate the feature against the owner's real Ollama model with one large
+  language skill and several smaller compatible skills before enabling multiple
+  active skills by default.
+
+Acceptance requires that users can accumulate a large local catalog without
+increasing ordinary request size, import and activate the Finnish-language
+example intact, see exactly which skills affect a request, and recover cleanly
+from conflicts or context limits. Calendar, Tasks, Notes, and skill-free AI chat
+must remain usable when skill storage or an imported file is unavailable.
+
+#### Step 12: semantic-search design and prototype
 
 - [ ] Decide whether every device builds its own local embedding index or
   whether versioned embeddings synchronize across devices.
@@ -1095,7 +1281,7 @@ and immutable model version or digest are supplied to the quality runner.
 - [ ] Prototype semantic note search only after ordinary search, chat, and
   confirmed structured actions are reliable.
 
-#### Step 12: native hosted-provider BYOK
+#### Step 13: native hosted-provider BYOK
 
 - [ ] Add platform secure storage for native OpenAI and Anthropic credentials;
   keep only opaque credential references in connection profiles.
@@ -1111,7 +1297,7 @@ and immutable model version or digest are supplied to the quality runner.
   authoritative billing information.
 - [ ] Disable direct hosted-provider credentials on Flutter Web.
 
-#### Step 13: optional user-owned gateway for web
+#### Step 14: optional user-owned gateway for web
 
 - [ ] Provide a separately deployable personal gateway template rather than a
   central Nexecute provider key.
