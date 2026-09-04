@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
+import 'package:nexecute/shared/app_brand_icon.dart';
 
 enum AppLayoutClass { compact, medium, expanded }
 
@@ -231,27 +232,10 @@ class AdaptiveNavigationShell extends StatelessWidget {
       automaticallyImplyLeading: false,
       leadingWidth: persistentMenuWidth,
       leading: Align(
-        alignment: Alignment.centerLeft,
+        alignment: compact ? Alignment.center : Alignment.centerLeft,
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 20),
-          child:
-              compact
-                  ? FittedBox(
-                    key: const Key('medium-app-title-fitted-box'),
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Nexecute',
-                      maxLines: 1,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                  )
-                  : Text(
-                    'Nexecute',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
+          padding: EdgeInsets.symmetric(horizontal: compact ? 0 : 20),
+          child: const NexecuteAppIcon(key: Key('app-shell-icon'), size: 50),
         ),
       ),
       titleSpacing: 16,

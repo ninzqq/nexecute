@@ -16,6 +16,7 @@ import 'package:nexecute/models/tag.dart' as models;
 import 'package:nexecute/models/todo_item.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/shared/adaptive_navigation_shell.dart';
+import 'package:nexecute/shared/app_brand_icon.dart';
 import 'package:nexecute/shared/app_shortcuts.dart';
 import 'package:nexecute/shared/drawer.dart';
 import 'package:nexecute/services/auth.dart';
@@ -65,7 +66,8 @@ void main() {
       await tester.tap(find.byTooltip('Open navigation menu'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Nexecute'), findsOneWidget);
+      expect(find.text('Nexecute'), findsNothing);
+      expect(find.byKey(const Key('app-drawer-icon')), findsOneWidget);
       expect(find.text('Profile'), findsOneWidget);
       expect(find.text('Search'), findsOneWidget);
 
@@ -129,10 +131,20 @@ void main() {
       ];
       expect(itemTops, orderedEquals([...itemTops]..sort()));
 
-      expect(find.text('Nexecute'), findsOneWidget);
+      expect(find.text('Nexecute'), findsNothing);
+      final appIcon = tester.widget<Image>(
+        find.descendant(
+          of: find.byKey(const Key('app-shell-icon')),
+          matching: find.byType(Image),
+        ),
+      );
       expect(
-        find.byKey(const Key('medium-app-title-fitted-box')),
-        findsOneWidget,
+        appIcon.image,
+        isA<AssetImage>().having(
+          (image) => image.assetName,
+          'asset name',
+          NexecuteAppIcon.assetName,
+        ),
       );
 
       await tester.tap(find.byKey(const ValueKey('desktop-destination-0')));
@@ -188,6 +200,8 @@ void main() {
     );
     expect(find.byType(FloatingActionButton), findsNothing);
     expect(find.byTooltip('Open navigation menu'), findsNothing);
+    expect(find.text('Nexecute'), findsNothing);
+    expect(find.byKey(const Key('app-shell-icon')), findsOneWidget);
     expect(find.text('Profile'), findsOneWidget);
     expect(find.text('Search'), findsOneWidget);
     expect(find.text('Assistant'), findsOneWidget);

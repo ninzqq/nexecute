@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/shared/adaptive_navigation_shell.dart';
+import 'package:nexecute/shared/app_brand_icon.dart';
 import 'package:nexecute/shared/app_shortcuts.dart';
 import 'package:nexecute/themes.dart';
 
@@ -453,14 +454,11 @@ class MainMenuContent extends StatelessWidget {
     return Column(
       children: [
         if (showHeader)
-          Align(
+          const Align(
             alignment: Alignment.centerLeft,
             child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Text(
-                'Nexecute',
-                style: Theme.of(context).textTheme.displayLarge,
-              ),
+              padding: EdgeInsets.all(20),
+              child: NexecuteAppIcon(key: Key('app-drawer-icon'), size: 72),
             ),
           ),
         Expanded(
