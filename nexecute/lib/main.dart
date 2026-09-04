@@ -179,6 +179,15 @@ class NexecuteState extends State<Nexecute> {
           create: (_) => SharedPreferencesAiConnectionProfileStore(),
           dispose: (_, store) => store.dispose(),
         ),
+        Provider<AiSkillStore>(
+          create: (_) => createLocalAiSkillStore(),
+          dispose: (_, store) => store.dispose(),
+        ),
+        Provider<AiSkillTransferService>(
+          create:
+              (context) =>
+                  AiSkillTransferService(store: context.read<AiSkillStore>()),
+        ),
         Provider<AiConversationStore>(
           create:
               (context) => FirestoreAiConversationStore(

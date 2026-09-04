@@ -37,6 +37,7 @@ enum AiSkillValidationErrorCode {
   invalidName,
   invalidDescription,
   invalidInstructions,
+  invalidContentHash,
   invalidTimestamp,
 }
 
@@ -154,6 +155,93 @@ final class AiSkill {
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
+}
+
+/// Searchable local state that can be loaded without reading a skill body.
+final class AiSkillMetadata {
+  factory AiSkillMetadata({
+    int schemaVersion = aiSkillSchemaVersion,
+    required String id,
+    required String name,
+    required String description,
+    required bool isEnabled,
+    required AiSkillOutputMode outputMode,
+    required String contentHash,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+  }) {
+    _validateSchemaVersion(schemaVersion);
+    _validateId(id);
+    _validateSingleLineText(
+      name,
+      fieldName: 'name',
+      maximumCharacters: aiMaxSkillNameCharacters,
+      errorCode: AiSkillValidationErrorCode.invalidName,
+    );
+    _validateSingleLineText(
+      description,
+      fieldName: 'description',
+      maximumCharacters: aiMaxSkillDescriptionCharacters,
+      errorCode: AiSkillValidationErrorCode.invalidDescription,
+    );
+    if (!RegExp(r'^[a-f0-9]{64}$').hasMatch(contentHash)) {
+      throw const AiSkillValidationException(
+        AiSkillValidationErrorCode.invalidContentHash,
+        'Skill contentHash must be a lowercase SHA-256 digest.',
+      );
+    }
+    if (updatedAt.isBefore(createdAt)) {
+      throw const AiSkillValidationException(
+        AiSkillValidationErrorCode.invalidTimestamp,
+        'Skill updatedAt must not be before createdAt.',
+      );
+    }
+    return AiSkillMetadata._(
+      schemaVersion: schemaVersion,
+      id: id,
+      name: name,
+      description: description,
+      isEnabled: isEnabled,
+      outputMode: outputMode,
+      contentHash: contentHash,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
+
+  factory AiSkillMetadata.fromSkill(AiSkill skill) => AiSkillMetadata(
+    schemaVersion: skill.schemaVersion,
+    id: skill.id,
+    name: skill.name,
+    description: skill.description,
+    isEnabled: skill.isEnabled,
+    outputMode: skill.outputMode,
+    contentHash: skill.contentHash,
+    createdAt: skill.createdAt,
+    updatedAt: skill.updatedAt,
+  );
+
+  const AiSkillMetadata._({
+    required this.schemaVersion,
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.isEnabled,
+    required this.outputMode,
+    required this.contentHash,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final int schemaVersion;
+  final String id;
+  final String name;
+  final String description;
+  final bool isEnabled;
+  final AiSkillOutputMode outputMode;
+  final String contentHash;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 }
 
 void _validateSchemaVersion(int value) {

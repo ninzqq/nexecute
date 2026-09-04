@@ -61,6 +61,34 @@ void main() {
     );
   });
 
+  test('metadata is validated without retaining the instruction body', () {
+    final value = skill();
+    final metadata = AiSkillMetadata.fromSkill(value);
+
+    expect(metadata.id, value.id);
+    expect(metadata.contentHash, value.contentHash);
+    expect(metadata.isEnabled, value.isEnabled);
+    expect(
+      () => AiSkillMetadata(
+        id: value.id,
+        name: value.name,
+        description: value.description,
+        isEnabled: value.isEnabled,
+        outputMode: value.outputMode,
+        contentHash: 'invalid',
+        createdAt: value.createdAt,
+        updatedAt: value.updatedAt,
+      ),
+      throwsA(
+        isA<AiSkillValidationException>().having(
+          (error) => error.code,
+          'code',
+          AiSkillValidationErrorCode.invalidContentHash,
+        ),
+      ),
+    );
+  });
+
   test('accepts a Finnish instruction body up to 16000 characters', () {
     final value = skill(
       instructions: List.filled(aiMaxSkillInstructionCharacters, 'ä').join(),

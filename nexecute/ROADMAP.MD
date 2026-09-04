@@ -1118,7 +1118,7 @@ primary skill and at most a few compatible supporting skills should be active.
   descriptions, timestamps, and instruction size. Permit at least 16,000
   instruction characters so an approximately 11,000-character Finnish language
   skill can be represented intact.
-- [ ] Apply the contract to UTF-8 `SKILL.md` decoding and reject unknown or
+- [x] Apply the contract to UTF-8 `SKILL.md` decoding and reject unknown or
   malformed frontmatter fields during import.
 - [ ] Treat imported skill instructions as user-authored configuration that may
   refine assistant behavior but can never remove or supersede immutable Nexecute
@@ -1147,23 +1147,32 @@ or code blocks as dependencies or executable content.
 
 ##### Step 11B: local storage and import/export
 
-- [ ] Add an `AiSkillStore` interface and a local implementation designed for
+- [x] Add an `AiSkillStore` interface and a local implementation designed for
   many multi-kilobyte documents. Do not store the complete catalog as one large
   shared-preferences value; keep a small searchable metadata index separate from
   bounded skill bodies and use atomic replacement for edits and imports.
-- [ ] Register the store as an optional AI dependency so corrupt or unavailable
+- [x] Register the store as an optional AI dependency so corrupt or unavailable
   skill storage cannot prevent Calendar, Tasks, Notes, or ordinary AI chat from
   starting.
-- [ ] Add versioned decoding and migration, duplicate-ID conflict handling,
+- [x] Add strict versioned decoding, duplicate-ID conflict handling,
   deterministic filename normalization, and protection against path traversal,
   symbolic-link traversal, and oversized imports.
-- [ ] Keep skills local in the first release, matching connection-profile
+- [ ] Add an ordered metadata-index migration when the first persisted schema
+  change is introduced; version 1 has no legacy index to migrate.
+- [x] Keep skills local in the first release, matching connection-profile
   privacy. Provide explicit `SKILL.md` import and export before considering a
   synchronized Firestore collection, security rules, conflict resolution, and
   cross-device active-skill semantics.
-- [ ] Load and search skill metadata without loading every instruction body into
+- [x] Load and search skill metadata without loading every instruction body into
   memory. Load the complete body only for viewing, editing, exporting, or request
   activation.
+
+The version 1 local store uses an atomically replaced JSON metadata index and
+separate immutable Markdown bodies addressed by skill ID and content hash. A
+body is read only when one skill is requested, and its reconstructed hash must
+match the index before it is returned. Full-frontmatter and body-only
+`SKILL.md` documents can be decoded and exported through the same bounded codec;
+the management interface and platform file picker remain Step 11D work.
 
 ##### Step 11C: prompt composition and request semantics
 
