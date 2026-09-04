@@ -1513,6 +1513,164 @@ removed application-wide live event-history stream.
 
 These improvements should be considered before or alongside larger features.
 
+### Firestore read scalability and local-cache plan
+
+The current Firestore usage does not indicate that queries are being created
+from ordinary widget `build` methods. Repository streams are owned by Provider,
+and Calendar creates its stream outside `build`. The larger scaling risk is the
+scope and lifetime of the queries: Notes and Tasks currently subscribe to their
+complete collections, Calendar is mounted even when another primary tab is
+visible, and a visited desktop Assistant remains subscribed to its conversation
+list and current conversation while hidden.
+
+Firestore's native persistent cache is already enabled by default on Android
+and Apple platforms. It improves offline and warm-start behavior, but it is not
+a substitute for bounded queries: each device has its own cache, and a listener
+that has been disconnected long enough can be billed as a new query. Web
+persistence must be enabled separately and only on a trusted-device basis.
+
+The approximate current cold-session read shape is:
+
+```text
+all notes
++ all tasks
++ all note folders
++ visible-range events
++ all recurring event series
++ tags when first consumed
++ all AI conversation summaries when Assistant is opened
++ all messages in the latest conversation
+```
+
+This explains why repeated launches across several devices can produce read
+bursts proportional to the user's stored document count without requiring a
+listener leak. After a listener's initial result, ordinary real-time updates
+normally read only changed matching documents; cold synchronization, broad
+queries, duplicate subscriptions, and long-lived hidden screens are the main
+targets. The Firestore 50,000 daily read figure is a no-cost allowance rather
+than a technical database ceiling, but Nexecute should not make each session's
+cost grow with the user's complete history.
+
+#### Step 1: establish a reproducible read baseline
+
+- [ ] Add debug-only diagnostics for repository/query name, listener attach and
+  detach, active-listener count, initial result size, cache/server metadata, and
+  added, modified, and removed document counts. Never log document content,
+  credentials, private URLs, or other user data.
+- [ ] Measure fresh install, warm relaunch, relaunch after a long disconnect,
+  navigation between every primary destination, first Assistant visit, repeated
+  search terms, and synchronization between three devices.
+- [ ] Keep Firebase Console collection browsing out of measurement windows
+  because console activity can contribute reads.
+- [ ] Record baselines for small realistic data and generated large fixtures so
+  later changes can be compared against the same workload.
+
+#### Step 2: remove unnecessary and duplicate subscriptions
+
+- [ ] Instantiate only the selected primary tab at startup. Preserve necessary
+  view state separately so Calendar and Tasks do not need live listeners merely
+  to keep their UI positions available.
+- [ ] Dispose or suspend expensive screen-owned listeners while their screen is
+  inactive. In particular, a desktop Assistant that has been visited must not
+  keep its conversation and message listeners active indefinitely while hidden.
+- [ ] Give launcher-widget reconciliation a dedicated current-week event query
+  instead of relying on the larger visible Calendar query being permanently
+  mounted.
+- [ ] Introduce a session-scoped application-data snapshot/cache so Assistant
+  attachments and read tools reuse already-loaded Notes and Tasks rather than
+  opening fresh repository subscriptions for each request.
+- [ ] Reuse identical active queries through one owned subscription and replay
+  their latest typed `DataState` to consumers.
+- [ ] Avoid reading the complete event collection for every settled search term.
+  At minimum, load it no more than once per search session, cache repeated
+  queries, and require an intentional or sufficiently stable search input.
+
+Target: launching into Notes performs no Task, Calendar, AI-conversation, or
+AI-message reads, and hidden screens have no expensive active listeners.
+
+#### Step 3: bound every collection that grows with history
+
+- [ ] Replace `watchNotes()` as the universal complete-library stream with
+  location-aware queries for Quick Notes, a folder, All Notes, and Archive.
+  Filter by `trashed` and `folderId`, order by `updatedAt`, apply a fixed page
+  size, and load further pages with cursors rather than offsets.
+- [ ] Replace the combined active/completed Task stream with a bounded active
+  Task listener. Load completed Tasks only when requested and paginate their
+  history.
+- [ ] Limit the live AI conversation-summary query to the newest page and add
+  cursor pagination for older conversations.
+- [ ] Limit an active conversation to its newest message page and load older
+  messages when the user scrolls upward. Avoid listening to the same active
+  conversation metadata through both the summary list and a second document
+  listener where one source can safely be reused.
+- [ ] Exclude recurring events from the ordinary overlap query on the server so
+  an in-range recurring series is not read by both Calendar queries and then
+  discarded client-side. Backfill or safely migrate legacy `isRecurring`
+  values before depending on the filter.
+- [ ] Add a bounded lifetime/status strategy for recurring series so obsolete
+  series do not remain in the recurring query forever.
+- [ ] Load exact folder and location counts on demand through cached aggregation
+  queries, or remove exact always-live counts, rather than loading note bodies
+  merely to count them.
+- [ ] Add and deploy the composite indexes required by the bounded Note, Task,
+  Calendar, and pagination queries before switching production code to them.
+
+Target: a cold screen load is proportional to its page size and current working
+set, not to all documents the user has created over the lifetime of the account.
+
+#### Step 4: optional future local search/index layer
+
+Only consider this step if measurements show that bounded Firestore queries and
+native persistence are insufficient, or if complete offline full-text search
+across thousands of records becomes a firm product requirement.
+
+- [ ] Evaluate a small SQLite/Drift full-text index for Notes, Tasks, and Events;
+  do not add another local database solely because Firestore has a free-tier
+  allowance.
+- [ ] If adopted, define an initial paginated bootstrap followed by incremental
+  synchronization using stable per-user cursors.
+- [ ] Introduce tombstones or an equivalent change log before relying on delta
+  synchronization, so deletions made on another device cannot be missed.
+- [ ] Specify conflict resolution, retry/outbox behavior, account switching,
+  sign-out data removal, schema migration, corruption recovery, and a forced
+  full-resynchronization path.
+- [ ] Keep Firestore authoritative and ensure the local index never exposes one
+  user's data to another authenticated account on a shared device.
+
+This is intentionally optional future work. Do not build a second synchronization
+engine unless the simpler query and lifecycle improvements have been measured
+and found inadequate.
+
+#### Step 5: verification and operating guardrails
+
+- [ ] Add repository and widget tests proving that rebuilds do not attach new
+  Firestore listeners, navigation releases inactive listeners, and Assistant
+  read tools reuse session data.
+- [ ] Add pagination contract tests covering stable ordering, equal timestamps,
+  deletions between pages, empty pages, offline cache results, and authentication
+  changes.
+- [ ] Exercise an account with at least 10,000 historical documents and confirm
+  that startup, navigation, memory use, and read counts remain bounded.
+- [ ] Verify that writes still occur only for explicit user mutations. Preserve
+  the intentional two-write AI-message operation (message plus conversation
+  `updatedAt`) unless evidence shows that the ordering write is a material cost.
+- [ ] Configure usage dashboards, budget alerts, and release comparison notes so
+  regressions are detected before public or invited-user growth.
+
+Acceptance criteria:
+
+- Cold launch into Notes reads only the first relevant Note page and lightweight
+  metadata needed by that screen.
+- Hidden screens have no expensive active listeners.
+- Opening Assistant reads at most one bounded conversation page and one bounded
+  message page.
+- Typing several search characters does not trigger several complete collection
+  reads.
+- Warm relaunches display cached state immediately and synchronize changes
+  without presentation-level duplicate listeners.
+- Read cost remains bounded as historical Notes, completed Tasks, Events, and AI
+  conversations grow.
+
 ### High priority
 
 - [x] ~~Split `FirestoreService` into injected repositories for events, notes,~~
