@@ -123,6 +123,12 @@ The reminder preference synchronizes through Firestore, while the scheduled
 alarm itself is local to the Android device where the event is created or
 edited. Cross-device reminder reconciliation can be added later if needed.
 
+Android treats event times as minute-precision user input. If an **At event
+time** reminder becomes due while the event is being saved, the notification
+is delivered immediately during that same displayed minute instead of being
+silently discarded as already past. Older past reminders remain discarded and
+recurring reminders retain their existing next-occurrence behavior.
+
 ## Calendar event recurrence
 
 **Status:** ✅ Completed

@@ -55,8 +55,10 @@ class AndroidEventReminderScheduler implements EventReminderScheduler {
   AndroidEventReminderScheduler._({
     required FlutterLocalNotificationsPlugin notifications,
     required tz.Location location,
+    required DateTime Function() now,
   }) : _notifications = notifications,
-       _location = location;
+       _location = location,
+       _now = now;
 
   static const _channelId = 'calendar_event_reminders';
   static const _channelName = 'Calendar event reminders';
@@ -65,8 +67,11 @@ class AndroidEventReminderScheduler implements EventReminderScheduler {
 
   final FlutterLocalNotificationsPlugin _notifications;
   final tz.Location _location;
+  final DateTime Function() _now;
 
-  static Future<AndroidEventReminderScheduler> initialize() async {
+  static Future<AndroidEventReminderScheduler> initialize({
+    DateTime Function()? now,
+  }) async {
     tz_data.initializeTimeZones();
     final timeZone = await FlutterTimezone.getLocalTimezone();
     final location = tz.getLocation(timeZone.identifier);
@@ -82,6 +87,7 @@ class AndroidEventReminderScheduler implements EventReminderScheduler {
     return AndroidEventReminderScheduler._(
       notifications: notifications,
       location: location,
+      now: now ?? DateTime.now,
     );
   }
 
@@ -133,6 +139,26 @@ class AndroidEventReminderScheduler implements EventReminderScheduler {
     }
   }
 
+  Future<EventReminderPermissionStatus> _requestNotificationPermission() async {
+    try {
+      final android =
+          _notifications
+              .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin
+              >();
+      if (android == null) return EventReminderPermissionStatus.unsupported;
+
+      final notificationsAllowed =
+          await android.areNotificationsEnabled() == true ||
+          await android.requestNotificationsPermission() == true;
+      return notificationsAllowed
+          ? EventReminderPermissionStatus.authorized
+          : EventReminderPermissionStatus.denied;
+    } catch (_) {
+      return EventReminderPermissionStatus.failed;
+    }
+  }
+
   @override
   Future<EventReminderScheduleStatus> schedule(Event event) async {
     try {
@@ -142,37 +168,49 @@ class AndroidEventReminderScheduler implements EventReminderScheduler {
       if (scheduledTime == null) {
         return EventReminderScheduleStatus.notRequested;
       }
-      if (!event.recurrence.repeats && !scheduledTime.isAfter(DateTime.now())) {
+      final now = _now();
+      final deliverImmediately =
+          !event.recurrence.repeats &&
+          event.reminder == EventReminder.atStart &&
+          !scheduledTime.isAfter(now) &&
+          _isSameLocalMinute(scheduledTime, now);
+      if (!event.recurrence.repeats &&
+          !scheduledTime.isAfter(now) &&
+          !deliverImmediately) {
         return EventReminderScheduleStatus.triggerInPast;
       }
 
-      final permissionStatus = await requestPermission();
+      final permissionStatus =
+          deliverImmediately
+              ? await _requestNotificationPermission()
+              : await requestPermission();
       final unavailableStatus = _scheduleStatusForPermission(permissionStatus);
       if (unavailableStatus != null) return unavailableStatus;
 
-      await _notifications.zonedSchedule(
-        id: eventReminderNotificationId(event.id),
-        title: event.title,
-        body: _notificationBody(event),
-        scheduledDate: tz.TZDateTime.from(scheduledTime, _location),
-        notificationDetails: const NotificationDetails(
-          android: AndroidNotificationDetails(
-            _channelId,
-            _channelName,
-            channelDescription: _channelDescription,
-            icon: 'ic_notification',
-            importance: Importance.high,
-            priority: Priority.high,
-            category: AndroidNotificationCategory.event,
-            visibility: NotificationVisibility.private,
+      final notificationId = eventReminderNotificationId(event.id);
+      final body = _notificationBody(event);
+      if (deliverImmediately) {
+        await _notifications.show(
+          id: notificationId,
+          title: event.title,
+          body: body,
+          notificationDetails: _notificationDetails,
+          payload: event.id,
+        );
+      } else {
+        await _notifications.zonedSchedule(
+          id: notificationId,
+          title: event.title,
+          body: body,
+          scheduledDate: tz.TZDateTime.from(scheduledTime, _location),
+          notificationDetails: _notificationDetails,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          matchDateTimeComponents: eventReminderDateTimeComponents(
+            event.recurrence,
           ),
-        ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        matchDateTimeComponents: eventReminderDateTimeComponents(
-          event.recurrence,
-        ),
-        payload: event.id,
-      );
+          payload: event.id,
+        );
+      }
       return EventReminderScheduleStatus.scheduled;
     } catch (_) {
       return EventReminderScheduleStatus.failed;
@@ -190,7 +228,27 @@ class AndroidEventReminderScheduler implements EventReminderScheduler {
         ? 'Starting now'
         : 'Starting soon';
   }
+
+  static const _notificationDetails = NotificationDetails(
+    android: AndroidNotificationDetails(
+      _channelId,
+      _channelName,
+      channelDescription: _channelDescription,
+      icon: 'ic_notification',
+      importance: Importance.high,
+      priority: Priority.high,
+      category: AndroidNotificationCategory.event,
+      visibility: NotificationVisibility.private,
+    ),
+  );
 }
+
+bool _isSameLocalMinute(DateTime first, DateTime second) =>
+    first.year == second.year &&
+    first.month == second.month &&
+    first.day == second.day &&
+    first.hour == second.hour &&
+    first.minute == second.minute;
 
 EventReminderScheduleStatus? _scheduleStatusForPermission(
   EventReminderPermissionStatus status,

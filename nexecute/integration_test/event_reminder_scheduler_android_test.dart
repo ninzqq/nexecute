@@ -71,4 +71,35 @@ void main() {
       isTrue,
     );
   });
+
+  testWidgets('delivers an at-event-time reminder saved in the same minute', (
+    tester,
+  ) async {
+    final scheduler = await AndroidEventReminderScheduler.initialize();
+    final startTime = DateTime.now().subtract(const Duration(seconds: 5));
+    final event = Event(
+      id: 'android-reminder-same-minute-delivery-test',
+      title: 'Immediate reminder',
+      startTime: startTime,
+      endTime: startTime.add(const Duration(hours: 1)),
+      reminder: EventReminder.atStart,
+    );
+    final notificationId = eventReminderNotificationId(event.id);
+    addTearDown(() => scheduler.cancel(event.id));
+
+    expect(
+      await scheduler.schedule(event),
+      EventReminderScheduleStatus.scheduled,
+    );
+    await Future<void>.delayed(const Duration(seconds: 1));
+
+    final activeNotifications =
+        await FlutterLocalNotificationsPlugin().getActiveNotifications();
+    expect(
+      activeNotifications.any(
+        (notification) => notification.id == notificationId,
+      ),
+      isTrue,
+    );
+  });
 }
