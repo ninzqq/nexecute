@@ -14,6 +14,7 @@ export 'domain/ai_diagnostic.dart';
 export 'domain/ai_event_proposal.dart';
 export 'domain/ai_model_info.dart';
 export 'domain/ai_protocol.dart';
+export 'domain/ai_skill.dart';
 export 'domain/ai_stream_event.dart';
 export 'domain/ai_tool.dart';
 export 'domain/ai_task_proposal.dart';

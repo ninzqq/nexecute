@@ -45,6 +45,7 @@ dependencies:
   # 2.4.24 was the first Android implementation with built-in Kotlin support.
   shared_preferences_android: ^2.4.28
   http: ^1.6.0
+  crypto: ^3.0.7
   home_widget: ^0.9.1
   flutter_secure_storage: ^10.3.1
 

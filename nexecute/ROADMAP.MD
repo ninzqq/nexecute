@@ -1106,18 +1106,20 @@ primary skill and at most a few compatible supporting skills should be active.
 
 ##### Step 11A: skill contract and trust boundary
 
-- [ ] Add a versioned, provider-neutral `AiSkill` domain model containing an ID,
+- [x] Add a versioned, provider-neutral `AiSkill` domain model containing an ID,
   name, description, instruction body, enabled state, output mode, creation and
   update timestamps, and an immutable revision or content hash.
-- [ ] Keep skills independent from connection profiles so the same skill can be
+- [x] Keep skills independent from connection profiles so the same skill can be
   used with any compatible endpoint and model.
-- [ ] Support text output only in version 1. Reserve versioned fields for later
+- [x] Support text output only in version 1. Reserve versioned fields for later
   app-owned tool and structured-output identifiers without accepting arbitrary
   schemas, executors, scripts, network requests, or filesystem access.
-- [ ] Define conservative validation for UTF-8 input, identifiers, names,
-  descriptions, frontmatter fields, and instruction size. Permit at least 16,000
+- [x] Define conservative domain validation for Unicode, identifiers, names,
+  descriptions, timestamps, and instruction size. Permit at least 16,000
   instruction characters so an approximately 11,000-character Finnish language
-  skill can be imported intact.
+  skill can be represented intact.
+- [ ] Apply the contract to UTF-8 `SKILL.md` decoding and reject unknown or
+  malformed frontmatter fields during import.
 - [ ] Treat imported skill instructions as user-authored configuration that may
   refine assistant behavior but can never remove or supersede immutable Nexecute
   policies, request-scoped data authorization, output validation, or confirmed
