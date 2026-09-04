@@ -142,6 +142,7 @@ class _CalendarPageState extends State<CalendarPage> {
                     );
                     return Row(
                       key: const Key('calendar-side-by-side-layout'),
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Expanded(
                           child: _calendarPager(
@@ -161,31 +162,12 @@ class _CalendarPageState extends State<CalendarPage> {
                                     isExpanded: true,
                                     reserveFloatingActionButtonSpace: false,
                                   )
-                                  : ColoredBox(
-                                    key: const Key(
-                                      'calendar-event-details-pane',
-                                    ),
-                                    color: context.appPalette.chrome,
-                                    child: AppCancelShortcutRegion(
-                                      onCancel:
-                                          () => setState(
-                                            () => _selectedEvent = null,
-                                          ),
-                                      child: SingleChildScrollView(
-                                        padding: const EdgeInsets.all(16),
-                                        child: EventDetailsPanel(
-                                          event: selectedEvent,
-                                          onClose:
-                                              () => setState(
-                                                () => _selectedEvent = null,
-                                              ),
-                                          onDeleted:
-                                              () => setState(
-                                                () => _selectedEvent = null,
-                                              ),
+                                  : _CalendarEventDetailsOverlay(
+                                    event: selectedEvent,
+                                    onClose:
+                                        () => setState(
+                                          () => _selectedEvent = null,
                                         ),
-                                      ),
-                                    ),
                                   ),
                         ),
                       ],
@@ -626,6 +608,66 @@ class _CalendarPageState extends State<CalendarPage> {
       if (event.id == selectedEvent.id) return event;
     }
     return null;
+  }
+}
+
+class _CalendarEventDetailsOverlay extends StatelessWidget {
+  const _CalendarEventDetailsOverlay({
+    required this.event,
+    required this.onClose,
+  });
+
+  final Event event;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.appPalette;
+
+    return Material(
+      key: const Key('calendar-event-details-pane'),
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: AppCancelShortcutRegion(
+        onCancel: onClose,
+        child: GestureDetector(
+          key: const Key('calendar-event-details-dismiss-area'),
+          behavior: HitTestBehavior.opaque,
+          onTap: onClose,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: SizedBox(
+                width: double.infinity,
+                child: GestureDetector(
+                  key: const Key('calendar-event-details-window'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {},
+                  child: Material(
+                    color: palette.chrome,
+                    elevation: 8,
+                    shadowColor: Colors.black.withValues(alpha: 0.4),
+                    clipBehavior: Clip.antiAlias,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      side: BorderSide(
+                        color: palette.outline.withValues(alpha: 0.75),
+                      ),
+                    ),
+                    child: SingleChildScrollView(
+                      child: EventDetailsPanel(
+                        event: event,
+                        onClose: onClose,
+                        onDeleted: onClose,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

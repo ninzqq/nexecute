@@ -138,11 +138,22 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(EventDetailsBottomSheet), findsOneWidget);
+    expect(
+      find.byKey(const Key('event-details-schedule-card')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('event-details-description-card')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('event-details-tags')), findsOneWidget);
+    expect(find.text('Edit event'), findsOneWidget);
+    expect(find.text('Delete event'), findsOneWidget);
     expect(find.text('Prepare the monthly plan'), findsOneWidget);
     expect(find.text('Repeats yearly'), findsOneWidget);
     expect(
       tester.getSize(find.byType(EventDetailsBottomSheet)).height,
-      greaterThanOrEqualTo(1200 * 0.45),
+      lessThan(1200 * 0.6),
     );
 
     await tester.tap(find.byTooltip('Edit event'));
@@ -169,6 +180,13 @@ void main() {
       repository.updateCommand?.startTime,
       DateTime(now.year - 1, now.month, now.day, 9),
     );
+
+    expect(find.byType(EventDetailsBottomSheet), findsOneWidget);
+    await tester.tapAt(const Offset(20, 20));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(EventDetailsBottomSheet), findsNothing);
+    expect(find.byKey(const Key('selected-day-agenda')), findsOneWidget);
   });
 
   testWidgets('shows event details in the expanded calendar side pane', (
@@ -212,7 +230,35 @@ void main() {
 
     expect(find.byType(EventDetailsBottomSheet), findsNothing);
     expect(find.byKey(const Key('calendar-event-details-pane')), findsOne);
+    expect(
+      find.byKey(const Key('event-details-schedule-card')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('event-details-actions')), findsOneWidget);
     expect(find.text('Details stay beside the calendar'), findsOneWidget);
+
+    final layoutRect = tester.getRect(
+      find.byKey(const Key('calendar-side-by-side-layout')),
+    );
+    var paneRect = tester.getRect(
+      find.byKey(const Key('calendar-event-details-pane')),
+    );
+    final windowRect = tester.getRect(
+      find.byKey(const Key('calendar-event-details-window')),
+    );
+    expect(paneRect.top, layoutRect.top);
+    expect(paneRect.bottom, layoutRect.bottom);
+    expect(windowRect.top, greaterThan(paneRect.top + 8));
+    expect(windowRect.bottom, lessThan(paneRect.bottom - 8));
+    expect(windowRect.left, greaterThan(paneRect.left + 8));
+    expect(windowRect.right, lessThan(paneRect.right - 8));
+
+    await tester.tap(find.byKey(const Key('event-details-schedule-card')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('calendar-event-details-pane')),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byTooltip('Edit event'));
     await tester.pumpAndSettle();
@@ -225,6 +271,81 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('selected-day-agenda')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('agenda-event-desktop-event')));
+    await tester.pumpAndSettle();
+    paneRect = tester.getRect(
+      find.byKey(const Key('calendar-event-details-pane')),
+    );
+    await tester.tapAt(Offset(paneRect.center.dx, paneRect.bottom - 4));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('selected-day-agenda')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('agenda-event-desktop-event')));
+    await tester.pumpAndSettle();
+    paneRect = tester.getRect(
+      find.byKey(const Key('calendar-event-details-pane')),
+    );
+    await tester.tapAt(Offset(paneRect.center.dx, paneRect.top + 4));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('selected-day-agenda')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('event details remain structured from narrow to wide layouts', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final event = Event(
+      id: 'responsive-details',
+      title: 'A long planning session title that still needs clear hierarchy',
+      description:
+          'Bring the quarterly notes and review each open decision before the meeting.',
+      startTime: DateTime(2026, 9, 4, 9, 30),
+      endTime: DateTime(2026, 9, 5, 10, 45),
+      tags: const ['Planning', 'Quarterly review', 'Long tag for wrapping'],
+      reminder: EventReminder.thirtyMinutesBefore,
+      recurrence: EventRecurrence.monthly,
+    );
+
+    await tester.pumpWidget(
+      Provider<EventRepository>.value(
+        value: FakeEventRepository(events: [event]),
+        child: MaterialApp(
+          theme: AppThemes.forPreset(AppThemePreset.cyberpunkMega),
+          home: Scaffold(
+            body: SingleChildScrollView(child: EventDetailsPanel(event: event)),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('event-details-title')), findsOneWidget);
+    expect(
+      find.byKey(const Key('event-details-schedule-card')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('event-details-description-card')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('event-details-tags')), findsOneWidget);
+    expect(find.text('30 minutes before'), findsOneWidget);
+    expect(find.text('Repeats monthly'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    tester.view.physicalSize = const Size(1200, 900);
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getSize(find.byKey(const Key('event-details-content'))).width,
+      640,
+    );
     expect(tester.takeException(), isNull);
   });
 

@@ -157,6 +157,23 @@ range on the client. Editing or deleting a displayed occurrence currently
 applies to the complete series; per-occurrence exceptions are not part of this
 scope.
 
+## Responsive event details
+
+**Status:** ✅ Completed
+
+- [x] Give event titles a clear header without crowding them with edit and
+  delete icon buttons.
+- [x] Group date, time, reminder, and recurrence into one structured summary.
+- [x] Present descriptions and tags as distinct readable sections.
+- [x] Use labeled edit and delete actions on both mobile sheets and desktop
+  side panes.
+- [x] Let mobile sheets size to their content and constrain wide detail content
+  to a readable width without maintaining separate implementations.
+- [x] Close mobile details from the modal barrier and desktop details from the
+  unused pane background while keeping interactions inside the details open.
+- [x] Cover narrow, wide, bottom-sheet, and desktop side-pane layouts with
+  widget tests.
+
 ## Calendar week-view readability
 
 **Status:** ✅ Completed
