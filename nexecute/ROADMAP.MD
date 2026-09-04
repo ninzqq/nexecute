@@ -275,13 +275,13 @@ without a second UI implementation.
 - [x] Extract the top-level navigation destinations and selected-destination
   state from the phone-only shell into one reusable adaptive shell.
 - [x] Preserve the existing bottom `NavigationBar` on compact layouts.
-- [x] Use a labeled `NavigationRail` on medium layouts. On expanded layouts,
-  keep the application menu permanently visible and move Calendar, Tasks, and
-  Notes into the shell's horizontal top-bar selector.
+- [x] Keep the application navigation permanently visible on medium and
+  expanded layouts, using a compact, labeled rail on medium widths and the
+  grouped menu on expanded widths.
 - [x] Preserve the selected destination and feature state when a window crosses
   a breakpoint instead of rebuilding a separate application tree.
-- [x] Keep the drawer and existing named routes reachable on compact and medium
-  layouts, with those drawer actions given a persistent expanded placement.
+- [x] Keep the drawer and existing named routes on compact layouts, with those
+  actions given persistent placement on medium and expanded layouts.
 - [x] Cover compact, medium, expanded, and live-resize transitions with widget
   tests, including overflow checks and destination-state preservation.
 

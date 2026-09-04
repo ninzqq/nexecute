@@ -145,13 +145,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     policy: OrderedTraversalPolicy(),
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final desktop =
-                            AppLayoutBreakpoints.fromWidth(
-                              constraints.maxWidth,
-                            ) ==
-                            AppLayoutClass.expanded;
+                        final layoutClass = AppLayoutBreakpoints.fromWidth(
+                          constraints.maxWidth,
+                        );
+                        final usesPersistentWorkspace =
+                            layoutClass != AppLayoutClass.compact;
                         final activeIndex =
-                            desktop ? _desktopTabIndex : tabIndex;
+                            usesPersistentWorkspace
+                                ? _desktopTabIndex
+                                : tabIndex;
+                        final compactMenu =
+                            layoutClass == AppLayoutClass.medium;
                         return AdaptiveNavigationShell(
                           selectedIndex: tabIndex,
                           onDestinationSelected:
@@ -163,6 +167,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           drawer: const MainDrawer(),
                           persistentMenu: PersistentMainMenu(
+                            compact: compactMenu,
                             selectedIndex: activeIndex,
                             onDestinationSelected:
                                 (index) => _selectDesktopTab(tab, index),
@@ -173,18 +178,27 @@ class _HomeScreenState extends State<HomeScreen> {
                                   respectFocusedEditor: false,
                                 ),
                           ),
-                          persistentMenuWidth: PersistentMainMenu.width,
+                          persistentMenuWidth:
+                              compactMenu
+                                  ? PersistentMainMenu.compactWidth
+                                  : PersistentMainMenu.width,
                           body: _desktopTabHost(tab, activeIndex),
-                          floatingActionButton: Semantics(
-                            key: const Key('create-shortcut-semantics'),
-                            container: true,
-                            hint: 'Shortcut ${AppShortcutLabels.create}',
-                            child: FloatingActionButton(
-                              onPressed: () => _createItem(context, tabIndex),
-                              tooltip: _fabLabel(tabIndex),
-                              child: Icon(_fabIcon(tabIndex)),
-                            ),
-                          ),
+                          floatingActionButton:
+                              activeIndex < 3
+                                  ? Semantics(
+                                    key: const Key('create-shortcut-semantics'),
+                                    container: true,
+                                    hint:
+                                        'Shortcut ${AppShortcutLabels.create}',
+                                    child: FloatingActionButton(
+                                      onPressed:
+                                          () =>
+                                              _createItem(context, activeIndex),
+                                      tooltip: _fabLabel(activeIndex),
+                                      child: Icon(_fabIcon(activeIndex)),
+                                    ),
+                                  )
+                                  : null,
                           desktopToolbarSearch: DesktopGlobalSearchField(
                             onPressed:
                                 () => _openSearch(
@@ -255,8 +269,8 @@ class _HomeScreenState extends State<HomeScreen> {
     required int desktopIndex,
     required String mobileRoute,
   }) {
-    if (AppLayoutBreakpoints.fromWidth(MediaQuery.sizeOf(context).width) ==
-        AppLayoutClass.expanded) {
+    if (AppLayoutBreakpoints.fromWidth(MediaQuery.sizeOf(context).width) !=
+        AppLayoutClass.compact) {
       _selectDesktopTab(tab, desktopIndex);
     } else if (canInvokeGlobalAppShortcut(context)) {
       Navigator.pushNamed(context, mobileRoute);
@@ -294,8 +308,8 @@ class _HomeScreenState extends State<HomeScreen> {
   void _openSearch(BuildContext context, {bool respectFocusedEditor = true}) {
     if (respectFocusedEditor && !canInvokeGlobalAppShortcut(context)) return;
 
-    if (AppLayoutBreakpoints.fromWidth(MediaQuery.sizeOf(context).width) ==
-        AppLayoutClass.expanded) {
+    if (AppLayoutBreakpoints.fromWidth(MediaQuery.sizeOf(context).width) !=
+        AppLayoutClass.compact) {
       final tab = context.read<HomeTabIndex>();
       unawaited(
         showDesktopGlobalSearch(

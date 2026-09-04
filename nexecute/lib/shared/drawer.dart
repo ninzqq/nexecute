@@ -19,6 +19,7 @@ class MainDrawer extends StatelessWidget {
 class PersistentMainMenu extends StatelessWidget {
   const PersistentMainMenu({
     super.key,
+    this.compact = false,
     required this.selectedIndex,
     required this.onDestinationSelected,
     required this.destinations,
@@ -26,7 +27,9 @@ class PersistentMainMenu extends StatelessWidget {
   });
 
   static const width = 180.0;
+  static const compactWidth = 80.0;
 
+  final bool compact;
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
   final List<AdaptiveNavigationItem> destinations;
@@ -37,7 +40,7 @@ class PersistentMainMenu extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     return SizedBox(
       key: const Key('persistent-main-menu'),
-      width: width,
+      width: compact ? compactWidth : width,
       child: Material(
         color: Theme.of(context).appBarTheme.backgroundColor ?? colors.surface,
         child: DecoratedBox(
@@ -46,11 +49,191 @@ class PersistentMainMenu extends StatelessWidget {
               right: BorderSide(color: colors.outline.withValues(alpha: 0.75)),
             ),
           ),
-          child: _DesktopMainMenuContent(
-            selectedIndex: selectedIndex,
-            onDestinationSelected: onDestinationSelected,
-            destinations: destinations,
-            onSearch: onSearch,
+          child:
+              compact
+                  ? _MediumMainMenuRail(
+                    selectedIndex: selectedIndex,
+                    onDestinationSelected: onDestinationSelected,
+                    destinations: destinations,
+                    onSearch: onSearch,
+                  )
+                  : _DesktopMainMenuContent(
+                    selectedIndex: selectedIndex,
+                    onDestinationSelected: onDestinationSelected,
+                    destinations: destinations,
+                    onSearch: onSearch,
+                  ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MediumMainMenuRail extends StatelessWidget {
+  const _MediumMainMenuRail({
+    required this.selectedIndex,
+    required this.onDestinationSelected,
+    required this.destinations,
+    required this.onSearch,
+  });
+
+  final int selectedIndex;
+  final ValueChanged<int> onDestinationSelected;
+  final List<AdaptiveNavigationItem> destinations;
+  final VoidCallback onSearch;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      key: const Key('medium-persistent-navigation-rail'),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      children: [
+        for (var index = 0; index < 3; index++)
+          _MediumRailTile.destination(
+            destination: destinations[index],
+            selected: selectedIndex == index,
+            onTap: () => onDestinationSelected(index),
+            destinationKey: ValueKey('desktop-destination-$index'),
+          ),
+        const _MediumRailDivider(key: Key('medium-section-divider-0')),
+        _MediumRailTile.action(
+          label: 'Search',
+          icon: Icons.search_rounded,
+          onTap: onSearch,
+          tileKey: const Key('medium-search-action'),
+        ),
+        for (var index = 3; index < 6; index++)
+          _MediumRailTile.destination(
+            destination: destinations[index],
+            selected: selectedIndex == index,
+            onTap: () => onDestinationSelected(index),
+            destinationKey: ValueKey('desktop-destination-$index'),
+          ),
+        const _MediumRailDivider(key: Key('medium-section-divider-1')),
+        for (var index = 6; index < destinations.length; index++)
+          _MediumRailTile.destination(
+            destination: destinations[index],
+            selected: selectedIndex == index,
+            onTap: () => onDestinationSelected(index),
+            destinationKey: ValueKey('desktop-destination-$index'),
+          ),
+        _MediumRailTile.action(
+          label: 'Shortcuts',
+          tooltip: 'Keyboard shortcuts',
+          icon: Icons.keyboard_outlined,
+          onTap: () => showKeyboardShortcutsDialog(context),
+          tileKey: const Key('medium-keyboard-shortcuts-action'),
+        ),
+      ],
+    );
+  }
+}
+
+class _MediumRailDivider extends StatelessWidget {
+  const _MediumRailDivider({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 6),
+      child: Divider(height: 1, indent: 8, endIndent: 8),
+    );
+  }
+}
+
+class _MediumRailTile extends StatelessWidget {
+  _MediumRailTile.destination({
+    required AdaptiveNavigationItem destination,
+    required this.selected,
+    required this.onTap,
+    required Key destinationKey,
+  }) : label = destination.label,
+       tooltip = destination.label,
+       icon = destination.icon,
+       selectedIcon = destination.selectedIcon,
+       tileKey = destinationKey;
+
+  const _MediumRailTile.action({
+    required this.label,
+    String? tooltip,
+    required this.icon,
+    required this.onTap,
+    required this.tileKey,
+  }) : tooltip = tooltip ?? label,
+       selected = false,
+       selectedIcon = icon;
+
+  final String label;
+  final String tooltip;
+  final IconData icon;
+  final IconData selectedIcon;
+  final bool selected;
+  final VoidCallback onTap;
+  final Key tileKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final navigationTheme = theme.navigationRailTheme;
+    final colors = theme.colorScheme;
+    final selectedColor =
+        navigationTheme.selectedIconTheme?.color ?? colors.primary;
+    final unselectedColor =
+        navigationTheme.unselectedIconTheme?.color ?? colors.onSurfaceVariant;
+    final indicatorColor =
+        navigationTheme.indicatorColor ?? colors.secondaryContainer;
+    final selectedLabelStyle =
+        navigationTheme.selectedLabelTextStyle ?? theme.textTheme.labelMedium;
+    final unselectedLabelStyle =
+        navigationTheme.unselectedLabelTextStyle ?? theme.textTheme.labelMedium;
+
+    return Tooltip(
+      message: tooltip,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 2),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            key: tileKey,
+            borderRadius: BorderRadius.circular(8),
+            onTap: onTap,
+            child: Semantics(
+              selected: selected,
+              button: true,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 5),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedContainer(
+                      duration: kThemeAnimationDuration,
+                      width: 52,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: selected ? indicatorColor : Colors.transparent,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        selected ? selectedIcon : icon,
+                        size: 22,
+                        color: selected ? selectedColor : unselectedColor,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: (selected
+                              ? selectedLabelStyle
+                              : unselectedLabelStyle)
+                          ?.copyWith(fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ),

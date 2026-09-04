@@ -77,55 +77,97 @@ void main() {
     },
   );
 
-  testWidgets('medium layout uses a labeled navigation rail', (tester) async {
-    _setViewport(tester, const Size(700, 900));
-    await _pumpHome(tester);
+  testWidgets(
+    'medium layout uses the persistent workspace with a compact rail',
+    (tester) async {
+      _setViewport(tester, const Size(700, 900));
+      await _pumpHome(tester);
 
-    expect(find.byType(NavigationBar), findsNothing);
-    expect(find.byKey(const Key('adaptive-navigation-rail-shell')), findsOne);
+      expect(find.byType(NavigationBar), findsNothing);
+      expect(find.byType(NavigationRail), findsNothing);
+      expect(find.byKey(const Key('persistent-main-menu')), findsOneWidget);
+      expect(
+        find.byKey(const Key('medium-persistent-navigation-rail')),
+        findsOneWidget,
+      );
+      expect(
+        tester.getSize(find.byKey(const Key('persistent-main-menu'))).width,
+        PersistentMainMenu.compactWidth,
+      );
+      expect(find.byKey(const Key('medium-section-divider-0')), findsOneWidget);
+      expect(find.byKey(const Key('medium-section-divider-1')), findsOneWidget);
+      expect(_selectedDestination(tester), 2);
+      expect(find.text('Calendar'), findsWidgets);
+      expect(find.text('Tasks'), findsWidgets);
+      expect(find.text('Notes'), findsWidgets);
+      expect(find.text('Assistant'), findsOneWidget);
+      expect(find.text('Tags'), findsOneWidget);
+      expect(find.text('Archive'), findsOneWidget);
+      expect(find.text('Profile'), findsOneWidget);
+      expect(find.text('Settings'), findsOneWidget);
+      expect(find.byTooltip('Search'), findsOneWidget);
+      expect(find.byTooltip('Keyboard shortcuts'), findsOneWidget);
+      expect(find.byTooltip('Open navigation menu'), findsNothing);
+      expect(find.byType(FloatingActionButton), findsOneWidget);
 
-    final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
-    expect(rail.extended, isFalse);
-    expect(rail.labelType, NavigationRailLabelType.all);
-    expect(rail.selectedIndex, 2);
-    final notesRailTop = tester.getTopLeft(find.byType(NavigationRail)).dy;
-    expect(find.text('Calendar'), findsWidgets);
-    expect(find.text('Tasks'), findsWidgets);
-    expect(find.text('Notes'), findsWidgets);
+      final orderedItems = [
+        find.byKey(const ValueKey('desktop-destination-0')),
+        find.byKey(const ValueKey('desktop-destination-1')),
+        find.byKey(const ValueKey('desktop-destination-2')),
+        find.byKey(const Key('medium-section-divider-0')),
+        find.byKey(const Key('medium-search-action')),
+        find.byKey(const ValueKey('desktop-destination-3')),
+        find.byKey(const ValueKey('desktop-destination-4')),
+        find.byKey(const ValueKey('desktop-destination-5')),
+        find.byKey(const Key('medium-section-divider-1')),
+        find.byKey(const ValueKey('desktop-destination-6')),
+        find.byKey(const ValueKey('desktop-destination-7')),
+        find.byKey(const Key('medium-keyboard-shortcuts-action')),
+      ];
+      final itemTops = [
+        for (final item in orderedItems) tester.getTopLeft(item).dy,
+      ];
+      expect(itemTops, orderedEquals([...itemTops]..sort()));
 
-    await tester.tap(find.byIcon(Icons.calendar_month_outlined));
-    await tester.pumpAndSettle();
+      expect(find.text('Nexecute'), findsOneWidget);
+      expect(
+        find.byKey(const Key('medium-app-title-fitted-box')),
+        findsOneWidget,
+      );
 
-    expect(find.byTooltip('New event'), findsOneWidget);
-    expect(find.byTooltip('Open navigation menu'), findsOneWidget);
-    expect(tester.getTopLeft(find.byType(NavigationRail)).dy, notesRailTop);
-    expect(
-      find.descendant(
-        of: find.byType(AppBar),
-        matching: find.byTooltip('Open navigation menu'),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: find.byKey(const Key('calendar-toolbar')),
-        matching: find.byTooltip('Open navigation menu'),
-      ),
-      findsNothing,
-    );
-    expect(
-      tester.getBottomLeft(find.byType(AppBar)).dy,
-      lessThanOrEqualTo(
-        tester.getTopLeft(find.byKey(const Key('calendar-toolbar'))).dy,
-      ),
-    );
+      await tester.tap(find.byKey(const ValueKey('desktop-destination-0')));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Open navigation menu'));
-    await tester.pumpAndSettle();
-    expect(find.text('Profile'), findsOneWidget);
-    expect(find.text('Settings'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
+      expect(_selectedDestination(tester), 0);
+      expect(find.byTooltip('New event'), findsOneWidget);
+      expect(find.byKey(const Key('calendar-toolbar')), findsOneWidget);
+      expect(
+        find.byKey(const Key('calendar-side-by-side-layout')),
+        findsNothing,
+      );
+
+      await tester.tap(find.byTooltip('Search'));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('desktop-global-search-dialog')),
+        findsOneWidget,
+      );
+
+      Navigator.pop(
+        tester.element(find.byKey(const Key('desktop-global-search-dialog'))),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('desktop-destination-7')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('desktop-settings-tab')).hitTestable(),
+        findsOneWidget,
+      );
+      expect(find.byType(FloatingActionButton), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('expanded layout keeps the app menu visible beside content', (
     tester,
@@ -233,10 +275,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(NavigationBar), findsNothing);
+    expect(find.byType(NavigationRail), findsNothing);
     expect(
-      tester.widget<NavigationRail>(find.byType(NavigationRail)).selectedIndex,
-      0,
+      find.byKey(const Key('medium-persistent-navigation-rail')),
+      findsOneWidget,
     );
+    expect(_selectedDestination(tester), 0);
     _expectCalendarWeekSelected(tester);
 
     tester.view.physicalSize = const Size(1200, 900);

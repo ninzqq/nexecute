@@ -13,6 +13,7 @@ import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/models/tag.dart' as models;
 import 'package:nexecute/models/todo_item.dart';
 import 'package:nexecute/repositories/event_repository.dart';
+import 'package:nexecute/shared/drawer.dart';
 import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
 
@@ -24,6 +25,10 @@ void main() {
     (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
       addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      tester.view.physicalSize = const Size(599, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       await _pumpHome(tester);
 
       var menuBar = tester.widget<PlatformMenuBar>(
@@ -197,5 +202,14 @@ void _expectMacShortcut(PlatformMenuItem item, LogicalKeyboardKey key) {
   expect(shortcut.control, isFalse);
 }
 
-int _selectedDestination(WidgetTester tester) =>
-    tester.widget<NavigationRail>(find.byType(NavigationRail)).selectedIndex!;
+int _selectedDestination(WidgetTester tester) {
+  final persistentMenu = find.byType(PersistentMainMenu);
+  if (persistentMenu.evaluate().isNotEmpty) {
+    return tester.widget<PersistentMainMenu>(persistentMenu).selectedIndex;
+  }
+  final rail = find.byType(NavigationRail);
+  if (rail.evaluate().isNotEmpty) {
+    return tester.widget<NavigationRail>(rail).selectedIndex!;
+  }
+  return tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex;
+}

@@ -164,14 +164,20 @@ class AdaptiveNavigationShell extends StatelessWidget {
             constraints.maxWidth,
           );
           final usesPersistentMenu =
-              layoutClass == AppLayoutClass.expanded && persistentMenu != null;
+              layoutClass != AppLayoutClass.compact && persistentMenu != null;
           final usesRail =
               layoutClass.usesNavigationRail && !usesPersistentMenu;
 
           return AppLayoutScope(
             layoutClass: layoutClass,
             child: Scaffold(
-              appBar: usesPersistentMenu ? _desktopAppBar(context) : appBar,
+              appBar:
+                  usesPersistentMenu
+                      ? _desktopAppBar(
+                        context,
+                        compact: layoutClass == AppLayoutClass.medium,
+                      )
+                      : appBar,
               drawer: usesPersistentMenu ? null : drawer,
               resizeToAvoidBottomInset: resizeToAvoidBottomInset,
               body: Row(
@@ -197,7 +203,8 @@ class AdaptiveNavigationShell extends StatelessWidget {
                       ? _bottomNavigation(context)
                       : null,
               floatingActionButton:
-                  floatingActionButton == null || usesPersistentMenu
+                  floatingActionButton == null ||
+                          layoutClass == AppLayoutClass.expanded
                       ? null
                       : FocusTraversalOrder(
                         key: const Key('create-focus-order'),
@@ -215,7 +222,10 @@ class AdaptiveNavigationShell extends StatelessWidget {
     );
   }
 
-  PreferredSizeWidget _desktopAppBar(BuildContext context) {
+  PreferredSizeWidget _desktopAppBar(
+    BuildContext context, {
+    required bool compact,
+  }) {
     return AppBar(
       toolbarHeight: 58,
       automaticallyImplyLeading: false,
@@ -223,13 +233,25 @@ class AdaptiveNavigationShell extends StatelessWidget {
       leading: Align(
         alignment: Alignment.centerLeft,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Text(
-            'Nexecute',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
+          padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 20),
+          child:
+              compact
+                  ? FittedBox(
+                    key: const Key('medium-app-title-fitted-box'),
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Nexecute',
+                      maxLines: 1,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  )
+                  : Text(
+                    'Nexecute',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
         ),
       ),
       titleSpacing: 16,
@@ -238,7 +260,8 @@ class AdaptiveNavigationShell extends StatelessWidget {
         key: const Key('desktop-page-title'),
       ),
       actions:
-          desktopToolbarSearch == null && desktopPrimaryAction == null
+          compact ||
+                  (desktopToolbarSearch == null && desktopPrimaryAction == null)
               ? null
               : [
                 if (desktopToolbarSearch != null)
