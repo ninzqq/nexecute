@@ -1553,10 +1553,12 @@ cost grow with the user's complete history.
 
 #### Step 1: establish a reproducible read baseline
 
-- [ ] Add debug-only diagnostics for repository/query name, listener attach and
+- [x] Add debug-only diagnostics for repository/query name, listener attach and
   detach, active-listener count, initial result size, cache/server metadata, and
   added, modified, and removed document counts. Never log document content,
-  credentials, private URLs, or other user data.
+  credentials, private URLs, or other user data. The operation catalog and
+  controlled measurement procedure are recorded in
+  `docs/firestore_read_baseline.md`.
 - [ ] Measure fresh install, warm relaunch, relaunch after a long disconnect,
   navigation between every primary destination, first Assistant visit, repeated
   search terms, and synchronization between three devices.

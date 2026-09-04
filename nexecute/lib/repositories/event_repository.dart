@@ -10,6 +10,7 @@ import 'package:nexecute/repositories/firestore/schema/app_data_schema.dart';
 import 'package:nexecute/search/search_matcher.dart';
 import 'package:nexecute/services/auth.dart';
 import 'package:nexecute/services/authenticated_data_stream.dart';
+import 'package:nexecute/services/firestore_read_diagnostics.dart';
 import 'package:uuid/uuid.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -34,13 +35,16 @@ class FirestoreEventRepository implements EventRepository {
   FirestoreEventRepository({
     required AuthService authService,
     FirebaseFirestore? firestore,
+    FirestoreReadDiagnostics? readDiagnostics,
     Uuid uuid = const Uuid(),
   }) : _authService = authService,
        _db = firestore ?? FirebaseFirestore.instance,
+       _readDiagnostics = readDiagnostics ?? FirestoreReadDiagnostics.disabled,
        _uuid = uuid;
 
   final AuthService _authService;
   final FirebaseFirestore _db;
+  final FirestoreReadDiagnostics _readDiagnostics;
   final Uuid _uuid;
 
   @override
@@ -53,13 +57,16 @@ class FirestoreEventRepository implements EventRepository {
             .collection('users')
             .doc(user.uid)
             .collection('events');
-        final overlapping =
-            events
-                .where('startTime', isLessThan: range.endExclusive)
-                .where('endTime', isGreaterThanOrEqualTo: range.startInclusive)
-                .snapshots();
-        final recurring =
-            events.where('isRecurring', isEqualTo: true).snapshots();
+        final overlapping = _readDiagnostics.watchQuery(
+          operation: 'events.overlap',
+          query: events
+              .where('startTime', isLessThan: range.endExclusive)
+              .where('endTime', isGreaterThanOrEqualTo: range.startInclusive),
+        );
+        final recurring = _readDiagnostics.watchQuery(
+          operation: 'events.recurring',
+          query: events.where('isRecurring', isEqualTo: true),
+        );
 
         return Rx.combineLatest2(overlapping, recurring, (
           QuerySnapshot<Map<String, dynamic>> overlappingSnapshot,
@@ -88,7 +95,10 @@ class FirestoreEventRepository implements EventRepository {
     final normalizedQuery = normalizeSearchQuery(query);
     if (normalizedQuery.isEmpty || limit <= 0) return const [];
 
-    final snapshot = await _eventsCollection().get();
+    final snapshot = await _readDiagnostics.getQuery(
+      operation: 'events.searchAll',
+      query: _eventsCollection(),
+    );
     final matches =
         snapshot.docs
             .map(EventDocumentMapper.fromDocument)

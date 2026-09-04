@@ -61,6 +61,7 @@ class NexecuteState extends State<Nexecute> {
   late final CalendarSettingsController _calendarSettingsController;
   late final bool _ownsCalendarSettingsController;
   late final AppPlatformServices _platformServices;
+  late final FirestoreReadDiagnostics _firestoreReadDiagnostics;
 
   @override
   void initState() {
@@ -72,6 +73,7 @@ class NexecuteState extends State<Nexecute> {
         widget.calendarSettingsController ?? CalendarSettingsController();
     _platformServices =
         widget.platformServices ?? AppPlatformServices.unsupported;
+    _firestoreReadDiagnostics = FirestoreReadDiagnostics.debug();
     _themeController.addListener(_updateEventWidgetTheme);
   }
 
@@ -90,6 +92,9 @@ class NexecuteState extends State<Nexecute> {
     return MultiProvider(
       providers: [
         Provider<AuthService>(create: (_) => AuthService()),
+        Provider<FirestoreReadDiagnostics>.value(
+          value: _firestoreReadDiagnostics,
+        ),
         Provider<EventReminderScheduler>.value(
           value: _platformServices.reminderScheduler,
         ),
@@ -102,18 +107,21 @@ class NexecuteState extends State<Nexecute> {
           create:
               (context) => FirestoreNoteRepository(
                 authService: context.read<AuthService>(),
+                readDiagnostics: context.read<FirestoreReadDiagnostics>(),
               ),
         ),
         Provider<NoteFolderRepository>(
           create:
               (context) => FirestoreNoteFolderRepository(
                 authService: context.read<AuthService>(),
+                readDiagnostics: context.read<FirestoreReadDiagnostics>(),
               ),
         ),
         Provider<EventRepository>(
           create: (context) {
             final firestoreRepository = FirestoreEventRepository(
               authService: context.read<AuthService>(),
+              readDiagnostics: context.read<FirestoreReadDiagnostics>(),
             );
             EventRepository repository = ReminderSchedulingEventRepository(
               delegate: firestoreRepository,
@@ -130,6 +138,7 @@ class NexecuteState extends State<Nexecute> {
           create:
               (context) => FirestoreTodoRepository(
                 authService: context.read<AuthService>(),
+                readDiagnostics: context.read<FirestoreReadDiagnostics>(),
               ),
         ),
         Provider<AiApplicationContextReadService>(
@@ -144,6 +153,7 @@ class NexecuteState extends State<Nexecute> {
           create:
               (context) => FirestoreTagRepository(
                 authService: context.read<AuthService>(),
+                readDiagnostics: context.read<FirestoreReadDiagnostics>(),
               ),
         ),
         Provider<ItemConversionService>(
@@ -173,6 +183,7 @@ class NexecuteState extends State<Nexecute> {
           create:
               (context) => FirestoreAiConversationStore(
                 authService: context.read<AuthService>(),
+                readDiagnostics: context.read<FirestoreReadDiagnostics>(),
               ),
           dispose: (_, store) => store.dispose(),
         ),

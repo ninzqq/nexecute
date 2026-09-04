@@ -5,6 +5,7 @@ import 'package:nexecute/repositories/firestore/tag_document_mapper.dart';
 import 'package:nexecute/repositories/firestore/schema/app_data_schema.dart';
 import 'package:nexecute/services/auth.dart';
 import 'package:nexecute/services/authenticated_data_stream.dart';
+import 'package:nexecute/services/firestore_read_diagnostics.dart';
 
 abstract interface class TagRepository {
   Stream<DataState<Tags>> watchTags();
@@ -18,11 +19,14 @@ class FirestoreTagRepository implements TagRepository {
   FirestoreTagRepository({
     required AuthService authService,
     FirebaseFirestore? firestore,
+    FirestoreReadDiagnostics? readDiagnostics,
   }) : _authService = authService,
-       _db = firestore ?? FirebaseFirestore.instance;
+       _db = firestore ?? FirebaseFirestore.instance,
+       _readDiagnostics = readDiagnostics ?? FirestoreReadDiagnostics.disabled;
 
   final AuthService _authService;
   final FirebaseFirestore _db;
+  final FirestoreReadDiagnostics _readDiagnostics;
 
   @override
   Stream<DataState<Tags>> watchTags() {
@@ -30,10 +34,11 @@ class FirestoreTagRepository implements TagRepository {
       authentication: _authService.userStream,
       isEmpty: (tags) => tags.tags.isEmpty,
       load:
-          (user) => _db
-              .collection('users')
-              .doc(user.uid)
-              .snapshots()
+          (user) => _readDiagnostics
+              .watchDocument(
+                operation: 'tags.userDocument',
+                document: _db.collection('users').doc(user.uid),
+              )
               .map(
                 (document) =>
                     TagDocumentMapper.fromMap(document.data() ?? const {}),

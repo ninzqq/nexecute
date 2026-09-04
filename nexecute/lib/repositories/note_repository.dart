@@ -6,6 +6,7 @@ import 'package:nexecute/repositories/firestore/note_document_mapper.dart';
 import 'package:nexecute/repositories/firestore/schema/app_data_schema.dart';
 import 'package:nexecute/services/auth.dart';
 import 'package:nexecute/services/authenticated_data_stream.dart';
+import 'package:nexecute/services/firestore_read_diagnostics.dart';
 import 'package:uuid/uuid.dart';
 
 export 'package:nexecute/repositories/commands/update_note_command.dart';
@@ -36,13 +37,16 @@ class FirestoreNoteRepository implements NoteRepository {
   FirestoreNoteRepository({
     required AuthService authService,
     FirebaseFirestore? firestore,
+    FirestoreReadDiagnostics? readDiagnostics,
     Uuid uuid = const Uuid(),
   }) : _authService = authService,
        _db = firestore ?? FirebaseFirestore.instance,
+       _readDiagnostics = readDiagnostics ?? FirestoreReadDiagnostics.disabled,
        _uuid = uuid;
 
   final AuthService _authService;
   final FirebaseFirestore _db;
+  final FirestoreReadDiagnostics _readDiagnostics;
   final Uuid _uuid;
 
   @override
@@ -51,11 +55,14 @@ class FirestoreNoteRepository implements NoteRepository {
       authentication: _authService.userStream,
       isEmpty: (notes) => notes.isEmpty,
       load:
-          (user) => _db
-              .collection('users')
-              .doc(user.uid)
-              .collection('quicxecs')
-              .snapshots()
+          (user) => _readDiagnostics
+              .watchQuery(
+                operation: 'notes.all',
+                query: _db
+                    .collection('users')
+                    .doc(user.uid)
+                    .collection('quicxecs'),
+              )
               .map(
                 (snapshot) =>
                     snapshot.docs.map(NoteDocumentMapper.fromDocument).toList(),
@@ -150,8 +157,10 @@ class FirestoreNoteRepository implements NoteRepository {
   @override
   Future<void> emptyTrash() async {
     final batch = _db.batch();
-    final snapshot =
-        await _notesCollection().where('trashed', isEqualTo: true).get();
+    final snapshot = await _readDiagnostics.getQuery(
+      operation: 'notes.emptyTrash',
+      query: _notesCollection().where('trashed', isEqualTo: true),
+    );
 
     for (final document in snapshot.docs) {
       batch.delete(document.reference);

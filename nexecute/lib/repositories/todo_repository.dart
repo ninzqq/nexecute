@@ -6,6 +6,7 @@ import 'package:nexecute/repositories/firestore/todo_document_mapper.dart';
 import 'package:nexecute/repositories/firestore/schema/app_data_schema.dart';
 import 'package:nexecute/services/auth.dart';
 import 'package:nexecute/services/authenticated_data_stream.dart';
+import 'package:nexecute/services/firestore_read_diagnostics.dart';
 import 'package:uuid/uuid.dart';
 
 export 'package:nexecute/repositories/commands/create_todos_command.dart';
@@ -30,13 +31,16 @@ class FirestoreTodoRepository implements TodoRepository {
   FirestoreTodoRepository({
     required AuthService authService,
     FirebaseFirestore? firestore,
+    FirestoreReadDiagnostics? readDiagnostics,
     Uuid uuid = const Uuid(),
   }) : _authService = authService,
        _db = firestore ?? FirebaseFirestore.instance,
+       _readDiagnostics = readDiagnostics ?? FirestoreReadDiagnostics.disabled,
        _uuid = uuid;
 
   final AuthService _authService;
   final FirebaseFirestore _db;
+  final FirestoreReadDiagnostics _readDiagnostics;
   final Uuid _uuid;
 
   @override
@@ -45,11 +49,14 @@ class FirestoreTodoRepository implements TodoRepository {
       authentication: _authService.userStream,
       isEmpty: (todos) => todos.isEmpty,
       load:
-          (user) => _db
-              .collection('users')
-              .doc(user.uid)
-              .collection('todos')
-              .snapshots()
+          (user) => _readDiagnostics
+              .watchQuery(
+                operation: 'todos.all',
+                query: _db
+                    .collection('users')
+                    .doc(user.uid)
+                    .collection('todos'),
+              )
               .map(
                 (snapshot) =>
                     snapshot.docs.map(TodoDocumentMapper.fromDocument).toList(),

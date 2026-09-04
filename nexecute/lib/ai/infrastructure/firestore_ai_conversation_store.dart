@@ -4,25 +4,33 @@ import 'package:nexecute/ai/domain/ai_conversation.dart';
 import 'package:nexecute/ai/infrastructure/ai_conversation_document_mapper.dart';
 import 'package:nexecute/ai/repositories/ai_conversation_store.dart';
 import 'package:nexecute/services/auth.dart';
+import 'package:nexecute/services/firestore_read_diagnostics.dart';
 import 'package:rxdart/rxdart.dart';
 
 class FirestoreAiConversationStore implements AiConversationStore {
   FirestoreAiConversationStore({
     required AuthService authService,
     FirebaseFirestore? firestore,
+    FirestoreReadDiagnostics? readDiagnostics,
   }) : _authService = authService,
-       _db = firestore ?? FirebaseFirestore.instance;
+       _db = firestore ?? FirebaseFirestore.instance,
+       _readDiagnostics = readDiagnostics ?? FirestoreReadDiagnostics.disabled;
 
   final AuthService _authService;
   final FirebaseFirestore _db;
+  final FirestoreReadDiagnostics _readDiagnostics;
 
   @override
   Stream<List<AiConversation>> watchConversations() {
     return _authService.userStream.switchMap((user) {
       if (user == null) return Stream.value(const <AiConversation>[]);
-      return _collectionFor(user.uid)
-          .orderBy('updatedAt', descending: true)
-          .snapshots()
+      return _readDiagnostics
+          .watchQuery(
+            operation: 'ai.conversationSummaries',
+            query: _collectionFor(
+              user.uid,
+            ).orderBy('updatedAt', descending: true),
+          )
           .map(
             (snapshot) => List.unmodifiable(
               snapshot.docs.map(AiConversationDocumentMapper.fromDocument),
@@ -33,8 +41,10 @@ class FirestoreAiConversationStore implements AiConversationStore {
 
   @override
   Future<List<AiConversation>> getConversations() async {
-    final snapshot =
-        await _collection().orderBy('updatedAt', descending: true).get();
+    final snapshot = await _readDiagnostics.getQuery(
+      operation: 'ai.getConversationSummaries',
+      query: _collection().orderBy('updatedAt', descending: true),
+    );
     return List.unmodifiable(
       snapshot.docs.map(AiConversationDocumentMapper.fromDocument),
     );
@@ -44,8 +54,14 @@ class FirestoreAiConversationStore implements AiConversationStore {
   Future<AiConversation?> getConversation(String conversationId) async {
     final reference = _collection().doc(conversationId);
     final results = await Future.wait([
-      reference.get(),
-      reference.collection('messages').orderBy('createdAt').get(),
+      _readDiagnostics.getDocument(
+        operation: 'ai.getConversationMetadata',
+        document: reference,
+      ),
+      _readDiagnostics.getQuery(
+        operation: 'ai.getMessages',
+        query: reference.collection('messages').orderBy('createdAt'),
+      ),
     ]);
     final document = results[0] as DocumentSnapshot<Map<String, dynamic>>;
     if (!document.exists) return null;
@@ -65,8 +81,14 @@ class FirestoreAiConversationStore implements AiConversationStore {
       if (user == null) return Stream.value(null);
       final reference = _collectionFor(user.uid).doc(conversationId);
       return Rx.combineLatest2(
-        reference.snapshots(),
-        reference.collection('messages').orderBy('createdAt').snapshots(),
+        _readDiagnostics.watchDocument(
+          operation: 'ai.conversationMetadata',
+          document: reference,
+        ),
+        _readDiagnostics.watchQuery(
+          operation: 'ai.messages',
+          query: reference.collection('messages').orderBy('createdAt'),
+        ),
         (
           DocumentSnapshot<Map<String, dynamic>> document,
           QuerySnapshot<Map<String, dynamic>> messages,
@@ -118,7 +140,10 @@ class FirestoreAiConversationStore implements AiConversationStore {
   Future<void> deleteConversation(String conversationId) async {
     final reference = _collection().doc(conversationId);
     while (true) {
-      final snapshot = await reference.collection('messages').limit(400).get();
+      final snapshot = await _readDiagnostics.getQuery(
+        operation: 'ai.deleteConversationMessages',
+        query: reference.collection('messages').limit(400),
+      );
       if (snapshot.docs.isEmpty) break;
       final batch = _db.batch();
       for (final document in snapshot.docs) {
