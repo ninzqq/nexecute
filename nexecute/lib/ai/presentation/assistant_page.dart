@@ -39,6 +39,7 @@ class _AssistantPageState extends State<AssistantPage> {
       assistantRepository: assistantRepository,
       connectionProfileStore: context.read<AiConnectionProfileStore>(),
       conversationStore: context.read<AiConversationStore>(),
+      skillStore: context.read<AiSkillStore?>(),
       readToolCoordinator: AiReadToolCoordinator(
         assistantRepository: assistantRepository,
         readService: _contextReadService,

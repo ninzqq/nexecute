@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:nexecute/ai/application/ai_prompt_composer.dart';
 import 'package:nexecute/ai/application/ai_read_tool_coordinator.dart';
+import 'package:nexecute/ai/application/ai_skill_resolver.dart';
 import 'package:nexecute/ai/domain/ai_chat_message.dart';
 import 'package:nexecute/ai/domain/ai_chat_request.dart';
 import 'package:nexecute/ai/domain/ai_application_context.dart';
@@ -9,23 +11,34 @@ import 'package:nexecute/ai/domain/ai_connection_profile.dart';
 import 'package:nexecute/ai/domain/ai_conversation.dart';
 import 'package:nexecute/ai/domain/ai_diagnostic.dart';
 import 'package:nexecute/ai/domain/ai_stream_event.dart';
+import 'package:nexecute/ai/domain/ai_skill_invocation.dart';
 import 'package:nexecute/ai/repositories/ai_assistant_repository.dart';
 import 'package:nexecute/ai/repositories/ai_connection_profile_store.dart';
 import 'package:nexecute/ai/repositories/ai_conversation_store.dart';
 import 'package:nexecute/ai/repositories/ai_response_handle.dart';
+import 'package:nexecute/ai/repositories/ai_skill_store.dart';
 import 'package:uuid/uuid.dart';
+
+enum AiSkillActivationScope { conversation, nextRequest }
+
+enum AiSkillMismatchAction { block, continueWithoutSkills }
 
 class AiChatController extends ChangeNotifier {
   AiChatController({
     required AiAssistantRepository assistantRepository,
     required AiConnectionProfileStore connectionProfileStore,
     required AiConversationStore conversationStore,
+    AiSkillStore? skillStore,
+    AiPromptComposer promptComposer = const AiPromptComposer(),
     AiReadToolCoordinator? readToolCoordinator,
     String Function()? idFactory,
     DateTime Function()? clock,
   }) : _assistantRepository = assistantRepository,
        _connectionProfileStore = connectionProfileStore,
        _conversationStore = conversationStore,
+       _skillResolver =
+           skillStore == null ? null : AiSkillResolver(store: skillStore),
+       _promptComposer = promptComposer,
        _readToolCoordinator = readToolCoordinator,
        _idFactory = idFactory ?? const Uuid().v4,
        _clock = clock ?? DateTime.now;
@@ -33,6 +46,8 @@ class AiChatController extends ChangeNotifier {
   final AiAssistantRepository _assistantRepository;
   final AiConnectionProfileStore _connectionProfileStore;
   final AiConversationStore _conversationStore;
+  final AiSkillResolver? _skillResolver;
+  final AiPromptComposer _promptComposer;
   final AiReadToolCoordinator? _readToolCoordinator;
   final String Function() _idFactory;
   final DateTime Function() _clock;
@@ -47,6 +62,8 @@ class AiChatController extends ChangeNotifier {
   bool _generationFinalized = true;
   int _generation = 0;
   bool _disposed = false;
+  List<AiSkillReference> _newConversationSkills = const [];
+  List<AiSkillReference>? _nextRequestSkills;
 
   bool isLoading = true;
   bool isGenerating = false;
@@ -54,6 +71,15 @@ class AiChatController extends ChangeNotifier {
   List<AiConversation> conversations = const [];
   AiConversation? conversation;
   String? errorMessage;
+  AiSkillResolutionException? skillResolutionError;
+
+  List<AiSkillReference> get conversationSkills =>
+      conversation?.activeSkills ?? _newConversationSkills;
+
+  List<AiSkillReference>? get nextRequestSkills => _nextRequestSkills;
+
+  List<AiSkillReference> get effectiveSkills =>
+      _nextRequestSkills ?? conversationSkills;
 
   List<AiChatMessage> get messages => List.unmodifiable([
     ...?conversation?.messages,
@@ -125,6 +151,9 @@ class AiChatController extends ChangeNotifier {
     if (isGenerating) await stopResponse();
     _draftAssistant = null;
     errorMessage = null;
+    skillResolutionError = null;
+    _nextRequestSkills = null;
+    _newConversationSkills = const [];
     await _watchCurrentConversation(conversationId);
   }
 
@@ -134,13 +163,50 @@ class AiChatController extends ChangeNotifier {
     conversation = null;
     _draftAssistant = null;
     errorMessage = null;
+    skillResolutionError = null;
+    _nextRequestSkills = null;
+    _newConversationSkills = const [];
     _notify();
+  }
+
+  Future<bool> setActiveSkills(
+    Iterable<AiSkillReference> references, {
+    AiSkillActivationScope scope = AiSkillActivationScope.conversation,
+  }) async {
+    if (isGenerating) return false;
+    final normalized = normalizeAiSkillReferences(references);
+    skillResolutionError = null;
+    errorMessage = null;
+    if (scope == AiSkillActivationScope.nextRequest) {
+      _nextRequestSkills = normalized;
+      _notify();
+      return true;
+    }
+
+    final current = conversation;
+    if (current == null) {
+      _newConversationSkills = normalized;
+      _notify();
+      return true;
+    }
+    final updated = current.copyWith(
+      activeSkills: normalized,
+      updatedAt: _nextMessageTime(),
+    );
+    conversation = updated;
+    _notify();
+    _persistInBackground(
+      _conversationStore.saveConversation(updated),
+      failureMessage: 'The active skills could not be synchronized',
+    );
+    return true;
   }
 
   Future<bool> send(
     String rawText, {
     AiApplicationContextEnvelope? applicationContext,
     AiReadToolExecutionScope? readToolExecutionScope,
+    AiSkillMismatchAction skillMismatchAction = AiSkillMismatchAction.block,
   }) async {
     final text = rawText.trim();
     if (text.isEmpty || isGenerating) return false;
@@ -152,6 +218,11 @@ class AiChatController extends ChangeNotifier {
     }
 
     try {
+      final resolvedSkills = await _resolveSkills(
+        effectiveSkills,
+        mismatchAction: skillMismatchAction,
+      );
+      _nextRequestSkills = null;
       var current = conversation;
       final now = _nextMessageTime();
       if (current == null) {
@@ -162,7 +233,9 @@ class AiChatController extends ChangeNotifier {
           modelId: profile.modelId,
           createdAt: now,
           updatedAt: now,
+          activeSkills: _newConversationSkills,
         );
+        _newConversationSkills = const [];
         conversation = current;
         final conversationId = current.id;
         _persistInBackground(
@@ -210,7 +283,13 @@ class AiChatController extends ChangeNotifier {
         requestMessages,
         applicationContext: applicationContext,
         readToolExecutionScope: readToolExecutionScope,
+        resolvedSkills: resolvedSkills,
       );
+    } on AiSkillResolutionException catch (error) {
+      skillResolutionError = error;
+      errorMessage = _skillResolutionMessage(error);
+      _notify();
+      return false;
     } catch (error) {
       errorMessage = 'Could not send the message: $error';
       _notify();
@@ -218,7 +297,9 @@ class AiChatController extends ChangeNotifier {
     }
   }
 
-  Future<void> retryLastResponse() async {
+  Future<void> retryLastResponse({
+    AiSkillMismatchAction skillMismatchAction = AiSkillMismatchAction.block,
+  }) async {
     if (isGenerating) return;
     final profile = activeProfile;
     final current = conversation;
@@ -231,17 +312,26 @@ class AiChatController extends ChangeNotifier {
     );
     if (failedIndex < 0) return;
 
-    final failed = current.messages[failedIndex];
-    final retained = [...current.messages]..removeAt(failedIndex);
-    _reasoningByMessageId.remove(failed.id);
-    conversation = current.copyWith(messages: retained);
-    _notify();
     try {
+      final resolvedSkills = await _resolveSkills(
+        effectiveSkills,
+        mismatchAction: skillMismatchAction,
+      );
+      _nextRequestSkills = null;
+      final failed = current.messages[failedIndex];
+      final retained = [...current.messages]..removeAt(failedIndex);
+      _reasoningByMessageId.remove(failed.id);
+      conversation = current.copyWith(messages: retained);
+      _notify();
       _persistInBackground(
         _conversationStore.deleteMessage(current.id, failed.id),
         failureMessage: 'The failed response could not be removed',
       );
-      await _beginResponse(profile, retained);
+      await _beginResponse(profile, retained, resolvedSkills: resolvedSkills);
+    } on AiSkillResolutionException catch (error) {
+      skillResolutionError = error;
+      errorMessage = _skillResolutionMessage(error);
+      _notify();
     } catch (error) {
       errorMessage = 'Could not retry the response: $error';
       _notify();
@@ -274,6 +364,7 @@ class AiChatController extends ChangeNotifier {
     List<AiChatMessage> requestMessages, {
     AiApplicationContextEnvelope? applicationContext,
     AiReadToolExecutionScope? readToolExecutionScope,
+    List<AiResolvedSkillInvocation> resolvedSkills = const [],
   }) async {
     final current = conversation;
     if (current == null) return false;
@@ -293,10 +384,11 @@ class AiChatController extends ChangeNotifier {
       final request = AiChatRequest(
         connectionProfile: profile,
         conversationId: current.id,
-        systemInstruction:
-            profile.systemPrompt.trim().isEmpty
-                ? null
-                : profile.systemPrompt.trim(),
+        systemInstruction: _promptComposer.compose(
+          profilePreferences: profile.systemPrompt,
+          resolvedSkills: resolvedSkills,
+        ),
+        resolvedSkills: resolvedSkills,
         messages:
             requestMessages
                 .where((message) => message.status == AiMessageStatus.complete)
@@ -362,6 +454,43 @@ class AiChatController extends ChangeNotifier {
       );
       return false;
     }
+  }
+
+  Future<List<AiResolvedSkillInvocation>> _resolveSkills(
+    List<AiSkillReference> references, {
+    required AiSkillMismatchAction mismatchAction,
+  }) async {
+    if (references.isEmpty) {
+      skillResolutionError = null;
+      return const [];
+    }
+    try {
+      final resolver = _skillResolver;
+      if (resolver == null) {
+        throw AiSkillResolutionException([
+          for (final reference in references)
+            AiSkillResolutionIssue(
+              reference: reference,
+              kind: AiSkillResolutionIssueKind.storageUnavailable,
+            ),
+        ]);
+      }
+      final resolved = await resolver.resolve(references);
+      skillResolutionError = null;
+      return resolved;
+    } on AiSkillResolutionException {
+      if (mismatchAction == AiSkillMismatchAction.continueWithoutSkills) {
+        skillResolutionError = null;
+        return const [];
+      }
+      rethrow;
+    }
+  }
+
+  static String _skillResolutionMessage(AiSkillResolutionException error) {
+    final ids = error.issues.map((issue) => issue.reference.id).join(', ');
+    return 'Active skills require attention before sending: $ids. '
+        'Replace or import them, or explicitly continue without skills.';
   }
 
   void _onStreamEvent(int generation, AiStreamEvent event) {

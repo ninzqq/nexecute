@@ -57,6 +57,7 @@ void main() {
       request.systemInstruction,
       AiNoteTaskPromptBuilder.systemInstruction,
     );
+    expect(request.resolvedSkills, isEmpty);
     expect(
       request.messages.single.content,
       contains('Remember to buy coffee.'),

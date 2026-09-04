@@ -8,6 +8,14 @@ const aiMaxSkillNameCharacters = 100;
 const aiMaxSkillDescriptionCharacters = 500;
 const aiMaxSkillInstructionCharacters = 16000;
 
+bool isValidAiSkillId(String value) =>
+    _isWellFormedUnicode(value) &&
+    value.length <= aiMaxSkillIdCharacters &&
+    RegExp(r'^[a-z0-9]+(?:-[a-z0-9]+)*$').hasMatch(value);
+
+bool isValidAiSkillContentHash(String value) =>
+    RegExp(r'^[a-f0-9]{64}$').hasMatch(value);
+
 /// The fields accepted in version 1 `SKILL.md` frontmatter.
 ///
 /// Storage-only state such as [AiSkill.isEnabled] and timestamps deliberately
@@ -184,7 +192,7 @@ final class AiSkillMetadata {
       maximumCharacters: aiMaxSkillDescriptionCharacters,
       errorCode: AiSkillValidationErrorCode.invalidDescription,
     );
-    if (!RegExp(r'^[a-f0-9]{64}$').hasMatch(contentHash)) {
+    if (!isValidAiSkillContentHash(contentHash)) {
       throw const AiSkillValidationException(
         AiSkillValidationErrorCode.invalidContentHash,
         'Skill contentHash must be a lowercase SHA-256 digest.',
@@ -254,9 +262,7 @@ void _validateSchemaVersion(int value) {
 }
 
 void _validateId(String value) {
-  if (!_isWellFormedUnicode(value) ||
-      value.length > aiMaxSkillIdCharacters ||
-      !RegExp(r'^[a-z0-9]+(?:-[a-z0-9]+)*$').hasMatch(value)) {
+  if (!isValidAiSkillId(value)) {
     throw const AiSkillValidationException(
       AiSkillValidationErrorCode.invalidId,
       'Skill id must be a lowercase, hyphen-separated identifier of at most '

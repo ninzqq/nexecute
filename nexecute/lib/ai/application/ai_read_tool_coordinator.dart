@@ -437,6 +437,7 @@ class _AiReadToolSession {
     systemInstruction: request.systemInstruction,
     applicationContext: request.applicationContext,
     readToolAuthorization: _currentAuthorization(),
+    resolvedSkills: request.resolvedSkills,
     continuationMessages: continuationMessages,
   );
 
@@ -498,6 +499,7 @@ AiChatRequest _withoutTools(AiChatRequest request) => AiChatRequest(
   messages: request.messages,
   systemInstruction: request.systemInstruction,
   applicationContext: request.applicationContext,
+  resolvedSkills: request.resolvedSkills,
   continuationMessages: request.continuationMessages,
 );
 

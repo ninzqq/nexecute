@@ -75,6 +75,7 @@ void main() {
         request.systemInstruction,
         AiNoteEventPromptBuilder.systemInstruction,
       );
+      expect(request.resolvedSkills, isEmpty);
       expect(request.messages.single.content, preview.userMessage);
       expect(
         request.messages.single.content,

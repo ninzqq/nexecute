@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nexecute/ai/domain/ai_chat_message.dart';
 import 'package:nexecute/ai/domain/ai_conversation.dart';
 import 'package:nexecute/ai/domain/ai_diagnostic.dart';
+import 'package:nexecute/ai/domain/ai_skill_invocation.dart';
 import 'package:nexecute/repositories/firestore/schema/app_data_schema.dart';
 
 abstract final class AiConversationDocumentMapper {
@@ -14,6 +15,10 @@ abstract final class AiConversationDocumentMapper {
     'modelId': conversation.modelId,
     'createdAt': conversation.createdAt,
     'updatedAt': conversation.updatedAt,
+    'activeSkills': [
+      for (final skill in conversation.activeSkills)
+        {'id': skill.id, 'contentHash': skill.contentHash},
+    ],
   });
 
   static AiConversation fromDocument(
@@ -35,6 +40,7 @@ abstract final class AiConversationDocumentMapper {
       createdAt: createdAt,
       updatedAt: _date(data['updatedAt']) ?? createdAt,
       messages: messages,
+      activeSkills: _skillReferences(data['activeSkills']),
     );
   }
 
@@ -91,6 +97,28 @@ abstract final class AiConversationDocumentMapper {
     DateTime date => date,
     _ => null,
   };
+
+  static List<AiSkillReference> _skillReferences(Object? value) {
+    if (value is! Iterable) return const [];
+    final references = <AiSkillReference>[];
+    final ids = <String>{};
+    for (final item in value) {
+      if (item is! Map ||
+          item.keys.any((key) => key != 'id' && key != 'contentHash')) {
+        continue;
+      }
+      final id = item['id'];
+      final contentHash = item['contentHash'];
+      if (id is! String || contentHash is! String || !ids.add(id)) continue;
+      try {
+        references.add(AiSkillReference(id: id, contentHash: contentHash));
+      } on ArgumentError {
+        // Ignore corrupt synchronization metadata without loading or persisting
+        // any instruction body. Valid references still surface normally.
+      }
+    }
+    return references;
+  }
 
   static Map<String, Object?>? _diagnosticToMap(AiDiagnostic? diagnostic) {
     if (diagnostic == null) return null;

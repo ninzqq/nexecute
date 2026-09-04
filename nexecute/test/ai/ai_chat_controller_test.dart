@@ -129,7 +129,11 @@ void main() {
     );
     expect(
       repository.startedRequests.single.systemInstruction,
-      aiDefaultSystemPrompt.trim(),
+      startsWith('[IMMUTABLE NEXECUTE POLICY]'),
+    );
+    expect(
+      repository.startedRequests.single.systemInstruction,
+      contains(aiDefaultSystemPrompt.split('\n').first),
     );
     expect(controller.isGenerating, isFalse);
   });
@@ -364,12 +368,143 @@ void main() {
     expect(repository.startedRequests, hasLength(2));
     expect(repository.startedRequests.last.continuationMessages, hasLength(2));
   });
+
+  test('persists conversation skills and sends resolved snapshots', () async {
+    final skill = _skill('suomen-kieli', 'Kirjoita aina hyvää suomea.');
+    final skillStore = InMemoryAiSkillStore(skills: [skill]);
+    final repository = FakeAiAssistantRepository();
+    var nextId = 0;
+    final controller = AiChatController(
+      assistantRepository: repository,
+      connectionProfileStore: profileStore,
+      conversationStore: conversationStore,
+      skillStore: skillStore,
+      idFactory: () => 'skill-${nextId++}',
+      clock: () => DateTime.utc(2026, 9, 5, 12),
+    );
+    addTearDown(controller.dispose);
+    addTearDown(skillStore.dispose);
+    await controller.initialize();
+    await controller.setActiveSkills([AiSkillReference.fromSkill(skill)]);
+
+    expect(await controller.send('Hei'), isTrue);
+    await _flushEvents();
+
+    final request = repository.startedRequests.single;
+    expect(request.resolvedSkills.single.id, skill.id);
+    expect(request.resolvedSkills.single.contentHash, skill.contentHash);
+    expect(
+      request.systemInstruction,
+      startsWith('[IMMUTABLE NEXECUTE POLICY]'),
+    );
+    expect(request.systemInstruction, contains(r'Kirjoita aina hyvää suomea.'));
+    final saved = (await conversationStore.getConversations()).single;
+    expect(saved.activeSkills, [AiSkillReference.fromSkill(skill)]);
+    expect(
+      saved.messages.any(
+        (message) => message.content.contains(skill.instructions),
+      ),
+      isFalse,
+    );
+  });
+
+  test('applies a next-request skill override exactly once', () async {
+    final persistent = _skill('persistent', 'Persistent instructions');
+    final once = _skill('once', 'One request only');
+    final skillStore = InMemoryAiSkillStore(skills: [persistent, once]);
+    final repository = FakeAiAssistantRepository();
+    var nextId = 0;
+    final controller = AiChatController(
+      assistantRepository: repository,
+      connectionProfileStore: profileStore,
+      conversationStore: conversationStore,
+      skillStore: skillStore,
+      idFactory: () => 'override-${nextId++}',
+      clock: () => DateTime.utc(2026, 9, 5, 13, 0, nextId),
+    );
+    addTearDown(controller.dispose);
+    addTearDown(skillStore.dispose);
+    await controller.initialize();
+    await controller.setActiveSkills([AiSkillReference.fromSkill(persistent)]);
+    await controller.setActiveSkills([
+      AiSkillReference.fromSkill(once),
+    ], scope: AiSkillActivationScope.nextRequest);
+
+    await controller.send('First');
+    await _flushEvents();
+    await controller.send('Second');
+    await _flushEvents();
+
+    expect(repository.startedRequests, hasLength(2));
+    expect(repository.startedRequests.first.resolvedSkills.single.id, 'once');
+    expect(
+      repository.startedRequests.last.resolvedSkills.single.id,
+      'persistent',
+    );
+    expect(controller.nextRequestSkills, isNull);
+    expect(controller.conversationSkills.single.id, 'persistent');
+  });
+
+  test(
+    'blocks changed skills until explicitly continuing without them',
+    () async {
+      final previous = _skill('review', 'Previous instructions');
+      final current = _skill('review', 'Changed instructions');
+      final skillStore = InMemoryAiSkillStore(skills: [current]);
+      final repository = FakeAiAssistantRepository();
+      var nextId = 0;
+      final controller = AiChatController(
+        assistantRepository: repository,
+        connectionProfileStore: profileStore,
+        conversationStore: conversationStore,
+        skillStore: skillStore,
+        idFactory: () => 'mismatch-${nextId++}',
+        clock: () => DateTime.utc(2026, 9, 5, 14),
+      );
+      addTearDown(controller.dispose);
+      addTearDown(skillStore.dispose);
+      await controller.initialize();
+      await controller.setActiveSkills([AiSkillReference.fromSkill(previous)]);
+
+      expect(await controller.send('Review this'), isFalse);
+      expect(repository.startedRequests, isEmpty);
+      expect(controller.messages, isEmpty);
+      expect(
+        controller.skillResolutionError?.issues.single.kind,
+        AiSkillResolutionIssueKind.changed,
+      );
+
+      expect(
+        await controller.send(
+          'Review this',
+          skillMismatchAction: AiSkillMismatchAction.continueWithoutSkills,
+        ),
+        isTrue,
+      );
+      await _flushEvents();
+
+      expect(repository.startedRequests.single.resolvedSkills, isEmpty);
+      expect(
+        controller.conversationSkills.single.contentHash,
+        previous.contentHash,
+      );
+    },
+  );
 }
 
 Future<void> _flushEvents() async {
   await Future<void>.delayed(Duration.zero);
   await Future<void>.delayed(Duration.zero);
 }
+
+AiSkill _skill(String id, String instructions) => AiSkill(
+  id: id,
+  name: id,
+  description: 'Controller test skill',
+  instructions: instructions,
+  createdAt: DateTime.utc(2026, 9, 5),
+  updatedAt: DateTime.utc(2026, 9, 5),
+);
 
 class _PendingPersistenceConversationStore extends InMemoryAiConversationStore {
   final _acknowledgement = Completer<void>();

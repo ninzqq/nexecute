@@ -1120,12 +1120,14 @@ primary skill and at most a few compatible supporting skills should be active.
   skill can be represented intact.
 - [x] Apply the contract to UTF-8 `SKILL.md` decoding and reject unknown or
   malformed frontmatter fields during import.
-- [ ] Treat imported skill instructions as user-authored configuration that may
+- [x] Treat imported skill instructions as user-authored configuration that may
   refine assistant behavior but can never remove or supersede immutable Nexecute
   policies, request-scoped data authorization, output validation, or confirmed
   write requirements.
-- [ ] Warn users not to place credentials or secrets in skills. Never copy a
-  skill body into diagnostics, analytics, logs, or conversation messages.
+- [ ] Warn users not to place credentials or secrets in skills when the Step
+  11D management interface is added.
+- [x] Never copy a skill body into diagnostics, analytics, logs, Firestore
+  conversation messages, or tool transcripts.
 
 Suggested version 1 `SKILL.md` representation:
 
@@ -1176,27 +1178,40 @@ the management interface and platform file picker remain Step 11D work.
 
 ##### Step 11C: prompt composition and request semantics
 
-- [ ] Introduce one `AiPromptComposer` used by ordinary chat requests. Compose
+- [x] Introduce one `AiPromptComposer` used by ordinary chat requests. Compose
   instructions in deterministic precedence order: immutable Nexecute policy,
   profile-level preferences, active skill instructions, and trusted
   request-specific workflow constraints.
-- [ ] Stop using the editable connection-profile prompt as the only system-level
+- [x] Stop using the editable connection-profile prompt as the only system-level
   safety instruction. Preserve backward compatibility by treating existing
   profile prompts as user preferences beneath the immutable policy.
-- [ ] Add immutable resolved skill invocations to `AiChatRequest`, including the
+- [x] Add immutable resolved skill invocations to `AiChatRequest`, including the
   skill ID, display name, revision or hash, and validated instruction body.
   Provider adapters should receive only the already composed instruction text.
-- [ ] Define active skills per conversation, with an explicit option to apply a
+- [x] Define active skills per conversation, with an explicit option to apply a
   change only to the next request. Persist only the minimal skill IDs and
   revisions needed for interface continuity; never persist instruction bodies
   in Firestore conversation messages or tool transcripts.
-- [ ] Specify recovery when a synchronized conversation refers to a local skill
+- [x] Specify recovery when a synchronized conversation refers to a local skill
   that is missing or has changed on the current device. Show the mismatch and
   require an explicit replacement, import, or skill-free continuation rather
   than silently using different instructions.
-- [ ] Keep dedicated Note-to-Task, Note-to-Event, and later structured workflows
+- [x] Keep dedicated Note-to-Task, Note-to-Event, and later structured workflows
   on their fixed prompts unless each workflow explicitly defines how a skill can
   participate without weakening its schema and confirmation contract.
+
+Ordinary chat now resolves the conversation's pinned skill IDs and content
+hashes against the local store before persisting or sending a user message. The
+single prompt composer emits the immutable Nexecute policy first, then
+JSON-bounded profile preferences and active skills in deterministic skill-ID
+order, followed by optional app-owned workflow constraints. Missing, disabled,
+changed, corrupt, or unavailable skill revisions block by default and surface a
+body-free recovery result; continuing without skills must be explicit and does
+not silently rewrite the conversation's pinned references. A next-request
+override remains in memory and is consumed once. Firestore conversation metadata
+contains only skill IDs and hashes, while provider adapters serialize only the
+already composed instruction string. Dedicated structured Note workflows remain
+skill-free.
 
 ##### Step 11D: management and activation interface
 

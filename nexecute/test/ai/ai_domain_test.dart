@@ -105,6 +105,49 @@ void main() {
     expect(() => request.messages.clear(), throwsUnsupportedError);
   });
 
+  test('conversation references and resolved request skills are immutable', () {
+    final skill = AiSkill(
+      id: 'suomen-kieli',
+      name: 'Suomen kieli',
+      description: 'Finnish writing',
+      instructions: 'Kirjoita suomeksi.',
+      createdAt: DateTime.utc(2026, 9, 5),
+      updatedAt: DateTime.utc(2026, 9, 5),
+    );
+    final references = <AiSkillReference>[AiSkillReference.fromSkill(skill)];
+    final invocations = <AiResolvedSkillInvocation>[
+      AiResolvedSkillInvocation.fromSkill(skill),
+    ];
+    final conversation = AiConversation(
+      id: 'conversation',
+      title: 'Skills',
+      connectionProfileId: 'profile',
+      modelId: 'model',
+      createdAt: DateTime.utc(2026, 9, 5),
+      updatedAt: DateTime.utc(2026, 9, 5),
+      activeSkills: references,
+    );
+    final request = AiChatRequest(
+      connectionProfile: AiConnectionProfile(
+        id: 'profile',
+        name: 'Profile',
+        protocol: AiProtocol.openAiCompatibleChat,
+        baseUrl: Uri.parse('https://example.test/v1'),
+        modelId: 'model',
+      ),
+      conversationId: conversation.id,
+      messages: const [],
+      resolvedSkills: invocations,
+    );
+
+    references.clear();
+    invocations.clear();
+    expect(conversation.activeSkills.single.id, skill.id);
+    expect(request.resolvedSkills.single.instructions, skill.instructions);
+    expect(() => conversation.activeSkills.clear(), throwsUnsupportedError);
+    expect(() => request.resolvedSkills.clear(), throwsUnsupportedError);
+  });
+
   test('protocol-neutral events carry text, tools, usage, and failures', () {
     const delta = AiTextDelta('Hello');
     const reasoning = AiReasoningDelta('Consider the request');

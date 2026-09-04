@@ -849,8 +849,10 @@ class _AiConnectionProfileEditorState
                   childrenPadding: const EdgeInsets.only(top: 12, bottom: 8),
                   shape: const Border(),
                   collapsedShape: const Border(),
-                  title: const Text('System prompt'),
-                  subtitle: const Text('Sent with every chat request'),
+                  title: const Text('Profile instructions'),
+                  subtitle: const Text(
+                    'User preferences applied beneath Nexecute safety policy',
+                  ),
                   children: [
                     TextFormField(
                       key: const Key('ai-profile-system-prompt-field'),
@@ -862,9 +864,12 @@ class _AiConnectionProfileEditorState
                       decoration: const InputDecoration(
                         labelText: 'Assistant instructions',
                         alignLabelWithHint: true,
-                        helperMaxLines: 3,
+                        helperMaxLines: 4,
                         helperText:
-                            'Stored locally with this profile and sent on every request. Keep it concise and do not include secrets. Leave empty to send no system prompt.',
+                            'Stored locally and included as user-authored preferences. '
+                            'They cannot override Nexecute safety or workflow rules. '
+                            'Keep them concise, never include credentials or secrets, '
+                            'and leave empty for no profile preferences.',
                       ),
                     ),
                     const SizedBox(height: 8),

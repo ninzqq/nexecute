@@ -288,11 +288,22 @@ void main() {
       reasoningEffort: AiReasoningEffort.none,
       maxOutputTokens: 512,
     );
+    final resolvedSkill = AiResolvedSkillInvocation.fromSkill(
+      AiSkill(
+        id: 'local-skill',
+        name: 'Local skill',
+        description: 'Adapter boundary test',
+        instructions: 'This body must not be serialized separately.',
+        createdAt: DateTime.utc(2026, 9, 5),
+        updatedAt: DateTime.utc(2026, 9, 5),
+      ),
+    );
     final handle = await repository.startResponse(
       AiChatRequest(
         connectionProfile: configuredProfile,
         conversationId: 'conversation-1',
         systemInstruction: 'Keep answers short.',
+        resolvedSkills: [resolvedSkill],
         messages: [
           AiChatMessage(
             id: 'message-1',
@@ -316,6 +327,8 @@ void main() {
     expect(requestBody['stream'], isTrue);
     expect(requestBody['max_tokens'], 512);
     expect(requestBody['reasoning_effort'], 'none');
+    expect(requestBody, isNot(contains('resolvedSkills')));
+    expect(requestBody.toString(), isNot(contains(resolvedSkill.instructions)));
     final messages = requestBody['messages'] as List;
     expect(messages, hasLength(2));
     expect(messages.first, {

@@ -1,4 +1,5 @@
 import 'package:nexecute/ai/domain/ai_chat_message.dart';
+import 'package:nexecute/ai/domain/ai_skill_invocation.dart';
 
 class AiConversation {
   AiConversation({
@@ -9,7 +10,9 @@ class AiConversation {
     required this.createdAt,
     required this.updatedAt,
     List<AiChatMessage> messages = const [],
-  }) : messages = List.unmodifiable(messages);
+    Iterable<AiSkillReference> activeSkills = const [],
+  }) : messages = List.unmodifiable(messages),
+       activeSkills = normalizeAiSkillReferences(activeSkills);
 
   final String id;
   final String title;
@@ -18,6 +21,7 @@ class AiConversation {
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<AiChatMessage> messages;
+  final List<AiSkillReference> activeSkills;
 
   AiConversation copyWith({
     String? id,
@@ -27,6 +31,7 @@ class AiConversation {
     DateTime? createdAt,
     DateTime? updatedAt,
     List<AiChatMessage>? messages,
+    Iterable<AiSkillReference>? activeSkills,
   }) {
     return AiConversation(
       id: id ?? this.id,
@@ -36,6 +41,7 @@ class AiConversation {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       messages: messages ?? this.messages,
+      activeSkills: activeSkills ?? this.activeSkills,
     );
   }
 }

@@ -5,6 +5,14 @@ import 'package:nexecute/repositories/firestore/schema/app_data_schema.dart';
 
 void main() {
   test('conversation metadata round-trips without embedding messages', () {
+    final skill = AiSkill(
+      id: 'suomen-kieli',
+      name: 'Suomen kieli',
+      description: 'Finnish writing',
+      instructions: 'Private local instruction body',
+      createdAt: DateTime.utc(2026, 8, 29),
+      updatedAt: DateTime.utc(2026, 8, 29),
+    );
     final conversation = AiConversation(
       id: 'conversation-1',
       title: 'Planning',
@@ -20,6 +28,7 @@ void main() {
           createdAt: DateTime.utc(2026, 8, 29, 10),
         ),
       ],
+      activeSkills: [AiSkillReference.fromSkill(skill)],
     );
 
     final data = AiConversationDocumentMapper.conversationMetadataToMap(
@@ -32,10 +41,32 @@ void main() {
     }, messages: conversation.messages);
 
     expect(data, isNot(contains('messages')));
+    expect(data.toString(), isNot(contains(skill.instructions)));
+    expect(data['activeSkills'], [
+      {'id': skill.id, 'contentHash': skill.contentHash},
+    ]);
     expect(data[AppDataSchema.versionField], AppDataSchema.currentVersion);
     expect(restored.title, conversation.title);
     expect(restored.modelId, conversation.modelId);
     expect(restored.messages.single.content, 'Hello');
+    expect(restored.activeSkills, [AiSkillReference.fromSkill(skill)]);
+  });
+
+  test('ignores malformed synchronized skill references safely', () {
+    final restored = AiConversationDocumentMapper.fromMap('conversation', {
+      'activeSkills': [
+        {'id': '../escape', 'contentHash': 'bad'},
+        {'id': 'duplicate', 'contentHash': List.filled(64, '0').join()},
+        {'id': 'duplicate', 'contentHash': List.filled(64, '1').join()},
+        {
+          'id': 'unknown-field',
+          'contentHash': List.filled(64, '2').join(),
+          'body': 'secret',
+        },
+      ],
+    });
+
+    expect(restored.activeSkills.single.id, 'duplicate');
   });
 
   test('message mapper preserves partial failure state', () {

@@ -1,6 +1,8 @@
 export 'application/ai_note_event_prompt.dart';
 export 'application/ai_note_task_prompt.dart';
+export 'application/ai_prompt_composer.dart';
 export 'application/ai_read_tool_coordinator.dart';
+export 'application/ai_skill_resolver.dart';
 export 'application/ai_skill_transfer_service.dart';
 export 'application/ai_application_context_builder.dart';
 export 'application/ai_application_context_read_contract.dart';
@@ -16,6 +18,7 @@ export 'domain/ai_event_proposal.dart';
 export 'domain/ai_model_info.dart';
 export 'domain/ai_protocol.dart';
 export 'domain/ai_skill.dart';
+export 'domain/ai_skill_invocation.dart';
 export 'domain/ai_stream_event.dart';
 export 'domain/ai_tool.dart';
 export 'domain/ai_task_proposal.dart';
