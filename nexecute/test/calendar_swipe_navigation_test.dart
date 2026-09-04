@@ -12,6 +12,81 @@ import 'package:provider/provider.dart';
 import 'support/fake_event_repository.dart';
 
 void main() {
+  testWidgets('calendar toolbar uses one row at desktop and phone widths', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<EventRepository>.value(value: FakeEventRepository()),
+          ChangeNotifierProvider(create: (_) => SelectedDay()),
+        ],
+        child: MaterialApp(
+          theme: AppThemes.forPreset(AppThemePreset.midnight),
+          home: const CalendarPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('calendar-toolbar-single-row')),
+      findsOneWidget,
+    );
+    final wideToolbarHeight =
+        tester.getSize(find.byKey(const Key('calendar-toolbar'))).height;
+    final controlCenters = [
+      tester.getCenter(find.text('Today')).dy,
+      tester.getCenter(find.byKey(const Key('calendar-period-title'))).dy,
+      tester.getCenter(find.text('Week')).dy,
+    ];
+    expect((controlCenters.last - controlCenters.first).abs(), lessThan(2));
+    expect((controlCenters[1] - controlCenters.first).abs(), lessThan(2));
+    expect(wideToolbarHeight, lessThan(64));
+
+    tester.view.physicalSize = const Size(390, 844);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('calendar-toolbar-single-row')),
+      findsOneWidget,
+    );
+    expect(
+      tester.getSize(find.byKey(const Key('calendar-toolbar'))).height,
+      lessThan(64),
+    );
+    final phoneControlCenters = [
+      tester.getCenter(find.text('Today')).dy,
+      tester.getCenter(find.byKey(const Key('calendar-period-title'))).dy,
+      tester.getCenter(find.text('Week')).dy,
+    ];
+    expect(
+      (phoneControlCenters.last - phoneControlCenters.first).abs(),
+      lessThan(2),
+    );
+    expect(
+      (phoneControlCenters[1] - phoneControlCenters.first).abs(),
+      lessThan(2),
+    );
+
+    tester.view.physicalSize = const Size(320, 844);
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Today'), findsOneWidget);
+    await tester.tap(find.text('Week'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<Text>(find.byKey(const Key('calendar-period-title'))).data,
+      startsWith('W'),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('calendar pager survives fractional desktop width changes', (
     tester,
   ) async {

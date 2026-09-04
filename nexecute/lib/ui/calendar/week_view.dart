@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:nexecute/domain/calendar/calendar_day.dart';
@@ -56,36 +58,51 @@ class WeekView extends StatelessWidget {
           ),
         const Divider(height: 1),
         Expanded(
-          child: SingleChildScrollView(
-            key: const Key('week-time-grid-scroll-view'),
-            controller: timeScrollController,
-            child: SizedBox(
-              height: weekTimeGridHeight,
-              child: Row(
-                key: const Key('week-time-grid'),
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: _timeGutterWidth,
-                    child: const _HourGutter(hourHeight: weekHourHeight),
-                  ),
-                  for (final day in week.days)
-                    Expanded(
-                      child: DayColumn(
-                        day: day,
-                        events: eventsForDay(events, day.date),
-                        isSelected: isSameCalendarDay(day.date, selectedDay),
-                        hourHeight: weekHourHeight,
-                        onSelected: () => onDaySelected(day.date),
-                        onEventSelected: (event) {
-                          onDaySelected(day.date);
-                          onEventSelected(event);
-                        },
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final bottomScrollRoom = math.max(
+                0.0,
+                constraints.maxHeight +
+                    weekInitialScrollOffset -
+                    weekTimeGridHeight +
+                    weekHourHeight,
+              );
+              return SingleChildScrollView(
+                key: const Key('week-time-grid-scroll-view'),
+                controller: timeScrollController,
+                padding: EdgeInsets.only(bottom: bottomScrollRoom),
+                child: SizedBox(
+                  height: weekTimeGridHeight,
+                  child: Row(
+                    key: const Key('week-time-grid'),
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: _timeGutterWidth,
+                        child: const _HourGutter(hourHeight: weekHourHeight),
                       ),
-                    ),
-                ],
-              ),
-            ),
+                      for (final day in week.days)
+                        Expanded(
+                          child: DayColumn(
+                            day: day,
+                            events: eventsForDay(events, day.date),
+                            isSelected: isSameCalendarDay(
+                              day.date,
+                              selectedDay,
+                            ),
+                            hourHeight: weekHourHeight,
+                            onSelected: () => onDaySelected(day.date),
+                            onEventSelected: (event) {
+                              onDaySelected(day.date);
+                              onEventSelected(event);
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ],

@@ -121,6 +121,10 @@ class _CalendarPageState extends State<CalendarPage> {
                   _viewMode == CalendarViewMode.month
                       ? DateFormat('MMMM yyyy').format(month.start)
                       : 'Week ${week.weekNumber} · ${DateFormat('MMM yyyy').format(week.start)}',
+              compactTitle:
+                  _viewMode == CalendarViewMode.month
+                      ? DateFormat('MMM yyyy').format(month.start)
+                      : 'W${week.weekNumber} · ${DateFormat('MMM yyyy').format(week.start)}',
               viewMode: _viewMode,
               onViewModeChanged: _changeViewMode,
               onPrevious: _showPrevious,
@@ -674,6 +678,7 @@ class _CalendarEventDetailsOverlay extends StatelessWidget {
 class _CalendarToolbar extends StatelessWidget {
   const _CalendarToolbar({
     required this.title,
+    required this.compactTitle,
     required this.viewMode,
     required this.onViewModeChanged,
     required this.onPrevious,
@@ -682,6 +687,7 @@ class _CalendarToolbar extends StatelessWidget {
   });
 
   final String title;
+  final String compactTitle;
   final CalendarViewMode viewMode;
   final ValueChanged<CalendarViewMode> onViewModeChanged;
   final VoidCallback onPrevious;
@@ -695,66 +701,118 @@ class _CalendarToolbar extends StatelessWidget {
     return ColoredBox(
       key: const Key('calendar-toolbar'),
       color: theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final dense = constraints.maxWidth < 600;
+          final iconOnlyToday = constraints.maxWidth < 360;
+          return Padding(
+            key: const Key('calendar-toolbar-single-row'),
+            padding: EdgeInsets.symmetric(
+              horizontal: dense ? 4 : 12,
+              vertical: 6,
+            ),
             child: Row(
               children: [
-                IconButton(
+                if (iconOnlyToday)
+                  _navigationButton(
+                    tooltip: 'Today',
+                    icon: Icons.today_rounded,
+                    onPressed: onToday,
+                    dense: true,
+                  )
+                else
+                  TextButton(
+                    style:
+                        dense
+                            ? const ButtonStyle(
+                              minimumSize: WidgetStatePropertyAll(Size(0, 40)),
+                              padding: WidgetStatePropertyAll(
+                                EdgeInsets.symmetric(horizontal: 8),
+                              ),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            )
+                            : null,
+                    onPressed: onToday,
+                    child: const Text('Today'),
+                  ),
+                SizedBox(width: dense ? 0 : 4),
+                _navigationButton(
                   tooltip: 'Previous',
-                  visualDensity: VisualDensity.compact,
+                  icon: Icons.chevron_left,
                   onPressed: onPrevious,
-                  icon: const Icon(Icons.chevron_left),
+                  dense: dense,
                 ),
-                Expanded(
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.titleMedium,
-                  ),
-                ),
-                IconButton(
+                _navigationButton(
                   tooltip: 'Next',
-                  visualDensity: VisualDensity.compact,
+                  icon: Icons.chevron_right,
                   onPressed: onNext,
-                  icon: const Icon(Icons.chevron_right),
+                  dense: dense,
                 ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-            child: Row(
-              children: [
-                TextButton(onPressed: onToday, child: const Text('Today')),
-                const Spacer(),
-                SegmentedButton<CalendarViewMode>(
-                  showSelectedIcon: false,
-                  style: const ButtonStyle(
-                    visualDensity: VisualDensity.compact,
+                SizedBox(width: dense ? 4 : 8),
+                Expanded(
+                  child: _periodTitle(
+                    theme,
+                    text: dense ? compactTitle : title,
                   ),
-                  segments: const [
-                    ButtonSegment(
-                      value: CalendarViewMode.week,
-                      label: Text('Week'),
-                    ),
-                    ButtonSegment(
-                      value: CalendarViewMode.month,
-                      label: Text('Month'),
-                    ),
-                  ],
-                  selected: {viewMode},
-                  onSelectionChanged:
-                      (selection) => onViewModeChanged(selection.first),
                 ),
+                SizedBox(width: dense ? 4 : 16),
+                _viewSelector(dense: dense),
               ],
             ),
-          ),
-        ],
+          );
+        },
       ),
+    );
+  }
+
+  Widget _navigationButton({
+    required String tooltip,
+    required IconData icon,
+    required VoidCallback onPressed,
+    bool dense = false,
+  }) {
+    return IconButton(
+      tooltip: tooltip,
+      visualDensity: VisualDensity.compact,
+      constraints:
+          dense ? const BoxConstraints.tightFor(width: 40, height: 40) : null,
+      padding: dense ? EdgeInsets.zero : null,
+      onPressed: onPressed,
+      icon: Icon(icon),
+    );
+  }
+
+  Widget _periodTitle(ThemeData theme, {required String text}) {
+    return Text(
+      text,
+      key: const Key('calendar-period-title'),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      textAlign: TextAlign.start,
+      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+    );
+  }
+
+  Widget _viewSelector({required bool dense}) {
+    return SegmentedButton<CalendarViewMode>(
+      showSelectedIcon: false,
+      style: ButtonStyle(
+        visualDensity: VisualDensity.compact,
+        minimumSize: dense ? const WidgetStatePropertyAll(Size(0, 40)) : null,
+        padding:
+            dense
+                ? const WidgetStatePropertyAll(
+                  EdgeInsets.symmetric(horizontal: 8),
+                )
+                : null,
+        tapTargetSize: dense ? MaterialTapTargetSize.shrinkWrap : null,
+      ),
+      segments: const [
+        ButtonSegment(value: CalendarViewMode.week, label: Text('Week')),
+        ButtonSegment(value: CalendarViewMode.month, label: Text('Month')),
+      ],
+      selected: {viewMode},
+      onSelectionChanged: (selection) => onViewModeChanged(selection.first),
     );
   }
 }

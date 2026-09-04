@@ -189,6 +189,18 @@ scope.
 - [x] Preserve horizontal week swipes, event selection, overlapping-event
   lanes, and access to the earliest and latest hours with automated tests.
 
+## Compact calendar toolbar
+
+**Status:** ✅ Completed
+
+- [x] Combine Today, period navigation, the current period, and the Week/Month
+  selector into one row at every layout width.
+- [x] Use denser controls and an abbreviated period label on narrow phones.
+- [x] Preserve the week view's 07:00 initial position after reclaiming toolbar
+  height.
+- [x] Cover desktop, phone, and narrow-phone toolbar arrangements with widget
+  tests.
+
 ## Mobile editor keyboard handling
 
 **Status:** ✅ Completed
