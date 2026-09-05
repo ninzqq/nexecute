@@ -16,18 +16,24 @@ void main() {
   const timeZoneChannel = MethodChannel('flutter_timezone');
 
   late List<MethodCall> calls;
+  late bool notificationsAllowed;
+  late bool exactAlarmsAllowed;
 
   setUp(() {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     calls = [];
+    notificationsAllowed = true;
+    exactAlarmsAllowed = true;
 
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(notificationsChannel, (call) async {
           calls.add(call);
           return switch (call.method) {
             'initialize' => true,
-            'areNotificationsEnabled' => true,
-            'canScheduleExactNotifications' => true,
+            'areNotificationsEnabled' => notificationsAllowed,
+            'requestNotificationsPermission' => notificationsAllowed,
+            'canScheduleExactNotifications' => exactAlarmsAllowed,
+            'requestExactAlarmsPermission' => exactAlarmsAllowed,
             _ => null,
           };
         });
@@ -115,6 +121,36 @@ void main() {
     expect(status, EventReminderScheduleStatus.triggerInPast);
     expect(calls.map((call) => call.method), ['cancel']);
   });
+
+  test(
+    'schedules pending events after exact-alarm access is enabled',
+    () async {
+      final now = DateTime(2099, 9, 3, 14, 30, 10);
+      final scheduler = await AndroidEventReminderScheduler.initialize(
+        now: () => now,
+      );
+      calls.clear();
+      exactAlarmsAllowed = false;
+      final event = _event(startTime: DateTime(2099, 9, 3, 15));
+
+      expect(
+        await scheduler.schedule(event),
+        EventReminderScheduleStatus.permissionDenied,
+      );
+      expect(
+        calls.map((call) => call.method),
+        contains('requestExactAlarmsPermission'),
+      );
+
+      calls.clear();
+      exactAlarmsAllowed = true;
+      expect(
+        await scheduler.requestPermission(),
+        EventReminderPermissionStatus.authorized,
+      );
+      expect(calls.map((call) => call.method), contains('zonedSchedule'));
+    },
+  );
 }
 
 Event _event({required DateTime startTime}) {

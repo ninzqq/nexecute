@@ -116,12 +116,20 @@ collections, including `todos`.
 - [x] ~~Request Android notification and exact-alarm access only when a reminder~~
   ~~is enabled, and restore scheduled notifications after reboot or app update.~~
 - [x] ~~Show reminder settings in the event editor and event details.~~
+- [x] ~~Reconcile synchronized events into local alarms on every active Android~~
+  ~~device, including remote edits and deletions.~~
+- [x] ~~Show notification and exact-alarm access for the current device in~~
+  ~~Settings, with an action to enable missing access.~~
 - [x] ~~Cover reminder timing, persistence, mutation lifecycle, editor behavior,~~
   ~~Android scheduling and cancellation, and the debug APK build.~~
 
-The reminder preference synchronizes through Firestore, while the scheduled
-alarm itself is local to the Android device where the event is created or
-edited. Cross-device reminder reconciliation can be added later if needed.
+The reminder preference synchronizes through Firestore. Each active Android
+device watches all upcoming and recurring events and reconciles its own local
+alarms, so an event created or edited on one device is also scheduled on the
+others. A device must run Nexecute and complete a sync before the reminder is
+due; this local notification path does not wake an offline device through a
+remote push service. Notification and exact-alarm access are granted separately
+on every device and their combined status is visible in Settings.
 
 Android treats event times as minute-precision user input. If an **At event
 time** reminder becomes due while the event is being saved, the notification

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:nexecute/domain/calendar/calendar_query_range.dart';
 import 'package:nexecute/models/data_state.dart';
@@ -97,6 +99,119 @@ void main() {
   });
 
   test(
+    'reconciles synchronized events into local reminders on this device',
+    () async {
+      final delegate = _RecordingEventRepository();
+      final scheduler = _RecordingReminderScheduler();
+      final repository = ReminderSchedulingEventRepository(
+        delegate: delegate,
+        reminderScheduler: scheduler,
+      );
+      final visibleSubscription = repository
+          .watchEvents(_range())
+          .listen((_) {});
+      addTearDown(visibleSubscription.cancel);
+      addTearDown(delegate.dispose);
+
+      delegate.reminderStates.add(DataReady([_event(id: 'synced-event')]));
+      await _flushAsyncWork();
+
+      expect(scheduler.scheduledEvents, hasLength(1));
+      expect(scheduler.scheduledEvents.single.id, 'synced-event');
+    },
+  );
+
+  test('deduplicates unchanged reminder snapshots and applies edits', () async {
+    final delegate = _RecordingEventRepository();
+    final scheduler = _RecordingReminderScheduler();
+    final repository = ReminderSchedulingEventRepository(
+      delegate: delegate,
+      reminderScheduler: scheduler,
+    );
+    final visibleSubscription = repository.watchEvents(_range()).listen((_) {});
+    addTearDown(visibleSubscription.cancel);
+    addTearDown(delegate.dispose);
+    final event = _event(id: 'synced-event');
+
+    delegate.reminderStates.add(DataReady([event]));
+    delegate.reminderStates.add(DataReady([event]));
+    await _flushAsyncWork();
+    delegate.reminderStates.add(
+      DataReady([event.copyWith(reminder: EventReminder.oneHourBefore)]),
+    );
+    await _flushAsyncWork();
+
+    expect(scheduler.scheduledEvents, hasLength(2));
+    expect(
+      scheduler.scheduledEvents.last.reminder,
+      EventReminder.oneHourBefore,
+    );
+  });
+
+  test(
+    'does not repeatedly request denied access on unchanged snapshots',
+    () async {
+      final delegate = _RecordingEventRepository();
+      final scheduler =
+          _RecordingReminderScheduler()
+            ..scheduleStatus = EventReminderScheduleStatus.permissionDenied;
+      final repository = ReminderSchedulingEventRepository(
+        delegate: delegate,
+        reminderScheduler: scheduler,
+      );
+      final visibleSubscription = repository
+          .watchEvents(_range())
+          .listen((_) {});
+      addTearDown(visibleSubscription.cancel);
+      addTearDown(delegate.dispose);
+      final event = _event(id: 'permission-denied');
+
+      delegate.reminderStates.add(DataReady([event]));
+      delegate.reminderStates.add(DataReady([event]));
+      await _flushAsyncWork();
+
+      expect(scheduler.scheduledEvents, hasLength(1));
+    },
+  );
+
+  test('cancels local reminders removed by synchronization', () async {
+    final delegate = _RecordingEventRepository();
+    final scheduler = _RecordingReminderScheduler();
+    final repository = ReminderSchedulingEventRepository(
+      delegate: delegate,
+      reminderScheduler: scheduler,
+    );
+    final visibleSubscription = repository.watchEvents(_range()).listen((_) {});
+    addTearDown(visibleSubscription.cancel);
+    addTearDown(delegate.dispose);
+
+    delegate.reminderStates.add(DataReady([_event(id: 'remote-delete')]));
+    await _flushAsyncWork();
+    delegate.reminderStates.add(const DataEmpty([]));
+    await _flushAsyncWork();
+
+    expect(scheduler.cancelledIds, ['remote-delete']);
+  });
+
+  test('cancels reminders deleted while this device was offline', () async {
+    final delegate = _RecordingEventRepository();
+    final scheduler =
+        _RecordingReminderScheduler()..pendingIds.add('offline-delete');
+    final repository = ReminderSchedulingEventRepository(
+      delegate: delegate,
+      reminderScheduler: scheduler,
+    );
+    final visibleSubscription = repository.watchEvents(_range()).listen((_) {});
+    addTearDown(visibleSubscription.cancel);
+    addTearDown(delegate.dispose);
+
+    delegate.reminderStates.add(const DataEmpty([]));
+    await _flushAsyncWork();
+
+    expect(scheduler.cancelledIds, ['offline-delete']);
+  });
+
+  test(
     'forwards event searches without involving the reminder scheduler',
     () async {
       final delegate = _RecordingEventRepository();
@@ -153,18 +268,39 @@ Event _event({required String id}) {
   );
 }
 
-class _RecordingEventRepository implements EventRepository {
+CalendarQueryRange _range() => CalendarQueryRange(
+  startInclusive: DateTime(2026, 8, 1),
+  endExclusive: DateTime(2026, 10, 1),
+);
+
+Future<void> _flushAsyncWork() async {
+  await Future<void>.delayed(Duration.zero);
+  await Future<void>.delayed(Duration.zero);
+}
+
+class _RecordingEventRepository
+    implements EventRepository, EventReminderSource {
   Event? addedEvent;
   Event? deletedEvent;
   UpdateEventCommand? updateCommand;
   CreateEventCommand? createCommand;
   String? searchQuery;
   int? searchLimit;
+  final reminderStates = StreamController<DataState<List<Event>>>.broadcast(
+    sync: true,
+  );
 
   @override
   Stream<DataState<List<Event>>> watchEvents(CalendarQueryRange range) {
     return Stream.value(const DataEmpty([]));
   }
+
+  @override
+  Stream<DataState<List<Event>>> watchReminderEvents() {
+    return reminderStates.stream;
+  }
+
+  Future<void> dispose() => reminderStates.close();
 
   @override
   Future<List<Event>> searchEvents(String query, {int limit = 50}) async {
@@ -196,7 +332,8 @@ class _RecordingEventRepository implements EventRepository {
   }
 }
 
-class _RecordingReminderScheduler implements EventReminderScheduler {
+class _RecordingReminderScheduler
+    implements EventReminderScheduler, PendingEventReminderReader {
   @override
   Future<EventReminderPermissionStatus> checkPermissionStatus() async {
     return EventReminderPermissionStatus.authorized;
@@ -209,17 +346,24 @@ class _RecordingReminderScheduler implements EventReminderScheduler {
 
   final scheduledEvents = <Event>[];
   final cancelledIds = <String>[];
+  final pendingIds = <String>{};
+  EventReminderScheduleStatus scheduleStatus =
+      EventReminderScheduleStatus.scheduled;
 
   @override
   Future<EventReminderScheduleStatus> schedule(Event event) async {
     scheduledEvents.add(event);
-    return EventReminderScheduleStatus.scheduled;
+    return scheduleStatus;
   }
 
   @override
   Future<void> cancel(String eventId) async {
     cancelledIds.add(eventId);
+    pendingIds.remove(eventId);
   }
+
+  @override
+  Future<Set<String>> pendingEventIds() async => pendingIds.toSet();
 }
 
 class _ThrowingReminderScheduler implements EventReminderScheduler {

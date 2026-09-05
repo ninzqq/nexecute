@@ -31,7 +31,11 @@ abstract interface class EventRepository {
   Future<void> deleteEvent(Event event);
 }
 
-class FirestoreEventRepository implements EventRepository {
+abstract interface class EventReminderSource {
+  Stream<DataState<List<Event>>> watchReminderEvents();
+}
+
+class FirestoreEventRepository implements EventRepository, EventReminderSource {
   FirestoreEventRepository({
     required AuthService authService,
     FirebaseFirestore? firestore,
@@ -85,6 +89,46 @@ class FirestoreEventRepository implements EventRepository {
             (first, second) => first.startTime.compareTo(second.startTime),
           );
           return visibleEvents;
+        });
+      },
+    );
+  }
+
+  @override
+  Stream<DataState<List<Event>>> watchReminderEvents() {
+    return authenticatedDataStream(
+      authentication: _authService.userStream,
+      isEmpty: (events) => events.isEmpty,
+      load: (user) {
+        final events = _db
+            .collection('users')
+            .doc(user.uid)
+            .collection('events');
+        final upcoming = _readDiagnostics.watchQuery(
+          operation: 'events.reminderUpcoming',
+          query: events.where(
+            'endTime',
+            isGreaterThanOrEqualTo: DateTime.now(),
+          ),
+        );
+        final recurring = _readDiagnostics.watchQuery(
+          operation: 'events.reminderRecurring',
+          query: events.where('isRecurring', isEqualTo: true),
+        );
+        return Rx.combineLatest2(upcoming, recurring, (
+          QuerySnapshot<Map<String, dynamic>> upcomingSnapshot,
+          QuerySnapshot<Map<String, dynamic>> recurringSnapshot,
+        ) {
+          final eventsById = <String, Event>{};
+          for (final document in [
+            ...upcomingSnapshot.docs,
+            ...recurringSnapshot.docs,
+          ]) {
+            eventsById[document.id] = EventDocumentMapper.fromDocument(
+              document,
+            );
+          }
+          return eventsById.values.toList(growable: false);
         });
       },
     );

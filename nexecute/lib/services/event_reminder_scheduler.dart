@@ -27,6 +27,10 @@ abstract interface class EventReminderScheduler {
   Future<void> cancel(String eventId);
 }
 
+abstract interface class PendingEventReminderReader {
+  Future<Set<String>> pendingEventIds();
+}
+
 class NoopEventReminderScheduler implements EventReminderScheduler {
   const NoopEventReminderScheduler();
 
@@ -51,7 +55,8 @@ class NoopEventReminderScheduler implements EventReminderScheduler {
   Future<void> cancel(String eventId) async {}
 }
 
-class AndroidEventReminderScheduler implements EventReminderScheduler {
+class AndroidEventReminderScheduler
+    implements EventReminderScheduler, PendingEventReminderReader {
   AndroidEventReminderScheduler._({
     required FlutterLocalNotificationsPlugin notifications,
     required tz.Location location,
@@ -68,6 +73,7 @@ class AndroidEventReminderScheduler implements EventReminderScheduler {
   final FlutterLocalNotificationsPlugin _notifications;
   final tz.Location _location;
   final DateTime Function() _now;
+  final Map<String, Event> _pendingEvents = {};
 
   static Future<AndroidEventReminderScheduler> initialize({
     DateTime Function()? now,
@@ -131,9 +137,14 @@ class AndroidEventReminderScheduler implements EventReminderScheduler {
       final exactAlarmsAllowed =
           await android.canScheduleExactNotifications() == true ||
           await android.requestExactAlarmsPermission() == true;
-      return exactAlarmsAllowed
-          ? EventReminderPermissionStatus.authorized
-          : EventReminderPermissionStatus.denied;
+      final status =
+          exactAlarmsAllowed
+              ? EventReminderPermissionStatus.authorized
+              : EventReminderPermissionStatus.denied;
+      if (status == EventReminderPermissionStatus.authorized) {
+        await _retryPendingEvents();
+      }
+      return status;
     } catch (_) {
       return EventReminderPermissionStatus.failed;
     }
@@ -166,6 +177,7 @@ class AndroidEventReminderScheduler implements EventReminderScheduler {
 
       final scheduledTime = event.reminder.scheduledTime(event.startTime);
       if (scheduledTime == null) {
+        _pendingEvents.remove(event.id);
         return EventReminderScheduleStatus.notRequested;
       }
       final now = _now();
@@ -177,6 +189,7 @@ class AndroidEventReminderScheduler implements EventReminderScheduler {
       if (!event.recurrence.repeats &&
           !scheduledTime.isAfter(now) &&
           !deliverImmediately) {
+        _pendingEvents.remove(event.id);
         return EventReminderScheduleStatus.triggerInPast;
       }
 
@@ -185,8 +198,14 @@ class AndroidEventReminderScheduler implements EventReminderScheduler {
               ? await _requestNotificationPermission()
               : await requestPermission();
       final unavailableStatus = _scheduleStatusForPermission(permissionStatus);
-      if (unavailableStatus != null) return unavailableStatus;
+      if (unavailableStatus != null) {
+        if (permissionStatus != EventReminderPermissionStatus.unsupported) {
+          _pendingEvents[event.id] = event;
+        }
+        return unavailableStatus;
+      }
 
+      _pendingEvents.remove(event.id);
       final notificationId = eventReminderNotificationId(event.id);
       final body = _notificationBody(event);
       if (deliverImmediately) {
@@ -219,7 +238,25 @@ class AndroidEventReminderScheduler implements EventReminderScheduler {
 
   @override
   Future<void> cancel(String eventId) {
+    _pendingEvents.remove(eventId);
     return _notifications.cancel(id: eventReminderNotificationId(eventId));
+  }
+
+  @override
+  Future<Set<String>> pendingEventIds() async {
+    final requests = await _notifications.pendingNotificationRequests();
+    return requests
+        .map((request) => request.payload)
+        .whereType<String>()
+        .toSet();
+  }
+
+  Future<void> _retryPendingEvents() async {
+    final pending = _pendingEvents.values.toList(growable: false);
+    _pendingEvents.clear();
+    for (final event in pending) {
+      await schedule(event);
+    }
   }
 
   String _notificationBody(Event event) {

@@ -6,7 +6,8 @@ import 'package:nexecute/services/event_reminder_scheduler.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
-class MacOSEventReminderScheduler implements EventReminderScheduler {
+class MacOSEventReminderScheduler
+    implements EventReminderScheduler, PendingEventReminderReader {
   MacOSEventReminderScheduler._({
     required FlutterLocalNotificationsPlugin notifications,
     required tz.Location location,
@@ -138,6 +139,15 @@ class MacOSEventReminderScheduler implements EventReminderScheduler {
   @override
   Future<void> cancel(String eventId) {
     return _notifications.cancel(id: eventReminderNotificationId(eventId));
+  }
+
+  @override
+  Future<Set<String>> pendingEventIds() async {
+    final requests = await _notifications.pendingNotificationRequests();
+    return requests
+        .map((request) => request.payload)
+        .whereType<String>()
+        .toSet();
   }
 
   MacOSFlutterLocalNotificationsPlugin? get _macOSNotifications =>

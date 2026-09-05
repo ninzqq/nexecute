@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/ai/presentation/ai_settings_section.dart';
+import 'package:nexecute/home/widgets/event_reminder_settings_tile.dart';
 import 'package:nexecute/models/app_theme_controller.dart';
 import 'package:nexecute/models/calendar_settings_controller.dart';
 import 'package:nexecute/shared/adaptive_navigation_shell.dart';
+import 'package:nexecute/services/event_reminder_scheduler.dart';
 import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
 
@@ -15,6 +17,7 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = context.watch<AppThemeController>();
     final calendarSettings = context.watch<CalendarSettingsController>();
+    final reminderScheduler = context.read<EventReminderScheduler?>();
 
     final content = SafeArea(
       top: false,
@@ -56,6 +59,7 @@ class SettingsScreen extends StatelessWidget {
               value: calendarSettings.showWeekNumbers,
               onChanged: calendarSettings.setShowWeekNumbers,
             ),
+            EventReminderSettingsTile(scheduler: reminderScheduler),
             const SizedBox(height: 12),
             const Divider(),
             const SizedBox(height: 12),
