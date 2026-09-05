@@ -490,6 +490,41 @@ void main() {
       );
     },
   );
+
+  test('loads local default skills only for a new conversation', () async {
+    final skill = _skill('default-skill', 'Default instructions');
+    final skillStore = InMemoryAiSkillStore(skills: [skill]);
+    final preferences = InMemoryAiSkillPreferencesStore(
+      defaultSkills: [AiSkillReference.fromSkill(skill)],
+    );
+    final repository = FakeAiAssistantRepository();
+    var nextId = 0;
+    final controller = AiChatController(
+      assistantRepository: repository,
+      connectionProfileStore: profileStore,
+      conversationStore: conversationStore,
+      skillStore: skillStore,
+      skillPreferencesStore: preferences,
+      idFactory: () => 'default-${nextId++}',
+      clock: () => DateTime.utc(2026, 9, 6),
+    );
+    addTearDown(controller.dispose);
+    addTearDown(skillStore.dispose);
+    addTearDown(preferences.dispose);
+
+    await controller.initialize();
+    expect(controller.conversationSkills, [AiSkillReference.fromSkill(skill)]);
+    await controller.send('Use the default');
+    await _flushEvents();
+
+    expect(
+      repository.startedRequests.single.resolvedSkills.single.id,
+      skill.id,
+    );
+    expect((await conversationStore.getConversations()).single.activeSkills, [
+      AiSkillReference.fromSkill(skill),
+    ]);
+  });
 }
 
 Future<void> _flushEvents() async {

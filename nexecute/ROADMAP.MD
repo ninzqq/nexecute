@@ -1124,7 +1124,7 @@ primary skill and at most a few compatible supporting skills should be active.
   refine assistant behavior but can never remove or supersede immutable Nexecute
   policies, request-scoped data authorization, output validation, or confirmed
   write requirements.
-- [ ] Warn users not to place credentials or secrets in skills when the Step
+- [x] Warn users not to place credentials or secrets in skills when the Step
   11D management interface is added.
 - [x] Never copy a skill body into diagnostics, analytics, logs, Firestore
   conversation messages, or tool transcripts.
@@ -1215,19 +1215,34 @@ skill-free.
 
 ##### Step 11D: management and activation interface
 
-- [ ] Add a Skills area under AI Settings with create, import, inspect, edit,
+- [x] Add a Skills area under AI Settings with create, import, inspect, edit,
   duplicate, enable/disable, export, and delete actions.
-- [ ] Show validation and conflict errors before saving. For a body-only import,
+- [x] Show validation and conflict errors before saving. For a body-only import,
   collect the required metadata without modifying the original instruction body.
-- [ ] Add an assistant skill picker and persistent active-skill chips near the
+- [x] Add an assistant skill picker and persistent active-skill chips near the
   composer. Make the exact active set visible before every request and allow
   individual skills or the complete set to be deactivated quickly.
-- [ ] Support an optional default-active set, subject to the same prompt budget
-  and conflict checks, but never make newly imported skills active automatically.
-- [ ] Preview the composed instruction sources and their order without including
+- [x] Support an optional local default-active set with revision conflict checks,
+  but never make newly imported skills active automatically.
+- [ ] Apply the Step 11E combined prompt budget to the default-active set before
+  enabling budgeted multi-skill activation.
+- [x] Preview the composed instruction sources and their order without including
   credentials, attached application data, or hidden provider payloads.
-- [ ] Clearly distinguish an unavailable skill from a disabled or inactive one
+- [x] Clearly distinguish an unavailable skill from a disabled or inactive one
   and preserve ordinary chat when skill loading fails.
+
+AI Settings now provides searchable local skill cards, a bounded editor, exact
+body inspection, duplication, enable/disable and default controls, confirmed
+replacement and deletion, and cross-platform `SKILL.md` import/export. Body-only
+imports collect metadata separately and keep the instruction body unchanged;
+validation and optimistic conflicts are surfaced before a write. The assistant
+shows the effective skill set above the composer, supports conversation or
+one-request scope, and labels inactive, disabled, changed, missing, and storage-
+unavailable states. Its source-order preview includes only safe metadata, and a
+mismatch requires review or an explicit skill-free send. Local default
+references contain only IDs and hashes and apply only when starting a new
+conversation. Step 11E still owns combined prompt-budget enforcement before the
+interface treats multi-skill sets as generally safe.
 
 ##### Step 11E: context budgeting and conflict handling
 

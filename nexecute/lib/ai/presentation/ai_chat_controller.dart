@@ -17,6 +17,7 @@ import 'package:nexecute/ai/repositories/ai_connection_profile_store.dart';
 import 'package:nexecute/ai/repositories/ai_conversation_store.dart';
 import 'package:nexecute/ai/repositories/ai_response_handle.dart';
 import 'package:nexecute/ai/repositories/ai_skill_store.dart';
+import 'package:nexecute/ai/repositories/ai_skill_preferences_store.dart';
 import 'package:uuid/uuid.dart';
 
 enum AiSkillActivationScope { conversation, nextRequest }
@@ -29,6 +30,7 @@ class AiChatController extends ChangeNotifier {
     required AiConnectionProfileStore connectionProfileStore,
     required AiConversationStore conversationStore,
     AiSkillStore? skillStore,
+    AiSkillPreferencesStore? skillPreferencesStore,
     AiPromptComposer promptComposer = const AiPromptComposer(),
     AiReadToolCoordinator? readToolCoordinator,
     String Function()? idFactory,
@@ -38,6 +40,8 @@ class AiChatController extends ChangeNotifier {
        _conversationStore = conversationStore,
        _skillResolver =
            skillStore == null ? null : AiSkillResolver(store: skillStore),
+       _skillStoreAvailable = skillStore?.isAvailable ?? false,
+       _skillPreferencesStore = skillPreferencesStore,
        _promptComposer = promptComposer,
        _readToolCoordinator = readToolCoordinator,
        _idFactory = idFactory ?? const Uuid().v4,
@@ -47,6 +51,8 @@ class AiChatController extends ChangeNotifier {
   final AiConnectionProfileStore _connectionProfileStore;
   final AiConversationStore _conversationStore;
   final AiSkillResolver? _skillResolver;
+  final bool _skillStoreAvailable;
+  final AiSkillPreferencesStore? _skillPreferencesStore;
   final AiPromptComposer _promptComposer;
   final AiReadToolCoordinator? _readToolCoordinator;
   final String Function() _idFactory;
@@ -127,6 +133,8 @@ class AiChatController extends ChangeNotifier {
       if (initial.isNotEmpty) {
         final latestConversationId = initial.first.id;
         await _watchCurrentConversation(latestConversationId);
+      } else {
+        await _loadDefaultSkills();
       }
     } catch (error) {
       errorMessage = 'Could not load AI conversations: $error';
@@ -166,6 +174,7 @@ class AiChatController extends ChangeNotifier {
     skillResolutionError = null;
     _nextRequestSkills = null;
     _newConversationSkills = const [];
+    await _loadDefaultSkills();
     _notify();
   }
 
@@ -175,6 +184,11 @@ class AiChatController extends ChangeNotifier {
   }) async {
     if (isGenerating) return false;
     final normalized = normalizeAiSkillReferences(references);
+    if (normalized.length > 1) {
+      throw StateError(
+        'Activate one skill at a time until multi-skill prompt budgeting is available.',
+      );
+    }
     skillResolutionError = null;
     errorMessage = null;
     if (scope == AiSkillActivationScope.nextRequest) {
@@ -464,6 +478,15 @@ class AiChatController extends ChangeNotifier {
       skillResolutionError = null;
       return const [];
     }
+    if (references.length > 1) {
+      throw AiSkillResolutionException([
+        for (final reference in references)
+          AiSkillResolutionIssue(
+            reference: reference,
+            kind: AiSkillResolutionIssueKind.promptBudgetUnavailable,
+          ),
+      ]);
+    }
     try {
       final resolver = _skillResolver;
       if (resolver == null) {
@@ -484,6 +507,18 @@ class AiChatController extends ChangeNotifier {
         return const [];
       }
       rethrow;
+    }
+  }
+
+  Future<void> _loadDefaultSkills() async {
+    final store = _skillPreferencesStore;
+    if (store == null || !_skillStoreAvailable) return;
+    try {
+      _newConversationSkills = normalizeAiSkillReferences(
+        await store.getDefaultSkills(),
+      );
+    } catch (_) {
+      _newConversationSkills = const [];
     }
   }
 

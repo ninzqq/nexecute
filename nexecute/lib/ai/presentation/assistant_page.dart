@@ -25,6 +25,10 @@ class _AssistantPageState extends State<AssistantPage> {
   final _composerFocusNode = FocusNode(debugLabel: 'Assistant composer');
   final _scrollController = ScrollController();
   final Map<String, AiApplicationContextEnvelope> _noteContexts = {};
+  AiSkillStore? _skillStore;
+  StreamSubscription<List<AiSkillMetadata>>? _skillSubscription;
+  List<AiSkillMetadata> _skillCatalog = const [];
+  Object? _skillCatalogError;
   AiApplicationContextEnvelope? _taskContext;
   AiApplicationContextEnvelope? _eventContext;
   DateTime? _contextGeneratedAt;
@@ -35,16 +39,34 @@ class _AssistantPageState extends State<AssistantPage> {
     super.initState();
     _contextReadService = context.read<AiApplicationContextReadService>();
     final assistantRepository = context.read<AiAssistantRepository>();
+    _skillStore = context.read<AiSkillStore?>();
     _controller = AiChatController(
       assistantRepository: assistantRepository,
       connectionProfileStore: context.read<AiConnectionProfileStore>(),
       conversationStore: context.read<AiConversationStore>(),
-      skillStore: context.read<AiSkillStore?>(),
+      skillStore: _skillStore,
+      skillPreferencesStore: context.read<AiSkillPreferencesStore?>(),
       readToolCoordinator: AiReadToolCoordinator(
         assistantRepository: assistantRepository,
         readService: _contextReadService,
       ),
     )..addListener(_onControllerChanged);
+    final skillStore = _skillStore;
+    if (skillStore != null && skillStore.isAvailable) {
+      _skillSubscription = skillStore.watchSkills().listen(
+        (skills) {
+          if (!mounted) return;
+          setState(() {
+            _skillCatalog = skills;
+            _skillCatalogError = null;
+          });
+        },
+        onError: (Object error) {
+          if (!mounted) return;
+          setState(() => _skillCatalogError = error);
+        },
+      );
+    }
     unawaited(_controller.initialize());
   }
 
@@ -52,6 +74,7 @@ class _AssistantPageState extends State<AssistantPage> {
   void dispose() {
     _controller.removeListener(_onControllerChanged);
     _controller.dispose();
+    unawaited(_skillSubscription?.cancel());
     _composerController.dispose();
     _composerFocusNode.dispose();
     _scrollController.dispose();
@@ -102,6 +125,18 @@ class _AssistantPageState extends State<AssistantPage> {
                   onRemoveEvents: _removeEvents,
                   onPreview: () => _showContextPreview(applicationContext),
                 ),
+              _SkillActivationBar(
+                references: _controller.effectiveSkills,
+                metadata: _skillCatalog,
+                appliesToNextRequest: _controller.nextRequestSkills != null,
+                storageAvailable:
+                    _skillStore?.isAvailable == true &&
+                    _skillCatalogError == null,
+                onPick: _showSkillPicker,
+                onRemove: _removeSkill,
+                onClear: _clearSkills,
+                onPreview: _showInstructionPreview,
+              ),
               _Composer(
                 controller: _composerController,
                 focusNode: _composerFocusNode,
@@ -288,8 +323,179 @@ class _AssistantPageState extends State<AssistantPage> {
       applicationContext: _applicationContext,
       readToolExecutionScope: _readToolExecutionScope,
     );
-    if (!mounted || !sent) return;
-    setState(_clearApplicationContext);
+    if (!mounted) return;
+    if (sent) {
+      setState(_clearApplicationContext);
+      return;
+    }
+    if (_controller.skillResolutionError != null) {
+      _composerController.text = text;
+      await _showSkillRecovery(text);
+    }
+  }
+
+  Future<void> _showSkillRecovery(String text) async {
+    final failure = _controller.skillResolutionError;
+    if (failure == null || !mounted) return;
+    final action = await showDialog<_SkillRecoveryAction>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Active skills need attention'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final issue in failure.issues)
+                  Text('• ${issue.reference.id}: ${_issueLabel(issue.kind)}'),
+                const SizedBox(height: 12),
+                const Text(
+                  'Review the active set, import or replace the local skill, '
+                  'or explicitly send this message without skills.',
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                key: const Key('assistant-review-skills'),
+                onPressed:
+                    () => Navigator.pop(context, _SkillRecoveryAction.review),
+                child: const Text('Review skills'),
+              ),
+              FilledButton(
+                key: const Key('assistant-continue-without-skills'),
+                onPressed:
+                    () => Navigator.pop(
+                      context,
+                      _SkillRecoveryAction.continueWithoutSkills,
+                    ),
+                child: const Text('Send without skills'),
+              ),
+            ],
+          ),
+    );
+    if (!mounted) return;
+    switch (action) {
+      case _SkillRecoveryAction.review:
+        await _showSkillPicker();
+      case _SkillRecoveryAction.continueWithoutSkills:
+        _composerController.clear();
+        final sent = await _controller.send(
+          text,
+          applicationContext: _applicationContext,
+          readToolExecutionScope: _readToolExecutionScope,
+          skillMismatchAction: AiSkillMismatchAction.continueWithoutSkills,
+        );
+        if (!mounted) return;
+        if (sent) {
+          setState(_clearApplicationContext);
+        } else {
+          _composerController.text = text;
+        }
+      case null:
+        return;
+    }
+  }
+
+  Future<void> _showSkillPicker() async {
+    if (_skillStore?.isAvailable != true || _skillCatalogError != null) {
+      _showContextError(
+        'Skill storage is unavailable. Ordinary chat still works without skills.',
+      );
+      return;
+    }
+    final selection = await showModalBottomSheet<_SkillSelection>(
+      context: context,
+      isScrollControlled: true,
+      constraints: adaptiveSheetConstraints(context),
+      builder:
+          (sheetContext) => BottomSheetSafeArea(
+            child: _SkillPickerSheet(
+              skills: _skillCatalog,
+              conversationReferences: _controller.conversationSkills,
+              nextRequestReferences: _controller.nextRequestSkills,
+              onManage: () {
+                Navigator.pop(sheetContext);
+                _openSettings();
+              },
+            ),
+          ),
+    );
+    if (selection == null) return;
+    await _controller.setActiveSkills(
+      selection.references,
+      scope: selection.scope,
+    );
+  }
+
+  Future<void> _removeSkill(String skillId) => _setEffectiveSkills(
+    _controller.effectiveSkills.where((skill) => skill.id != skillId),
+  );
+
+  Future<void> _clearSkills() => _setEffectiveSkills(const []);
+
+  Future<void> _setEffectiveSkills(Iterable<AiSkillReference> references) =>
+      _controller.setActiveSkills(
+        references,
+        scope:
+            _controller.nextRequestSkills == null
+                ? AiSkillActivationScope.conversation
+                : AiSkillActivationScope.nextRequest,
+      );
+
+  Future<void> _showInstructionPreview() async {
+    final profile = _controller.activeProfile;
+    final metadata = {for (final skill in _skillCatalog) skill.id: skill};
+    final sources = <String>['Immutable Nexecute policy'];
+    if (profile?.systemPrompt.trim().isNotEmpty ?? false) {
+      sources.add(
+        'Connection profile preferences · ${profile!.name} · '
+        '${profile.systemPrompt.trim().length} characters',
+      );
+    }
+    for (final reference in _controller.effectiveSkills) {
+      sources.add(
+        'Active skill · ${metadata[reference.id]?.name ?? reference.id} · '
+        'revision ${reference.contentHash.substring(0, 12)}…',
+      );
+    }
+    sources.add('Trusted app-owned workflow constraints, when present');
+    await showDialog<void>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Instruction source order'),
+            content: SizedBox(
+              width: 560,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (var index = 0; index < sources.length; index++) ...[
+                    Text('${index + 1}. ${sources[index]}'),
+                    const SizedBox(height: 8),
+                  ],
+                  const Divider(),
+                  const Text(
+                    'This preview intentionally excludes credentials, skill '
+                    'bodies, attached application data, conversation content, '
+                    'and hidden provider payloads.',
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
+            ],
+          ),
+    );
   }
 
   AiReadToolExecutionScope? get _readToolExecutionScope {
@@ -616,6 +822,338 @@ class _Composer extends StatelessWidget {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+enum _SkillRecoveryAction { review, continueWithoutSkills }
+
+String _issueLabel(AiSkillResolutionIssueKind kind) => switch (kind) {
+  AiSkillResolutionIssueKind.missing => 'not installed on this device',
+  AiSkillResolutionIssueKind.changed => 'local revision changed',
+  AiSkillResolutionIssueKind.disabled => 'disabled',
+  AiSkillResolutionIssueKind.storageUnavailable => 'storage unavailable',
+  AiSkillResolutionIssueKind.promptBudgetUnavailable =>
+    'multiple skills require Step 11E prompt budgeting',
+};
+
+class _SkillActivationBar extends StatelessWidget {
+  const _SkillActivationBar({
+    required this.references,
+    required this.metadata,
+    required this.appliesToNextRequest,
+    required this.storageAvailable,
+    required this.onPick,
+    required this.onRemove,
+    required this.onClear,
+    required this.onPreview,
+  });
+
+  final List<AiSkillReference> references;
+  final List<AiSkillMetadata> metadata;
+  final bool appliesToNextRequest;
+  final bool storageAvailable;
+  final VoidCallback onPick;
+  final ValueChanged<String> onRemove;
+  final VoidCallback onClear;
+  final VoidCallback onPreview;
+
+  @override
+  Widget build(BuildContext context) {
+    final byId = {for (final skill in metadata) skill.id: skill};
+    return Material(
+      key: const Key('assistant-skill-bar'),
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    !storageAvailable
+                        ? 'Skills unavailable · chat continues without them'
+                        : appliesToNextRequest
+                        ? 'Skills for next message'
+                        : references.isEmpty
+                        ? 'Skills · none active'
+                        : 'Active skills for this conversation',
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                ),
+                IconButton(
+                  key: const Key('assistant-preview-instructions'),
+                  tooltip: 'Preview instruction source order',
+                  onPressed: onPreview,
+                  icon: const Icon(Icons.visibility_outlined, size: 20),
+                ),
+                TextButton.icon(
+                  key: const Key('assistant-pick-skills'),
+                  onPressed: storageAvailable ? onPick : null,
+                  icon: const Icon(Icons.psychology_alt_outlined, size: 20),
+                  label: const Text('Skills'),
+                ),
+                if (references.isNotEmpty)
+                  IconButton(
+                    key: const Key('assistant-clear-skills'),
+                    tooltip: 'Deactivate all skills',
+                    onPressed: onClear,
+                    icon: const Icon(Icons.layers_clear_outlined, size: 20),
+                  ),
+              ],
+            ),
+            if (references.isNotEmpty)
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  for (final reference in references)
+                    InputChip(
+                      key: ValueKey('assistant-skill-${reference.id}'),
+                      avatar: Icon(
+                        _skillIcon(reference, byId[reference.id]),
+                        size: 18,
+                      ),
+                      label: Text(_skillLabel(reference, byId[reference.id])),
+                      onDeleted: () => onRemove(reference.id),
+                    ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static IconData _skillIcon(
+    AiSkillReference reference,
+    AiSkillMetadata? metadata,
+  ) {
+    if (metadata == null) return Icons.cloud_off_outlined;
+    if (!metadata.isEnabled) return Icons.pause_circle_outline_rounded;
+    if (metadata.contentHash != reference.contentHash) {
+      return Icons.sync_problem_rounded;
+    }
+    return Icons.psychology_alt_rounded;
+  }
+
+  static String _skillLabel(
+    AiSkillReference reference,
+    AiSkillMetadata? metadata,
+  ) {
+    if (metadata == null) return '${reference.id} · unavailable';
+    if (!metadata.isEnabled) return '${metadata.name} · disabled';
+    if (metadata.contentHash != reference.contentHash) {
+      return '${metadata.name} · changed';
+    }
+    return metadata.name;
+  }
+}
+
+final class _SkillSelection {
+  const _SkillSelection({required this.scope, required this.references});
+
+  final AiSkillActivationScope scope;
+  final List<AiSkillReference> references;
+}
+
+class _SkillPickerSheet extends StatefulWidget {
+  const _SkillPickerSheet({
+    required this.skills,
+    required this.conversationReferences,
+    required this.nextRequestReferences,
+    required this.onManage,
+  });
+
+  final List<AiSkillMetadata> skills;
+  final List<AiSkillReference> conversationReferences;
+  final List<AiSkillReference>? nextRequestReferences;
+  final VoidCallback onManage;
+
+  @override
+  State<_SkillPickerSheet> createState() => _SkillPickerSheetState();
+}
+
+class _SkillPickerSheetState extends State<_SkillPickerSheet> {
+  late AiSkillActivationScope _scope;
+  late Set<String> _selectedIds;
+  String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _scope =
+        widget.nextRequestReferences == null
+            ? AiSkillActivationScope.conversation
+            : AiSkillActivationScope.nextRequest;
+    _selectedIds = _referencesFor(_scope).map((skill) => skill.id).toSet();
+  }
+
+  List<AiSkillReference> _referencesFor(AiSkillActivationScope scope) =>
+      scope == AiSkillActivationScope.conversation
+          ? widget.conversationReferences
+          : widget.nextRequestReferences ?? widget.conversationReferences;
+
+  @override
+  Widget build(BuildContext context) {
+    final query = _query.trim().toLowerCase();
+    final visible =
+        widget.skills
+            .where(
+              (skill) =>
+                  query.isEmpty ||
+                  skill.name.toLowerCase().contains(query) ||
+                  skill.description.toLowerCase().contains(query) ||
+                  skill.id.toLowerCase().contains(query),
+            )
+            .toList();
+    return SizedBox(
+      height: MediaQuery.sizeOf(context).height * 0.75,
+      child: Column(
+        children: [
+          ListTile(
+            title: const Text('Choose active skills'),
+            subtitle: const Text(
+              'Choose one enabled skill. Multi-skill budgeting is added in Step 11E.',
+            ),
+            trailing: IconButton(
+              tooltip: 'Manage skills in Settings',
+              onPressed: widget.onManage,
+              icon: const Icon(Icons.settings_outlined),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SegmentedButton<AiSkillActivationScope>(
+              key: const Key('assistant-skill-scope'),
+              segments: const [
+                ButtonSegment(
+                  value: AiSkillActivationScope.conversation,
+                  label: Text('This conversation'),
+                  icon: Icon(Icons.forum_outlined),
+                ),
+                ButtonSegment(
+                  value: AiSkillActivationScope.nextRequest,
+                  label: Text('Next message only'),
+                  icon: Icon(Icons.looks_one_outlined),
+                ),
+              ],
+              selected: {_scope},
+              onSelectionChanged: (selection) {
+                final scope = selection.single;
+                setState(() {
+                  _scope = scope;
+                  _selectedIds =
+                      _referencesFor(scope).map((skill) => skill.id).toSet();
+                });
+              },
+            ),
+          ),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextField(
+              key: const Key('assistant-skill-search'),
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.search_rounded),
+                hintText: 'Search local skills',
+              ),
+              onChanged: (value) => setState(() => _query = value),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child:
+                widget.skills.isEmpty
+                    ? const Center(
+                      child: Text(
+                        'No local skills. Create or import one in Settings.',
+                      ),
+                    )
+                    : visible.isEmpty
+                    ? const Center(child: Text('No skills match this search.'))
+                    : ListView.builder(
+                      itemCount: visible.length,
+                      itemBuilder: (context, index) {
+                        final skill = visible[index];
+                        final selected = _selectedIds.contains(skill.id);
+                        return CheckboxListTile(
+                          key: ValueKey('assistant-skill-option-${skill.id}'),
+                          value: selected,
+                          onChanged:
+                              skill.isEnabled
+                                  ? (value) {
+                                    setState(() {
+                                      if (value ?? false) {
+                                        _selectedIds.clear();
+                                        _selectedIds.add(skill.id);
+                                      } else {
+                                        _selectedIds.remove(skill.id);
+                                      }
+                                    });
+                                  }
+                                  : null,
+                          title: Text(skill.name),
+                          subtitle: Text(
+                            skill.isEnabled
+                                ? selected
+                                    ? 'Active · ${skill.description}'
+                                    : 'Inactive · ${skill.description}'
+                                : 'Disabled · ${skill.description}',
+                          ),
+                        );
+                      },
+                    ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: Row(
+              children: [
+                TextButton(
+                  key: const Key('assistant-skill-deactivate-all'),
+                  onPressed: () => setState(_selectedIds.clear),
+                  child: const Text('Deactivate all'),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  key: const Key('assistant-skill-apply'),
+                  onPressed:
+                      _selectedIds.length > 1
+                          ? null
+                          : () {
+                            final references = [
+                              for (final skill in widget.skills)
+                                if (skill.isEnabled &&
+                                    _selectedIds.contains(skill.id))
+                                  AiSkillReference(
+                                    id: skill.id,
+                                    contentHash: skill.contentHash,
+                                  ),
+                            ];
+                            Navigator.pop(
+                              context,
+                              _SkillSelection(
+                                scope: _scope,
+                                references: references,
+                              ),
+                            );
+                          },
+                  child: Text(
+                    _selectedIds.length > 1 ? 'Select one skill' : 'Apply',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

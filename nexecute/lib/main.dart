@@ -183,10 +183,17 @@ class NexecuteState extends State<Nexecute> {
           create: (_) => createLocalAiSkillStore(),
           dispose: (_, store) => store.dispose(),
         ),
+        Provider<AiSkillPreferencesStore>(
+          create: (_) => SharedPreferencesAiSkillPreferencesStore(),
+          dispose: (_, store) => store.dispose(),
+        ),
         Provider<AiSkillTransferService>(
           create:
               (context) =>
                   AiSkillTransferService(store: context.read<AiSkillStore>()),
+        ),
+        Provider<AiSkillFileGateway>.value(
+          value: const FilePickerAiSkillFileGateway(),
         ),
         Provider<AiConversationStore>(
           create:

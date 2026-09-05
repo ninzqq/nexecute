@@ -537,6 +537,158 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('assistant-retry')), findsOneWidget);
   });
+
+  testWidgets('selects persistent skills and previews only source metadata', (
+    tester,
+  ) async {
+    final profile = AiConnectionProfile(
+      id: 'home',
+      name: 'Home AI',
+      protocol: AiProtocol.openAiCompatibleChat,
+      baseUrl: Uri.parse('https://ai.example.test/v1'),
+      modelId: 'local-model',
+    );
+    final profileStore = FakeAiConnectionProfileStore(
+      profiles: [profile],
+      activeProfileId: profile.id,
+    );
+    final conversationStore = FakeAiConversationStore();
+    final repository = FakeAiAssistantRepository();
+    final skill = _skill('suomen-kieli', 'Private Finnish instructions');
+    final disabled = _skill(
+      'disabled-skill',
+      'Private disabled instructions',
+    ).copyWith(isEnabled: false);
+    final skillStore = InMemoryAiSkillStore(skills: [skill, disabled]);
+    final preferences = InMemoryAiSkillPreferencesStore();
+    addTearDown(profileStore.dispose);
+    addTearDown(conversationStore.dispose);
+    addTearDown(skillStore.dispose);
+    addTearDown(preferences.dispose);
+
+    await tester.pumpWidget(
+      _app(
+        assistantRepository: repository,
+        profileStore: profileStore,
+        conversationStore: conversationStore,
+        skillStore: skillStore,
+        skillPreferencesStore: preferences,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Skills · none active'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('assistant-pick-skills')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Inactive · Finnish writing'), findsOneWidget);
+    expect(find.textContaining('Disabled · Finnish writing'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const Key('assistant-skill-option-suomen-kieli')),
+    );
+    await tester.tap(find.byKey(const Key('assistant-skill-apply')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('assistant-skill-suomen-kieli')),
+      findsOneWidget,
+    );
+    expect(find.text('Active skills for this conversation'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('assistant-preview-instructions')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Active skill · Suomen kieli'), findsOneWidget);
+    expect(find.textContaining(skill.instructions), findsNothing);
+    expect(
+      find.textContaining('excludes credentials, skill bodies'),
+      findsOneWidget,
+    );
+    await tester.tap(find.widgetWithText(TextButton, 'Close'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('assistant-composer')),
+      'Kirjoita tervehdys',
+    );
+    await tester.tap(find.byKey(const Key('assistant-send')));
+    await tester.pumpAndSettle();
+
+    expect(
+      repository.startedRequests.single.resolvedSkills.single.id,
+      skill.id,
+    );
+    expect((await conversationStore.getConversations()).single.activeSkills, [
+      AiSkillReference.fromSkill(skill),
+    ]);
+  });
+
+  testWidgets(
+    'shows changed skill recovery and requires explicit continuation',
+    (tester) async {
+      final profile = AiConnectionProfile(
+        id: 'home',
+        name: 'Home AI',
+        protocol: AiProtocol.openAiCompatibleChat,
+        baseUrl: Uri.parse('https://ai.example.test/v1'),
+        modelId: 'local-model',
+      );
+      final previous = _skill('review', 'Previous private instructions');
+      final current = _skill('review', 'Current private instructions');
+      final conversation = AiConversation(
+        id: 'conversation',
+        title: 'Review',
+        connectionProfileId: profile.id,
+        modelId: profile.modelId,
+        createdAt: DateTime.utc(2026, 9, 5),
+        updatedAt: DateTime.utc(2026, 9, 5),
+        activeSkills: [AiSkillReference.fromSkill(previous)],
+      );
+      final profileStore = FakeAiConnectionProfileStore(
+        profiles: [profile],
+        activeProfileId: profile.id,
+      );
+      final conversationStore = FakeAiConversationStore(
+        conversations: [conversation],
+      );
+      final repository = FakeAiAssistantRepository();
+      final skillStore = InMemoryAiSkillStore(skills: [current]);
+      addTearDown(profileStore.dispose);
+      addTearDown(conversationStore.dispose);
+      addTearDown(skillStore.dispose);
+
+      await tester.pumpWidget(
+        _app(
+          assistantRepository: repository,
+          profileStore: profileStore,
+          conversationStore: conversationStore,
+          skillStore: skillStore,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('review · changed'), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const Key('assistant-composer')),
+        'Continue explicitly',
+      );
+      await tester.tap(find.byKey(const Key('assistant-send')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Active skills need attention'), findsOneWidget);
+      expect(find.textContaining('local revision changed'), findsOneWidget);
+      expect(repository.startedRequests, isEmpty);
+      await tester.tap(
+        find.byKey(const Key('assistant-continue-without-skills')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(repository.startedRequests.single.resolvedSkills, isEmpty);
+      expect(
+        (await conversationStore.getConversations()).single.activeSkills.single,
+        AiSkillReference.fromSkill(previous),
+      );
+      expect(find.textContaining(previous.instructions), findsNothing);
+      expect(find.textContaining(current.instructions), findsNothing);
+    },
+  );
 }
 
 Widget _app({
@@ -544,6 +696,8 @@ Widget _app({
   required AiConnectionProfileStore profileStore,
   required AiConversationStore conversationStore,
   AiApplicationContextReadService? contextReadService,
+  AiSkillStore? skillStore,
+  AiSkillPreferencesStore? skillPreferencesStore,
   ThemeData? theme,
 }) {
   return MultiProvider(
@@ -551,6 +705,9 @@ Widget _app({
       Provider<AiAssistantRepository>.value(value: assistantRepository),
       Provider<AiConnectionProfileStore>.value(value: profileStore),
       Provider<AiConversationStore>.value(value: conversationStore),
+      if (skillStore != null) Provider<AiSkillStore>.value(value: skillStore),
+      if (skillPreferencesStore != null)
+        Provider<AiSkillPreferencesStore>.value(value: skillPreferencesStore),
       Provider<AiApplicationContextReadService>(
         create:
             (_) => contextReadService ?? FakeAiApplicationContextReadService(),
@@ -563,6 +720,15 @@ Widget _app({
     ),
   );
 }
+
+AiSkill _skill(String id, String instructions) => AiSkill(
+  id: id,
+  name: id == 'suomen-kieli' ? 'Suomen kieli' : id,
+  description: 'Finnish writing',
+  instructions: instructions,
+  createdAt: DateTime.utc(2026, 9, 5),
+  updatedAt: DateTime.utc(2026, 9, 5),
+);
 
 Future<void> _pressControlShortcut(
   WidgetTester tester,

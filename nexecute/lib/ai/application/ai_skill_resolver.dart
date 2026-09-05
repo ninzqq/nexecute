@@ -6,6 +6,7 @@ enum AiSkillResolutionIssueKind {
   changed,
   disabled,
   storageUnavailable,
+  promptBudgetUnavailable,
 }
 
 final class AiSkillResolutionIssue {
