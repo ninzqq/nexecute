@@ -1286,21 +1286,39 @@ whole-turn history, migration, and the existing theme/layout coverage.
 
 ##### Step 11F: later tool-aware skills
 
-- [ ] After prompt-only skills are reliable, allow a skill to reference only
+**Status:** Completed. Versioned app-owned read-capability declarations and
+registry dispatch, preserving all existing authorization and execution limits.
+
+- [x] After prompt-only skills are reliable, allow a skill to reference only
   stable, app-owned capability identifiers registered by Nexecute. A skill file
   must never define a tool executor or arbitrary JSON-to-repository binding.
-- [ ] Generalize the existing read-tool catalog and coordinator into a registry
+- [x] Generalize the existing read-tool catalog and coordinator into a registry
   whose definitions, validators, executors, limits, and authorization predicates
   remain application code.
-- [ ] Compute effective tool access as the intersection of the skill allow-list,
+- [x] Compute effective tool access as the intersection of the skill allow-list,
   confirmed model capability, explicit per-request user authorization, and
   installed application capability. A skill declaration is never authorization.
-- [ ] Preserve bounded reads, opaque record references, execution timeouts,
+- [x] Preserve bounded reads, opaque record references, execution timeouts,
   continuation limits, cancellation, and persistence exclusion for every
   skill-assisted tool session.
-- [ ] Keep writes outside the skill runtime. Skills may opt into an existing
+- [x] Keep writes outside the skill runtime. Skills may opt into an existing
   app-owned proposal workflow only when its strict parser, editable review,
   explicit confirmation, and idempotent command path already exist.
+
+Skill schema 3 adds a bounded `capabilities` list of `listTasks`,
+`eventsForDateRange`, `searchNotes`, and `getNote`. The app-owned registry maps
+these IDs to authorization predicates, bounded definitions, and typed executor
+branches with strict argument validation. Active declarations form one request
+allow-list; prompt-only supporting skills add no capabilities. That list is
+intersected with installed registrations, confirmed model support, and explicit
+request authorization, both when advertising tools and before each execution.
+Skill-free chat retains its existing authorized read workflow. No skill can
+register code or a write operation; dedicated proposal workflows remain fixed,
+skill-free, and behind their existing editable review and confirmation path.
+Ordered index migrations run 1 → 2 → 3 without changing pinned content hashes.
+Verification: all 234 AI tests passed and analysis is clean, including capability
+intersection, denied-call execution, codec/hash identity, and existing timeout,
+cancellation, continuation, and opaque-reference tests.
 
 ##### Step 11G: verification and rollout
 

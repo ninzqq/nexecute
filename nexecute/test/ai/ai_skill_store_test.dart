@@ -56,6 +56,7 @@ void main() {
         data['schemaVersion'] = 1;
         for (final entry in data['skills'] as List) {
           (entry as Map).remove('category');
+          entry.remove('capabilities');
         }
         await index.writeAsString(jsonEncode(data));
         final reopened = createStore();
@@ -64,7 +65,7 @@ void main() {
           (await reopened.getSkills()).single.contentHash,
           legacy.contentHash,
         );
-        expect(jsonDecode(await index.readAsString())['schemaVersion'], 2);
+        expect(jsonDecode(await index.readAsString())['schemaVersion'], 3);
         expect((await reopened.getSkill('legacy'))!.instructions, 'Original');
         expect(
           (await reopened.getSkill('legacy'))!.contentHash,

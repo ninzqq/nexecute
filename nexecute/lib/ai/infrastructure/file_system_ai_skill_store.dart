@@ -14,7 +14,7 @@ class FileSystemAiSkillStore implements AiSkillStore {
   FileSystemAiSkillStore({required AiSkillDirectoryProvider directoryProvider})
     : _directoryProvider = directoryProvider;
 
-  static const _indexSchemaVersion = 2;
+  static const _indexSchemaVersion = 3;
   static const _indexFileName = 'index.v1.json';
   static const _bodiesDirectoryName = 'bodies';
   static const _maxIndexBytes = 8 * 1024 * 1024;
@@ -86,6 +86,7 @@ class FileSystemAiSkillStore implements AiSkillStore {
         isEnabled: metadata.isEnabled,
         outputMode: metadata.outputMode,
         category: metadata.category,
+        capabilities: metadata.capabilities,
         createdAt: metadata.createdAt,
         updatedAt: metadata.updatedAt,
       );
@@ -256,8 +257,8 @@ class FileSystemAiSkillStore implements AiSkillStore {
         );
       }
       final decoded = jsonDecode(utf8.decode(bytes, allowMalformed: false));
-      final loaded = _decodeIndex(decoded);
-      if ((decoded as Map)['schemaVersion'] == 1) {
+      final loaded = _decodeIndex(_migrateIndex(decoded));
+      if ((decoded as Map)['schemaVersion'] != _indexSchemaVersion) {
         await _writeIndex(root, loaded);
       }
       _metadata
@@ -496,12 +497,14 @@ List<AiSkillMetadata> _decodeIndex(Object? value) {
         'skills',
       }).isNotEmpty ||
       (value['schemaVersion'] != 1 &&
+          value['schemaVersion'] != 2 &&
           value['schemaVersion'] !=
               FileSystemAiSkillStore._indexSchemaVersion) ||
       value['skills'] is! List) {
     throw const FormatException('Invalid skill metadata index root.');
   }
-  final legacy = value['schemaVersion'] == 1;
+  final indexVersion = value['schemaVersion'] as int;
+  final legacy = indexVersion == 1;
   final values = value['skills'] as List;
   if (values.length > FileSystemAiSkillStore._maxSkills) {
     throw const FormatException('Too many skills in metadata index.');
@@ -520,6 +523,7 @@ List<AiSkillMetadata> _decodeIndex(Object? value) {
       'isEnabled',
       'outputMode',
       if (!legacy) 'category',
+      if (indexVersion >= 3) 'capabilities',
       'contentHash',
       'createdAt',
       'updatedAt',
@@ -540,6 +544,7 @@ List<AiSkillMetadata> _decodeIndex(Object? value) {
         outputMode: _outputMode(_requiredString(value, 'outputMode')),
         category:
             value['category'] == null ? null : _category(value['category']),
+        capabilities: _storedCapabilities(value['capabilities']),
         contentHash: _requiredString(value, 'contentHash'),
         createdAt: _requiredDate(value, 'createdAt'),
         updatedAt: _requiredDate(value, 'updatedAt'),
@@ -557,6 +562,7 @@ Map<String, Object?> _metadataToJson(AiSkillMetadata value) => {
   'isEnabled': value.isEnabled,
   'outputMode': value.outputMode.name,
   'category': value.category?.name,
+  'capabilities': value.capabilities.toList()..sort(),
   'contentHash': value.contentHash,
   'createdAt': value.createdAt.toIso8601String(),
   'updatedAt': value.updatedAt.toIso8601String(),
@@ -634,4 +640,38 @@ AiSkillCategory _category(Object? value) {
     if (category.name == value) return category;
   }
   throw const FormatException('Invalid skill category.');
+}
+
+Set<String> _storedCapabilities(Object? value) {
+  if (value == null) return const {};
+  if (value is! List ||
+      value.any((id) => id is! String || !aiSkillCapabilityIds.contains(id)) ||
+      value.toSet().length != value.length) {
+    throw const FormatException('Invalid stored capabilities.');
+  }
+  return value.cast<String>().toSet();
+}
+
+/// Validate each ordered metadata-only migration. Portable revisions and body
+/// filenames stay unchanged; no body reads are needed for catalog migration.
+Object? _migrateIndex(Object? source) {
+  _decodeIndex(source);
+  var current = Map<String, dynamic>.from(source as Map);
+  while (current['schemaVersion'] <
+      FileSystemAiSkillStore._indexSchemaVersion) {
+    final version = current['schemaVersion'] as int;
+    current = {
+      'schemaVersion': version + 1,
+      'skills': [
+        for (final entry in current['skills'] as List)
+          {
+            ...Map<String, dynamic>.from(entry as Map),
+            if (version == 1) 'category': null,
+            if (version == 2) 'capabilities': <String>[],
+          },
+      ],
+    };
+    _decodeIndex(current);
+  }
+  return current;
 }

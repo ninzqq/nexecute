@@ -36,11 +36,13 @@ void main() {
       'description',
       'outputMode',
       'category',
+      'capabilities',
     });
     expect(
       AiSkillDocumentContract.requiredFrontmatterFields,
       AiSkillDocumentContract.supportedFrontmatterFields.difference({
         'category',
+        'capabilities',
       }),
     );
   });

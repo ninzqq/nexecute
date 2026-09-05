@@ -30,9 +30,18 @@ class AiChatRequest {
   final List<AiResolvedSkillInvocation> resolvedSkills;
   final List<AiToolContinuationMessage> continuationMessages;
 
+  /// Prompt-only supporting skills are neutral; declarations are combined into
+  /// one request allow-list. If active skills declare nothing, no tools are
+  /// exposed. Skill-free chat retains the ordinary authorized read workflow.
+  Set<String>? get skillCapabilityAllowList =>
+      resolvedSkills.isEmpty
+          ? null
+          : {for (final skill in resolvedSkills) ...skill.capabilities};
+
   List<AiToolDefinition> get toolDefinitions =>
-      AiReadToolCatalog.definitionsFor(
+      AiReadCapabilityRegistry.definitionsFor(
         profile: connectionProfile,
         authorization: readToolAuthorization,
+        skillAllowList: skillCapabilityAllowList,
       );
 }

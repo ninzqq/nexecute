@@ -190,10 +190,63 @@ class AiReadToolAuthorization {
   final Set<String> allowedNoteReferences;
 }
 
+enum AiReadCapabilityExecutor {
+  listTasks,
+  eventsForDateRange,
+  searchNotes,
+  getNote,
+}
+
+/// All dispatch and authorization behavior is fixed in application code.
+final class AiReadCapabilityRegistration {
+  const AiReadCapabilityRegistration({
+    required this.executor,
+    required this.isAuthorized,
+    required this.definition,
+  });
+  final AiReadCapabilityExecutor executor;
+  final bool Function(AiReadToolAuthorization) isAuthorized;
+  final AiToolDefinition Function(AiReadToolAuthorization) definition;
+}
+
 abstract final class AiReadToolCatalog {
   static List<AiToolDefinition> definitionsFor({
     required AiConnectionProfile profile,
     AiReadToolAuthorization? authorization,
+  }) => AiReadCapabilityRegistry.definitionsFor(
+    profile: profile,
+    authorization: authorization,
+  );
+}
+
+abstract final class AiReadCapabilityRegistry {
+  static final Map<String, AiReadCapabilityRegistration> registrations =
+      Map.unmodifiable({
+        AiReadToolNames.listTasks: AiReadCapabilityRegistration(
+          executor: AiReadCapabilityExecutor.listTasks,
+          isAuthorized: (a) => a.allowActiveTasks,
+          definition: (_) => _listTasks,
+        ),
+        AiReadToolNames.eventsForDateRange: AiReadCapabilityRegistration(
+          executor: AiReadCapabilityExecutor.eventsForDateRange,
+          isAuthorized: (a) => a.eventRange != null,
+          definition: (a) => _eventsForDateRange(a.eventRange!),
+        ),
+        AiReadToolNames.searchNotes: AiReadCapabilityRegistration(
+          executor: AiReadCapabilityExecutor.searchNotes,
+          isAuthorized: (a) => a.allowNoteSearch,
+          definition: (_) => _searchNotes,
+        ),
+        AiReadToolNames.getNote: AiReadCapabilityRegistration(
+          executor: AiReadCapabilityExecutor.getNote,
+          isAuthorized: (a) => a.allowedNoteReferences.isNotEmpty,
+          definition: (a) => _getNote(a.allowedNoteReferences),
+        ),
+      });
+  static List<AiToolDefinition> definitionsFor({
+    required AiConnectionProfile profile,
+    AiReadToolAuthorization? authorization,
+    Set<String>? skillAllowList,
   }) {
     if (authorization == null ||
         profile.capabilityState(AiCapability.tools) !=
@@ -201,12 +254,10 @@ abstract final class AiReadToolCatalog {
       return const [];
     }
     return List.unmodifiable([
-      if (authorization.allowActiveTasks) _listTasks,
-      if (authorization.eventRange case final range?)
-        _eventsForDateRange(range),
-      if (authorization.allowNoteSearch) _searchNotes,
-      if (authorization.allowedNoteReferences.isNotEmpty)
-        _getNote(authorization.allowedNoteReferences),
+      for (final entry in registrations.entries)
+        if ((skillAllowList == null || skillAllowList.contains(entry.key)) &&
+            entry.value.isAuthorized(authorization))
+          entry.value.definition(authorization),
     ]);
   }
 

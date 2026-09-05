@@ -102,6 +102,7 @@ abstract final class AiSkillMarkdownCodec {
         instructions: parsed.instructions,
         isEnabled: isEnabled,
         outputMode: outputMode,
+        capabilities: _capabilities(metadata?['capabilities'], schemaVersion),
         category:
             metadata?['category'] == null
                 ? null
@@ -127,7 +128,7 @@ id: ${skill.id}
 name: ${jsonEncode(skill.name)}
 description: ${jsonEncode(skill.description)}
 outputMode: ${skill.outputMode.name}
-${skill.category == null ? '' : 'category: ${skill.category!.name}\n'}---
+${skill.category == null ? '' : 'category: ${skill.category!.name}\n'}${skill.schemaVersion < 3 ? '' : 'capabilities: ${jsonEncode(skill.capabilities.toList()..sort())}\n'}---
 ${_normalizeLineEndings(skill.instructions)}''';
     final bytes = Uint8List.fromList(utf8.encode(document));
     if (bytes.length > aiMaxSkillDocumentBytes) {
@@ -281,3 +282,17 @@ final class _ParsedSkillDocument {
 
 String _normalizeLineEndings(String value) =>
     value.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+
+Set<String> _capabilities(Object? value, int version) {
+  if (value == null) return const {};
+  if (version < 3 ||
+      value is! List ||
+      value.any((id) => id is! String || !aiSkillCapabilityIds.contains(id)) ||
+      value.toSet().length != value.length) {
+    throw const AiSkillDocumentException(
+      AiSkillDocumentErrorCode.invalidMetadata,
+      'Capabilities must be unique app-owned read identifiers in schema version 3.',
+    );
+  }
+  return value.cast<String>().toSet();
+}

@@ -2,7 +2,15 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 
-const aiSkillSchemaVersion = 2;
+const aiSkillSchemaVersion = 3;
+
+/// Stable app-owned read capabilities. There are deliberately no write IDs.
+const aiSkillCapabilityIds = {
+  'listTasks',
+  'eventsForDateRange',
+  'searchNotes',
+  'getNote',
+};
 
 enum AiSkillCategory { language, domain, workflow, outputStyle }
 
@@ -19,7 +27,7 @@ bool isValidAiSkillId(String value) =>
 bool isValidAiSkillContentHash(String value) =>
     RegExp(r'^[a-f0-9]{64}$').hasMatch(value);
 
-/// The fields accepted in version 1 `SKILL.md` frontmatter.
+/// The fields accepted by the versioned `SKILL.md` frontmatter.
 ///
 /// Storage-only state such as [AiSkill.isEnabled] and timestamps deliberately
 /// stays outside the portable document. Importers must reject unknown fields
@@ -33,6 +41,7 @@ abstract final class AiSkillDocumentContract {
     'description',
     'outputMode',
     'category',
+    'capabilities',
   };
   static const requiredFrontmatterFields = {
     'schemaVersion',
@@ -43,10 +52,8 @@ abstract final class AiSkillDocumentContract {
   };
 }
 
-/// Version 1 skills can affect text generation only.
-///
-/// Tool identifiers and structured output contracts will remain app-owned
-/// capabilities if they are added in a later schema version.
+/// Skill output stays text-only. Version 3 may name registered read capabilities;
+/// schemas, validation, authorization and executors remain app-owned.
 enum AiSkillOutputMode { text }
 
 enum AiSkillValidationErrorCode {
@@ -68,7 +75,8 @@ final class AiSkillValidationException extends FormatException {
 /// A reusable, user-authored instruction set.
 ///
 /// This type intentionally contains no executable hooks, tool definitions,
-/// data permissions, network configuration, or repository bindings. An
+/// data permissions, network configuration, or repository bindings. Capability
+/// identifiers restrict eligible tools but cannot authorize access. An
 /// [AiSkill] can refine assistant behavior only after the application composes
 /// it beneath its immutable policy and request authorization boundaries.
 final class AiSkill {
@@ -81,10 +89,12 @@ final class AiSkill {
     bool isEnabled = true,
     AiSkillOutputMode outputMode = AiSkillOutputMode.text,
     AiSkillCategory? category,
+    Set<String> capabilities = const {},
     required DateTime createdAt,
     required DateTime updatedAt,
   }) {
     _validateSchemaVersion(schemaVersion);
+    _validateCapabilities(schemaVersion, capabilities);
     if (schemaVersion == 1 && category != null) {
       throw const FormatException(
         'Version 1 skills cannot declare a category.',
@@ -120,6 +130,7 @@ final class AiSkill {
       isEnabled: isEnabled,
       outputMode: outputMode,
       category: category,
+      capabilities: Set.unmodifiable(capabilities),
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
@@ -134,6 +145,7 @@ final class AiSkill {
     required this.isEnabled,
     required this.outputMode,
     required this.category,
+    required this.capabilities,
     required this.createdAt,
     required this.updatedAt,
   }) : contentHash = _contentHash(
@@ -144,6 +156,7 @@ final class AiSkill {
          instructions: instructions,
          outputMode: outputMode,
          category: category,
+         capabilities: Set.unmodifiable(capabilities),
        );
 
   final int schemaVersion;
@@ -154,6 +167,7 @@ final class AiSkill {
   final bool isEnabled;
   final AiSkillOutputMode outputMode;
   final AiSkillCategory? category;
+  final Set<String> capabilities;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -171,11 +185,15 @@ final class AiSkill {
     bool? isEnabled,
     AiSkillOutputMode? outputMode,
     AiSkillCategory? category,
+    Set<String>? capabilities,
     bool clearCategory = false,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => AiSkill(
-    schemaVersion: category != null ? aiSkillSchemaVersion : schemaVersion,
+    schemaVersion:
+        category != null || capabilities != null
+            ? aiSkillSchemaVersion
+            : schemaVersion,
     id: id ?? this.id,
     name: name ?? this.name,
     description: description ?? this.description,
@@ -183,6 +201,7 @@ final class AiSkill {
     isEnabled: isEnabled ?? this.isEnabled,
     outputMode: outputMode ?? this.outputMode,
     category: clearCategory ? null : category ?? this.category,
+    capabilities: capabilities ?? this.capabilities,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -198,11 +217,13 @@ final class AiSkillMetadata {
     required bool isEnabled,
     required AiSkillOutputMode outputMode,
     AiSkillCategory? category,
+    Set<String> capabilities = const {},
     required String contentHash,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) {
     _validateSchemaVersion(schemaVersion);
+    _validateCapabilities(schemaVersion, capabilities);
     if (schemaVersion == 1 && category != null) {
       throw const FormatException(
         'Version 1 skills cannot declare a category.',
@@ -241,6 +262,7 @@ final class AiSkillMetadata {
       isEnabled: isEnabled,
       outputMode: outputMode,
       category: category,
+      capabilities: Set.unmodifiable(capabilities),
       contentHash: contentHash,
       createdAt: createdAt,
       updatedAt: updatedAt,
@@ -255,6 +277,7 @@ final class AiSkillMetadata {
     isEnabled: skill.isEnabled,
     outputMode: skill.outputMode,
     category: skill.category,
+    capabilities: skill.capabilities,
     contentHash: skill.contentHash,
     createdAt: skill.createdAt,
     updatedAt: skill.updatedAt,
@@ -268,6 +291,7 @@ final class AiSkillMetadata {
     required this.isEnabled,
     required this.outputMode,
     required this.category,
+    required this.capabilities,
     required this.contentHash,
     required this.createdAt,
     required this.updatedAt,
@@ -280,6 +304,7 @@ final class AiSkillMetadata {
   final bool isEnabled;
   final AiSkillOutputMode outputMode;
   final AiSkillCategory? category;
+  final Set<String> capabilities;
   final String contentHash;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -369,6 +394,7 @@ String _contentHash({
   required String instructions,
   required AiSkillOutputMode outputMode,
   AiSkillCategory? category,
+  Set<String> capabilities = const {},
 }) =>
     sha256
         .convert(
@@ -381,6 +407,7 @@ String _contentHash({
               outputMode.name,
               _normalizeLineEndings(instructions),
               if (schemaVersion >= 2) category?.name,
+              if (schemaVersion >= 3) (capabilities.toList()..sort()),
             ]),
           ),
         )
@@ -388,3 +415,12 @@ String _contentHash({
 
 String _normalizeLineEndings(String value) =>
     value.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+
+void _validateCapabilities(int version, Set<String> capabilities) {
+  if ((version < 3 && capabilities.isNotEmpty) ||
+      !aiSkillCapabilityIds.containsAll(capabilities)) {
+    throw const FormatException(
+      'Skills may declare only registered read capabilities in schema version 3.',
+    );
+  }
+}

@@ -249,6 +249,7 @@ class _AiSkillsSettingsState extends State<AiSkillsSettings> {
         description: source.description,
         instructions: source.instructions,
         category: source.category,
+        capabilities: source.capabilities,
         isEnabled: source.isEnabled,
         createdAt: now,
         updatedAt: now,
@@ -558,6 +559,7 @@ class _SkillEditorDialogState extends State<_SkillEditorDialog> {
   late final TextEditingController _instructions;
   late bool _enabled;
   AiSkillCategory? _category;
+  Set<String> _capabilities = {};
   bool _saving = false;
   String? _error;
 
@@ -573,6 +575,7 @@ class _SkillEditorDialogState extends State<_SkillEditorDialog> {
     _instructions = TextEditingController(text: source?.instructions ?? '');
     _enabled = source?.isEnabled ?? true;
     _category = source?.category;
+    _capabilities = {...?source?.capabilities};
   }
 
   @override
@@ -657,6 +660,22 @@ class _SkillEditorDialogState extends State<_SkillEditorDialog> {
                       ),
                 ),
                 const SizedBox(height: 10),
+                const Text(
+                  'Optional read capabilities. These declarations never authorize access; each request still needs your approval.',
+                ),
+                for (final capability in aiSkillCapabilityIds)
+                  CheckboxListTile(
+                    title: Text(capability),
+                    value: _capabilities.contains(capability),
+                    onChanged:
+                        (value) => setState(() {
+                          if (value == true) {
+                            _capabilities.add(capability);
+                          } else {
+                            _capabilities.remove(capability);
+                          }
+                        }),
+                  ),
                 DropdownButtonFormField<AiSkillCategory>(
                   initialValue: _category,
                   decoration: const InputDecoration(
@@ -746,6 +765,7 @@ class _SkillEditorDialogState extends State<_SkillEditorDialog> {
         description: _description.text,
         instructions: _instructions.text,
         category: _category,
+        capabilities: _capabilities,
         isEnabled: _enabled,
         createdAt: original?.createdAt ?? widget.initial?.createdAt ?? now,
         updatedAt: original == null ? now : _monotonicNow(original.updatedAt),

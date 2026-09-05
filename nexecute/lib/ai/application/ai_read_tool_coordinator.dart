@@ -79,9 +79,10 @@ class AiReadToolCoordinator {
     AiChatRequest request, {
     required AiReadToolExecutionScope scope,
   }) async {
-    final definitions = AiReadToolCatalog.definitionsFor(
+    final definitions = AiReadCapabilityRegistry.definitionsFor(
       profile: request.connectionProfile,
       authorization: scope.authorization,
+      skillAllowList: request.skillCapabilityAllowList,
     );
     if (definitions.isEmpty) {
       return _assistantRepository.startResponse(_withoutTools(request));
@@ -306,8 +307,26 @@ class _AiReadToolSession {
       authorization: authorization,
       noteIds: noteIdsByReference.values.toSet(),
     );
-    switch (call.name) {
-      case AiReadToolNames.listTasks:
+    final registration = AiReadCapabilityRegistry.registrations[call.name];
+    if (registration == null) {
+      throw const _ToolCallRejection(
+        'unknown_tool',
+        'The requested tool is not installed.',
+      );
+    }
+    final allowed = AiReadCapabilityRegistry.definitionsFor(
+      profile: request.connectionProfile,
+      authorization: authorization,
+      skillAllowList: request.skillCapabilityAllowList,
+    );
+    if (!allowed.any((definition) => definition.name == call.name)) {
+      throw const _ToolCallRejection(
+        'unauthorized',
+        'This capability was not declared and authorized for this request.',
+      );
+    }
+    switch (registration.executor) {
+      case AiReadCapabilityExecutor.listTasks:
         if (!authorization.allowActiveTasks) {
           throw const _ToolCallRejection(
             'unauthorized',
@@ -324,7 +343,7 @@ class _AiReadToolSession {
           ),
         );
         return _contextResult(context);
-      case AiReadToolNames.eventsForDateRange:
+      case AiReadCapabilityExecutor.eventsForDateRange:
         if (authorization.eventRange == null) {
           throw const _ToolCallRejection(
             'unauthorized',
@@ -358,7 +377,7 @@ class _AiReadToolSession {
           ),
         );
         return _contextResult(context);
-      case AiReadToolNames.searchNotes:
+      case AiReadCapabilityExecutor.searchNotes:
         if (!authorization.allowNoteSearch) {
           throw const _ToolCallRejection(
             'unauthorized',
@@ -401,7 +420,7 @@ class _AiReadToolSession {
           'context': result.context.toJson(),
           'noteReferences': references,
         };
-      case AiReadToolNames.getNote:
+      case AiReadCapabilityExecutor.getNote:
         _requireExactArguments(call, const {'noteReference'});
         final reference = _stringArgument(
           call,
@@ -422,11 +441,6 @@ class _AiReadToolSession {
           noteId: noteId,
         );
         return _contextResult(context);
-      default:
-        throw const _ToolCallRejection(
-          'unknown_tool',
-          'The requested tool is not supported.',
-        );
     }
   }
 
