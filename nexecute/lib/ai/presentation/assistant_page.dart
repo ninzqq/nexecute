@@ -338,6 +338,9 @@ class _AssistantPageState extends State<AssistantPage> {
       setState(_clearApplicationContext);
       return;
     }
+    if (_controller.errorMessage?.contains('Nothing was truncated.') ?? false) {
+      _composerController.text = text;
+    }
     if (_controller.skillResolutionError != null) {
       _composerController.text = text;
       await _showSkillRecovery(text);
@@ -477,6 +480,19 @@ class _AssistantPageState extends State<AssistantPage> {
         'Active skill · ${metadata[reference.id]?.name ?? reference.id} · '
         'revision ${reference.contentHash.substring(0, 12)}…',
       );
+    }
+    for (final category in AiSkillCategory.values) {
+      final conflicts =
+          _controller.effectiveSkills
+              .where((s) => metadata[s.id]?.category == category)
+              .map((s) => s.id)
+              .toList()
+            ..sort();
+      if (conflicts.length > 1) {
+        sources.add(
+          'Conflict warning · ${category.name}: ${conflicts.join(' → ')}. Later IDs take precedence among skill preferences; review or deactivate conflicting skills.',
+        );
+      }
     }
     sources.add('Trusted app-owned workflow constraints, when present');
     await showDialog<void>(
@@ -850,7 +866,7 @@ String _issueLabel(AiSkillResolutionIssueKind kind) => switch (kind) {
   AiSkillResolutionIssueKind.disabled => 'disabled',
   AiSkillResolutionIssueKind.storageUnavailable => 'storage unavailable',
   AiSkillResolutionIssueKind.promptBudgetUnavailable =>
-    'multiple skills require Step 11E prompt budgeting',
+    'enable multiple skills for this connection in AI Settings',
 };
 
 class _SkillActivationBar extends StatelessWidget {
@@ -877,6 +893,12 @@ class _SkillActivationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final byId = {for (final skill in metadata) skill.id: skill};
+    final conflicts = [
+      for (final category in AiSkillCategory.values)
+        if (references.where((r) => byId[r.id]?.category == category).length >
+            1)
+          category.name,
+    ];
     return Material(
       key: const Key('assistant-skill-bar'),
       color: Theme.of(context).colorScheme.surfaceContainerLow,
@@ -901,9 +923,17 @@ class _SkillActivationBar extends StatelessWidget {
                 ),
                 IconButton(
                   key: const Key('assistant-preview-instructions'),
-                  tooltip: 'Preview instruction source order',
+                  tooltip:
+                      conflicts.isEmpty
+                          ? 'Preview instruction source order'
+                          : 'Conflicting skill categories: ${conflicts.join(', ')}. Review precedence.',
                   onPressed: onPreview,
-                  icon: const Icon(Icons.visibility_outlined, size: 20),
+                  icon: Icon(
+                    conflicts.isEmpty
+                        ? Icons.visibility_outlined
+                        : Icons.warning_amber_rounded,
+                    size: 20,
+                  ),
                 ),
                 TextButton.icon(
                   key: const Key('assistant-pick-skills'),
@@ -1031,24 +1061,10 @@ class _SkillPickerSheetState extends State<_SkillPickerSheet> {
       height: MediaQuery.sizeOf(context).height * 0.75,
       child: Column(
         children: [
-          for (final category in AiSkillCategory.values)
-            if (widget.skills
-                    .where(
-                      (s) =>
-                          _selectedIds.contains(s.id) && s.category == category,
-                    )
-                    .length >
-                1)
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: Text(
-                  'Conflict warning: multiple ${category.name} skills. Review their instructions. Precedence: ${(widget.skills.where((s) => _selectedIds.contains(s.id) && s.category == category).map((s) => s.id).toList()..sort()).join(' → ')} (later wins).',
-                ),
-              ),
           ListTile(
             title: const Text('Choose active skills'),
             subtitle: const Text(
-              'Select enabled skills. Instructions run in skill-ID order; later skills take precedence among equal-priority preferences. Budget checks run before sending.',
+              'Budget checked before sending. Later skill IDs take precedence.',
             ),
             trailing: IconButton(
               tooltip: 'Manage skills in Settings',
@@ -1060,16 +1076,15 @@ class _SkillPickerSheetState extends State<_SkillPickerSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: SegmentedButton<AiSkillActivationScope>(
               key: const Key('assistant-skill-scope'),
+              showSelectedIcon: false,
               segments: const [
                 ButtonSegment(
                   value: AiSkillActivationScope.conversation,
-                  label: Text('This conversation'),
-                  icon: Icon(Icons.forum_outlined),
+                  label: Text('Conversation'),
                 ),
                 ButtonSegment(
                   value: AiSkillActivationScope.nextRequest,
-                  label: Text('Next message only'),
-                  icon: Icon(Icons.looks_one_outlined),
+                  label: Text('Next message'),
                 ),
               ],
               selected: {_scope},
@@ -1107,9 +1122,30 @@ class _SkillPickerSheetState extends State<_SkillPickerSheet> {
                     : visible.isEmpty
                     ? const Center(child: Text('No skills match this search.'))
                     : ListView.builder(
-                      itemCount: visible.length,
+                      itemCount: visible.length + 1,
                       itemBuilder: (context, index) {
-                        final skill = visible[index];
+                        if (index == 0) {
+                          return Column(
+                            children: [
+                              for (final category in AiSkillCategory.values)
+                                if (widget.skills
+                                        .where(
+                                          (s) =>
+                                              _selectedIds.contains(s.id) &&
+                                              s.category == category,
+                                        )
+                                        .length >
+                                    1)
+                                  Padding(
+                                    padding: const EdgeInsets.all(8),
+                                    child: Text(
+                                      'Conflict warning: multiple ${category.name} skills. Review their instructions. Precedence: ${(widget.skills.where((s) => _selectedIds.contains(s.id) && s.category == category).map((s) => s.id).toList()..sort()).join(' → ')} (later wins).',
+                                    ),
+                                  ),
+                            ],
+                          );
+                        }
+                        final skill = visible[index - 1];
                         final selected = _selectedIds.contains(skill.id);
                         return CheckboxListTile(
                           key: ValueKey('assistant-skill-option-${skill.id}'),
@@ -1119,7 +1155,9 @@ class _SkillPickerSheetState extends State<_SkillPickerSheet> {
                                   ? (value) {
                                     setState(() {
                                       if (value ?? false) {
-                                        _selectedIds.clear();
+                                        if (!widget.allowMultiple) {
+                                          _selectedIds.clear();
+                                        }
                                         _selectedIds.add(skill.id);
                                       } else {
                                         _selectedIds.remove(skill.id);
@@ -1141,19 +1179,20 @@ class _SkillPickerSheetState extends State<_SkillPickerSheet> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-            child: Row(
+            child: OverflowBar(
+              alignment: MainAxisAlignment.end,
+              spacing: 8,
+              overflowSpacing: 4,
               children: [
                 TextButton(
                   key: const Key('assistant-skill-deactivate-all'),
                   onPressed: () => setState(_selectedIds.clear),
                   child: const Text('Deactivate all'),
                 ),
-                const Spacer(),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: const Text('Cancel'),
                 ),
-                const SizedBox(width: 8),
                 FilledButton(
                   key: const Key('assistant-skill-apply'),
                   onPressed:

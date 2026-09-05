@@ -7,6 +7,43 @@ import 'package:nexecute/ai/ai.dart';
 import '../../tool/ai_quality_evaluation.dart';
 
 void main() {
+  test(
+    'skill quality reports exclude echoed instructions and reasoning',
+    () async {
+      final suite = AiQualitySuite.fromJsonString(
+        File('evaluation/ai_quality_cases.v1.json').readAsStringSync(),
+      );
+      final value = suite.cases.firstWhere(
+        (c) => c.workflow == AiQualityWorkflow.skillChat,
+      );
+      final repository = _QueuedRepository([
+        [
+          AiTextDelta(value.input['skills'].toString()),
+          const AiReasoningDelta('private-reasoning'),
+          const AiResponseCompleted(),
+        ],
+      ]);
+      final evaluator = AiQualityEvaluator(repository: repository);
+      final report = await evaluator.run(
+        suite: suite,
+        profile: _profile().copyWith(contextWindowTokens: 32768),
+        metadata: const AiQualityRunMetadata(
+          modelId: 'test',
+          modelVersion: 'test',
+          repetitions: 1,
+        ),
+        caseIds: {value.id},
+      );
+      final encoded = jsonEncode(report.toJson());
+      expect(encoded, isNot(contains('Suomen kielen ohje')));
+      expect(encoded, isNot(contains('private-reasoning')));
+      expect(
+        (report.toJson()['results'] as List).single,
+        isNot(contains('output')),
+      );
+    },
+  );
+
   group('committed AI quality suite', () {
     late AiQualitySuite suite;
 
@@ -20,6 +57,7 @@ void main() {
     test('is bilingual across chat, attached context, and note extraction', () {
       for (final workflow in const [
         AiQualityWorkflow.chat,
+        AiQualityWorkflow.skillChat,
         AiQualityWorkflow.attachedContext,
         AiQualityWorkflow.noteToTasks,
         AiQualityWorkflow.noteToEvent,

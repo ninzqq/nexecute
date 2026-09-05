@@ -1322,24 +1322,52 @@ cancellation, continuation, and opaque-reference tests.
 
 ##### Step 11G: verification and rollout
 
-- [ ] Add domain, codec, migration, store-contract, and import/export tests for
+**Status:** Completed. Deterministic coverage, privacy checks, expanded quality
+fixtures, and a version-pinned Ollama validation are complete. Multi-skill use
+remains an explicit, default-off connection setting because the tested model did
+not reliably follow compatible-skill composition or deterministic conflict
+precedence.
+
+- [x] Add domain, codec, migration, store-contract, and import/export tests for
   valid, body-only, malformed, duplicate, unsupported-version, path-traversal,
   and oversized skill files.
-- [ ] Test prompt precedence, exact wire serialization, multiple active skills,
+- [x] Test prompt precedence, exact wire serialization, multiple active skills,
   deterministic ordering, missing revisions, context-budget boundaries, and
   the exclusion of inactive skill bodies.
-- [ ] Add controller and widget coverage for management, activation, default
+- [x] Add controller and widget coverage for management, activation, default
   activation, failed loading, conflict warnings, budget errors, all themes, and
   narrow phone layouts.
-- [ ] Verify that skill bodies, attached application data, tool transcripts,
+- [x] Verify that skill bodies, attached application data, tool transcripts,
   endpoint credentials, and provider reasoning do not enter unintended local or
   Firestore persistence paths.
-- [ ] Extend the quality suite with a representative long Finnish-language
+- [x] Extend the quality suite with a representative long Finnish-language
   skill, conflicting style skills, adversarial imported instructions, chat-only
   models, and tool-capability fallback.
-- [ ] Validate the feature against the owner's real Ollama model with one large
+- [x] Validate the feature against the owner's real Ollama model with one large
   language skill and several smaller compatible skills before enabling multiple
   active skills by default.
+
+Quality suite 1.3.0 contains 42 synthetic cases. The five new skill cases use a
+11,670-character Finnish-language skill, a compatible three-skill set,
+conflicting output-style skills, adversarial instructions, and a declared read
+capability without request authorization. Skill-case reports intentionally omit
+model output, imported instruction bodies, and provider reasoning.
+
+Live validation on 2026-09-05 used `gemma4-12b:latest`, base-model digest
+`072b601e219b7ce375653de33795659b9b6751ad9c64a2afa50c074942d558c5`,
+through a temporary alias pinned to a 32,768-token runtime context. Two
+repetitions passed the large Finnish-language, adversarial-instruction, and
+unauthorized-tool fallback cases. Both repetitions failed exact-output checks
+for the compatible multi-skill set and conflicting-style precedence, producing
+6 passes and 4 quality failures with no transport or application failures.
+These results keep multiple active skills default-off while leaving deliberate
+per-connection opt-in available for further model testing.
+
+Verification completed with clean static analysis, all 472 Flutter tests (with
+the opt-in smoke test skipped), the 42-case quality-suite dry run, focused
+privacy and narrow-layout checks, and a debug APK build. Tests confirm that a
+rejected request performs no write, preserves the composer and next-request
+skill selection, and reports that nothing was truncated.
 
 Acceptance requires that users can accumulate a large local catalog without
 increasing ordinary request size, import and activate the Finnish-language

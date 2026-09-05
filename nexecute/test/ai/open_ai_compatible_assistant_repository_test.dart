@@ -11,6 +11,60 @@ import 'package:nexecute/models/todo_item.dart';
 void main() {
   late AiConnectionProfile profile;
 
+  test(
+    'serializes multiple complete skills only in the composed system instruction',
+    () async {
+      final skills = [
+        for (final id in ['z', 'a'])
+          AiResolvedSkillInvocation.fromSkill(
+            AiSkill(
+              id: id,
+              name: id,
+              description: 'Wire fixture',
+              instructions: 'Instruction-$id: ää\n"quoted"',
+              createdAt: DateTime.utc(2026),
+              updatedAt: DateTime.utc(2026),
+            ),
+          ),
+      ];
+      final instruction = const AiPromptComposer().compose(
+        profilePreferences: 'Be concise',
+        resolvedSkills: skills,
+      );
+      late Map<String, dynamic> wire;
+      final repository = OpenAiCompatibleAssistantRepository(
+        client: MockClient((request) async {
+          wire = jsonDecode(request.body) as Map<String, dynamic>;
+          return http.Response(
+            'data: [DONE]\n\n',
+            200,
+            headers: {'content-type': 'text/event-stream'},
+          );
+        }),
+      );
+      addTearDown(repository.dispose);
+      final handle = await repository.startResponse(
+        AiChatRequest(
+          connectionProfile: profile.copyWith(allowMultipleSkills: true),
+          conversationId: 'wire',
+          systemInstruction: instruction,
+          resolvedSkills: skills,
+          messages: const [],
+        ),
+      );
+      await handle.events.toList();
+      expect(wire['messages'], [
+        {'role': 'system', 'content': instruction},
+      ]);
+      expect(wire.keys, isNot(contains('resolvedSkills')));
+      expect(wire.keys, isNot(contains('capabilities')));
+      expect(
+        instruction.indexOf('id: "a"'),
+        lessThan(instruction.indexOf('id: "z"')),
+      );
+    },
+  );
+
   setUp(() {
     profile = AiConnectionProfile(
       id: 'home',

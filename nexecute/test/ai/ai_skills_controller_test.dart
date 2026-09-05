@@ -1,7 +1,52 @@
+import 'package:nexecute/ai/application/ai_request_budget.dart';
+import '../support/fake_ai_dependencies.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/ai/ai.dart';
 
 void main() {
+  test(
+    'budgets multi-skill defaults and preserves the accepted set on failure',
+    () async {
+      final small = _skill(instructions: 'Be brief');
+      final large = small.copyWith(id: 'large', instructions: 'ä' * 11000);
+      final store = InMemoryAiSkillStore(skills: [small, large]);
+      final preferences = InMemoryAiSkillPreferencesStore();
+      final profile = AiConnectionProfile(
+        id: 'p',
+        name: 'P',
+        protocol: AiProtocol.openAiCompatibleChat,
+        baseUrl: Uri.parse('http://localhost/v1'),
+        modelId: 'm',
+        allowMultipleSkills: true,
+      );
+      final profiles = FakeAiConnectionProfileStore(
+        profiles: [profile],
+        activeProfileId: 'p',
+      );
+      final controller = AiSkillsController(
+        store: store,
+        preferencesStore: preferences,
+        profileStore: profiles,
+      );
+      addTearDown(controller.dispose);
+      addTearDown(store.dispose);
+      addTearDown(preferences.dispose);
+      addTearDown(profiles.dispose);
+      await controller.initialize();
+      await controller.setDefault(AiSkillMetadata.fromSkill(small), true);
+      await expectLater(
+        controller.setDefault(AiSkillMetadata.fromSkill(large), true),
+        throwsA(isA<AiRequestBudgetException>()),
+      );
+      expect(await preferences.getDefaultSkills(), [
+        AiSkillReference.fromSkill(small),
+      ]);
+      await profiles.saveProfile(profile.copyWith(contextWindowTokens: 32768));
+      await controller.setDefault(AiSkillMetadata.fromSkill(large), true);
+      expect((await preferences.getDefaultSkills()).length, 2);
+    },
+  );
+
   test('manages enabled state and exact default revisions', () async {
     final original = _skill(instructions: 'Original');
     final store = InMemoryAiSkillStore(skills: [original]);

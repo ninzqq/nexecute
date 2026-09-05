@@ -11,6 +11,89 @@ import '../support/fake_ai_dependencies.dart';
 
 void main() {
   for (final preset in AppThemePreset.values) {
+    testWidgets(
+      'shows multi-skill conflict and budget recovery on a narrow ${preset.name} phone',
+      (tester) async {
+        tester.view.physicalSize = const Size(320, 720);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final profile = AiConnectionProfile(
+          id: 'p',
+          name: 'P',
+          protocol: AiProtocol.openAiCompatibleChat,
+          baseUrl: Uri.parse('https://ai.example.test/v1'),
+          modelId: 'm',
+          allowMultipleSkills: true,
+        );
+        final profiles = FakeAiConnectionProfileStore(
+          profiles: [profile],
+          activeProfileId: 'p',
+        );
+        final conversations = FakeAiConversationStore();
+        final repository = FakeAiAssistantRepository();
+        final skills = InMemoryAiSkillStore(
+          skills: [
+            _skill(
+              'a',
+              'ä' * 11000,
+            ).copyWith(category: AiSkillCategory.outputStyle),
+            _skill(
+              'b',
+              'Be brief',
+            ).copyWith(category: AiSkillCategory.outputStyle),
+          ],
+        );
+        addTearDown(profiles.dispose);
+        addTearDown(conversations.dispose);
+        addTearDown(skills.dispose);
+        await tester.pumpWidget(
+          _app(
+            assistantRepository: repository,
+            profileStore: profiles,
+            conversationStore: conversations,
+            skillStore: skills,
+            theme: AppThemes.forPreset(preset),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('assistant-pick-skills')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('assistant-skill-option-a')));
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(
+          find.byKey(const Key('assistant-skill-option-b')),
+          80,
+          scrollable: find.byType(Scrollable).last,
+        );
+        await tester.tap(find.byKey(const Key('assistant-skill-option-b')));
+        await tester.pumpAndSettle();
+        expect(find.textContaining('Conflict warning'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await tester.tap(find.byKey(const Key('assistant-skill-apply')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('assistant-skill-a')), findsOneWidget);
+        expect(find.byKey(const Key('assistant-skill-b')), findsOneWidget);
+        await tester.enterText(
+          find.byKey(const Key('assistant-composer')),
+          'Hello',
+        );
+        await tester.tap(find.byKey(const Key('assistant-send')));
+        await tester.pumpAndSettle();
+        expect(find.textContaining('Nothing was truncated'), findsOneWidget);
+        expect(repository.startedRequests, isEmpty);
+        expect(await conversations.getConversations(), isEmpty);
+        expect(
+          tester
+              .widget<TextField>(find.byKey(const Key('assistant-composer')))
+              .controller!
+              .text,
+          'Hello',
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+
     testWidgets('renders context fallback under the ${preset.name} theme', (
       tester,
     ) async {

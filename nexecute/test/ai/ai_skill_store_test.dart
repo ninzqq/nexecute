@@ -75,6 +75,51 @@ void main() {
     );
 
     test(
+      'migrates category-aware v2 and persists v3 capability hashes',
+      () async {
+        final previous = AiSkill(
+          schemaVersion: 2,
+          id: 'category',
+          name: 'Category',
+          description: 'Test',
+          instructions: 'Body',
+          category: AiSkillCategory.domain,
+          createdAt: DateTime.utc(2026),
+          updatedAt: DateTime.utc(2026),
+        );
+        final first = createStore();
+        await first.saveSkill(previous);
+        first.dispose();
+        final index = File(path.join(directory.path, 'index.v1.json'));
+        final decoded =
+            jsonDecode(await index.readAsString()) as Map<String, dynamic>;
+        decoded['schemaVersion'] = 2;
+        for (final entry in decoded['skills'] as List) {
+          (entry as Map).remove('capabilities');
+        }
+        await index.writeAsString(jsonEncode(decoded));
+        final migrated = createStore();
+        expect(
+          (await migrated.getSkill(previous.id))!.contentHash,
+          previous.contentHash,
+        );
+        final revised = previous.copyWith(capabilities: {'listTasks'});
+        await migrated.saveSkill(
+          revised,
+          expectedContentHash: previous.contentHash,
+        );
+        migrated.dispose();
+        final reopened = createStore();
+        addTearDown(reopened.dispose);
+        expect((await reopened.getSkills()).single.capabilities, {'listTasks'});
+        expect(
+          (await reopened.getSkill(previous.id))!.contentHash,
+          revised.contentHash,
+        );
+      },
+    );
+
+    test(
       'persists searchable metadata separately from immutable bodies',
       () async {
         final store = createStore();

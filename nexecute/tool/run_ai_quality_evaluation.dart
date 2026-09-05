@@ -79,6 +79,9 @@ Future<void> main(List<String> arguments) async {
     protocol: AiProtocol.openAiCompatibleChat,
     baseUrl: baseUrl,
     modelId: options.modelId!,
+    contextWindowTokens: options.contextWindowTokens,
+    allowMultipleSkills: options.allowMultipleSkills,
+    reasoningEffort: AiReasoningEffort.none,
   );
   final repository = OpenAiCompatibleAssistantRepository();
   try {
@@ -144,11 +147,15 @@ class _Options {
     this.modelVersion,
     this.outputPath,
     this.caseIds,
+    this.contextWindowTokens = aiDefaultContextWindowTokens,
+    this.allowMultipleSkills = false,
   });
 
   factory _Options.parse(List<String> arguments) {
     var suitePath = _defaultSuitePath;
     var repetitions = 1;
+    var contextWindowTokens = aiDefaultContextWindowTokens;
+    var allowMultipleSkills = false;
     var dryRun = false;
     var showHelp = false;
     String? baseUrl;
@@ -167,6 +174,14 @@ class _Options {
       }
 
       switch (argument) {
+        case '--context-window':
+          contextWindowTokens = int.parse(nextValue());
+          if (contextWindowTokens < 2048 ||
+              contextWindowTokens > aiMaxContextWindowTokens) {
+            throw const FormatException('Invalid context window.');
+          }
+        case '--allow-multiple-skills':
+          allowMultipleSkills = true;
         case '--suite':
           suitePath = nextValue();
         case '--base-url':
@@ -205,6 +220,8 @@ class _Options {
       modelVersion: modelVersion,
       outputPath: outputPath,
       caseIds: caseIds,
+      contextWindowTokens: contextWindowTokens,
+      allowMultipleSkills: allowMultipleSkills,
     );
   }
 
@@ -217,6 +234,8 @@ class _Options {
   final String? modelVersion;
   final String? outputPath;
   final Set<String>? caseIds;
+  final int contextWindowTokens;
+  final bool allowMultipleSkills;
 }
 
 const _usage = '''
@@ -238,6 +257,8 @@ Options:
   --model-version <text>  Exact model version, tag, or digest for comparison
   --output <path>         Report path (default: evaluation/results/...)
   --repetitions <count>   Runs per case (default: 1)
+  --context-window <n>    Verified runtime context tokens (default: 8192)
+  --allow-multiple-skills Enable explicit multi-skill evaluation
   --case <id,id>          Run only the listed stable case IDs
   --dry-run               Validate and list cases without contacting a server
   --help                  Show this help

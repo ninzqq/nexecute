@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:nexecute/ai/domain/ai_diagnostic.dart';
 import 'package:nexecute/ai/infrastructure/ai_transport_error_inspector.dart';
 import 'package:nexecute/ai/infrastructure/ai_transport_error_kind.dart';
@@ -13,9 +12,11 @@ enum AiFailureOperation {
 /// Converts low-level AI failures into user-safe, provider-neutral guidance.
 final class AiFailureDiagnostics {
   AiFailureDiagnostics({bool? isWeb, bool? isSecureWebContext})
-    : isWeb = isWeb ?? kIsWeb,
+    : isWeb = isWeb ?? const bool.fromEnvironment('dart.library.js_interop'),
       isSecureWebContext =
-          isSecureWebContext ?? (kIsWeb && Uri.base.scheme == 'https');
+          isSecureWebContext ??
+          (const bool.fromEnvironment('dart.library.js_interop') &&
+              Uri.base.scheme == 'https');
 
   final bool isWeb;
   final bool isSecureWebContext;

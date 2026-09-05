@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:nexecute/ai/application/ai_prompt_composer.dart';
 import 'package:nexecute/ai/application/ai_application_context_read_contract.dart';
 import 'package:nexecute/ai/application/ai_note_event_prompt.dart';
 import 'package:nexecute/ai/application/ai_note_task_prompt.dart';
@@ -13,17 +14,20 @@ import 'package:nexecute/ai/domain/ai_connection_result.dart';
 import 'package:nexecute/ai/domain/ai_event_proposal.dart';
 import 'package:nexecute/ai/domain/ai_model_info.dart';
 import 'package:nexecute/ai/domain/ai_protocol.dart';
+import 'package:nexecute/ai/domain/ai_skill_invocation.dart';
 import 'package:nexecute/ai/domain/ai_stream_event.dart';
 import 'package:nexecute/ai/domain/ai_task_proposal.dart';
 import 'package:nexecute/ai/domain/ai_tool.dart';
 import 'package:nexecute/ai/infrastructure/ai_task_proposal_parser.dart';
 import 'package:nexecute/ai/infrastructure/ai_event_proposal_parser.dart';
+import 'package:nexecute/ai/infrastructure/ai_skill_markdown_codec.dart';
 import 'package:nexecute/ai/repositories/ai_assistant_repository.dart';
 import 'package:nexecute/ai/repositories/ai_response_handle.dart';
 import 'package:nexecute/domain/calendar/calendar_query_range.dart';
 
 enum AiQualityWorkflow {
   chat,
+  skillChat,
   attachedContext,
   noteToTasks,
   noteToEvent,
@@ -156,6 +160,10 @@ class AiQualityCase {
     Map<String, Object?> expectation,
   ) {
     switch (workflow) {
+      case AiQualityWorkflow.skillChat:
+        _nonEmptyString(input, 'message');
+        _qualitySkills(input);
+        _validateTextChecks(expectation);
       case AiQualityWorkflow.chat:
         _nonEmptyString(input, 'message');
         _validateTextChecks(expectation);
@@ -311,7 +319,9 @@ class AiQualityCaseResult {
     'durationMs': duration.inMilliseconds,
     'diagnostics': diagnostics,
     'reviewCriteria': reviewCriteria,
-    if (output != null) 'output': output,
+    // A model may quote imported instructions: skill outputs stay transient.
+    if (output != null && workflow != AiQualityWorkflow.skillChat)
+      'output': output,
     if (failureCode != null) 'failureCode': failureCode,
     if (usage != null)
       'usage': {
@@ -363,6 +373,8 @@ class AiQualityReport {
         'generationSettings': {
           'reasoningEffort': profile.reasoningEffort.name,
           'maxOutputTokens': profile.maxOutputTokens,
+          'contextWindowTokens': profile.contextWindowTokens,
+          'allowMultipleSkills': profile.allowMultipleSkills,
           'connectionTimeoutSeconds': profile.connectionTimeout.inSeconds,
           'streamIdleTimeoutSeconds': profile.responseIdleTimeout.inSeconds,
         },
@@ -750,6 +762,10 @@ class AiQualityEvaluator {
     AiConnectionProfile profile,
     int repetition,
   ) {
+    final skills =
+        evaluationCase.workflow == AiQualityWorkflow.skillChat
+            ? _qualitySkills(evaluationCase.input)
+            : <AiResolvedSkillInvocation>[];
     late final String systemInstruction;
     late final String userMessage;
     final AiApplicationContextEnvelope? applicationContext;
@@ -773,7 +789,10 @@ class AiQualityEvaluator {
       userMessage = prompt.userMessage;
       applicationContext = null;
     } else {
-      systemInstruction = profile.systemPrompt;
+      systemInstruction = const AiPromptComposer().compose(
+        profilePreferences: profile.systemPrompt,
+        resolvedSkills: skills,
+      );
       userMessage = evaluationCase.input['message'] as String;
       applicationContext =
           evaluationCase.workflow == AiQualityWorkflow.attachedContext
@@ -783,6 +802,7 @@ class AiQualityEvaluator {
     return AiChatRequest(
       connectionProfile: profile,
       conversationId: 'quality:${evaluationCase.id}:$repetition',
+      resolvedSkills: skills,
       systemInstruction:
           systemInstruction.trim().isEmpty ? null : systemInstruction.trim(),
       applicationContext: applicationContext,
@@ -1234,4 +1254,28 @@ List<List<String>> _stringGroups(Object? value, String name) {
     }
     return strings;
   }).toList();
+}
+
+List<AiResolvedSkillInvocation> _qualitySkills(Map<String, Object?> input) {
+  final documents = input['skills'];
+  if (documents is! List ||
+      documents.isEmpty ||
+      documents.length > 4 ||
+      documents.any((s) => s is! String)) {
+    throw const FormatException(
+      'Skill quality cases need one to four SKILL.md documents.',
+    );
+  }
+  final skills = [
+    for (final document in documents)
+      AiResolvedSkillInvocation.fromSkill(
+        AiSkillMarkdownCodec.decode(
+          utf8.encode(document as String),
+          sourceFileName: 'SKILL.md',
+          importedAt: DateTime.utc(2000),
+        ),
+      ),
+  ];
+  normalizeAiSkillReferences(skills.map((s) => s.reference));
+  return skills;
 }
