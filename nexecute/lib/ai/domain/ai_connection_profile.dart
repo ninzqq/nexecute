@@ -1,5 +1,8 @@
 import 'package:nexecute/ai/domain/ai_protocol.dart';
 
+const aiDefaultContextWindowTokens = 8192;
+const aiMaxContextWindowTokens = 2097152;
+
 const aiDefaultMaxOutputTokens = 1024;
 const aiMinOutputTokens = 1;
 const aiMaxOutputTokens = 131072;
@@ -37,6 +40,8 @@ class AiConnectionProfile {
     this.credentialReference,
     this.reasoningEffort = AiReasoningEffort.automatic,
     this.maxOutputTokens = aiDefaultMaxOutputTokens,
+    this.contextWindowTokens = aiDefaultContextWindowTokens,
+    this.allowMultipleSkills = false,
     this.connectionTimeout = aiDefaultConnectionTimeout,
     this.responseIdleTimeout = aiDefaultResponseIdleTimeout,
     this.systemPrompt = aiDefaultSystemPrompt,
@@ -52,6 +57,8 @@ class AiConnectionProfile {
   final String? credentialReference;
   final AiReasoningEffort reasoningEffort;
   final int maxOutputTokens;
+  final int contextWindowTokens;
+  final bool allowMultipleSkills;
   final Duration connectionTimeout;
   final Duration responseIdleTimeout;
   final String systemPrompt;
@@ -68,6 +75,8 @@ class AiConnectionProfile {
       (baseUrl.scheme == 'http' || baseUrl.scheme == 'https') &&
       baseUrl.host.isNotEmpty &&
       modelId.trim().isNotEmpty &&
+      contextWindowTokens >= 2048 &&
+      contextWindowTokens <= aiMaxContextWindowTokens &&
       maxOutputTokens >= aiMinOutputTokens &&
       maxOutputTokens <= aiMaxOutputTokens &&
       connectionTimeout > Duration.zero &&
@@ -109,6 +118,8 @@ class AiConnectionProfile {
     bool clearCredentialReference = false,
     AiReasoningEffort? reasoningEffort,
     int? maxOutputTokens,
+    int? contextWindowTokens,
+    bool? allowMultipleSkills,
     Duration? connectionTimeout,
     Duration? responseIdleTimeout,
     String? systemPrompt,
@@ -127,6 +138,8 @@ class AiConnectionProfile {
               : credentialReference ?? this.credentialReference,
       reasoningEffort: reasoningEffort ?? this.reasoningEffort,
       maxOutputTokens: maxOutputTokens ?? this.maxOutputTokens,
+      contextWindowTokens: contextWindowTokens ?? this.contextWindowTokens,
+      allowMultipleSkills: allowMultipleSkills ?? this.allowMultipleSkills,
       connectionTimeout: connectionTimeout ?? this.connectionTimeout,
       responseIdleTimeout: responseIdleTimeout ?? this.responseIdleTimeout,
       systemPrompt: systemPrompt ?? this.systemPrompt,

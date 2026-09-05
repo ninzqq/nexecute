@@ -491,6 +491,32 @@ void main() {
     },
   );
 
+  test(
+    'budget failure saves nothing and preserves the one-request skill selection',
+    () async {
+      final skill = _skill('large', 'ä' * 11000);
+      final skills = InMemoryAiSkillStore(skills: [skill]);
+      final repository = FakeAiAssistantRepository();
+      final controller = AiChatController(
+        assistantRepository: repository,
+        connectionProfileStore: profileStore,
+        conversationStore: conversationStore,
+        skillStore: skills,
+      );
+      addTearDown(controller.dispose);
+      addTearDown(skills.dispose);
+      await controller.initialize();
+      await controller.setActiveSkills([
+        AiSkillReference.fromSkill(skill),
+      ], scope: AiSkillActivationScope.nextRequest);
+      expect(await controller.send('Hello'), isFalse);
+      expect(controller.errorMessage, contains('Nothing was truncated'));
+      expect(repository.startedRequests, isEmpty);
+      expect(await conversationStore.getConversations(), isEmpty);
+      expect(controller.nextRequestSkills, [AiSkillReference.fromSkill(skill)]);
+    },
+  );
+
   test('loads local default skills only for a new conversation', () async {
     final skill = _skill('default-skill', 'Default instructions');
     final skillStore = InMemoryAiSkillStore(skills: [skill]);

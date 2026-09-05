@@ -1,3 +1,4 @@
+import 'package:nexecute/ai/application/ai_request_budget.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -184,9 +185,9 @@ class AiChatController extends ChangeNotifier {
   }) async {
     if (isGenerating) return false;
     final normalized = normalizeAiSkillReferences(references);
-    if (normalized.length > 1) {
+    if (normalized.length > 1 && activeProfile?.allowMultipleSkills != true) {
       throw StateError(
-        'Activate one skill at a time until multi-skill prompt budgeting is available.',
+        'Enable experimental multiple skills in this connection’s AI Settings first.',
       );
     }
     skillResolutionError = null;
@@ -235,6 +236,22 @@ class AiChatController extends ChangeNotifier {
       final resolvedSkills = await _resolveSkills(
         effectiveSkills,
         mismatchAction: skillMismatchAction,
+      );
+      final preflightMessages = [
+        ...?conversation?.messages,
+        AiChatMessage(
+          id: 'preflight',
+          role: AiMessageRole.user,
+          content: text,
+          createdAt: _clock(),
+        ),
+      ];
+      _validateBudget(
+        profile,
+        preflightMessages,
+        resolvedSkills,
+        applicationContext: applicationContext,
+        readToolExecutionScope: readToolExecutionScope,
       );
       _nextRequestSkills = null;
       var current = conversation;
@@ -331,6 +348,11 @@ class AiChatController extends ChangeNotifier {
         effectiveSkills,
         mismatchAction: skillMismatchAction,
       );
+      _validateBudget(
+        profile,
+        [...current.messages]..removeAt(failedIndex),
+        resolvedSkills,
+      );
       _nextRequestSkills = null;
       final failed = current.messages[failedIndex];
       final retained = [...current.messages]..removeAt(failedIndex);
@@ -373,6 +395,32 @@ class AiChatController extends ChangeNotifier {
     _notify();
   }
 
+  void _validateBudget(
+    AiConnectionProfile profile,
+    List<AiChatMessage> messages,
+    List<AiResolvedSkillInvocation> skills, {
+    AiApplicationContextEnvelope? applicationContext,
+    AiReadToolExecutionScope? readToolExecutionScope,
+  }) {
+    AiRequestBudget.validate(
+      AiChatRequest(
+        connectionProfile: profile,
+        conversationId: conversation?.id ?? 'preflight',
+        messages: AiRequestBudget.history(messages),
+        systemInstruction: _promptComposer.compose(
+          profilePreferences: profile.systemPrompt,
+          resolvedSkills: skills,
+        ),
+        resolvedSkills: skills,
+        applicationContext: applicationContext,
+        readToolAuthorization:
+            _readToolCoordinator == null
+                ? null
+                : readToolExecutionScope?.authorization,
+      ),
+    );
+  }
+
   Future<bool> _beginResponse(
     AiConnectionProfile profile,
     List<AiChatMessage> requestMessages, {
@@ -403,10 +451,7 @@ class AiChatController extends ChangeNotifier {
           resolvedSkills: resolvedSkills,
         ),
         resolvedSkills: resolvedSkills,
-        messages:
-            requestMessages
-                .where((message) => message.status == AiMessageStatus.complete)
-                .toList(),
+        messages: AiRequestBudget.history(requestMessages),
         applicationContext: applicationContext,
         readToolAuthorization:
             _readToolCoordinator == null
@@ -477,15 +522,6 @@ class AiChatController extends ChangeNotifier {
     if (references.isEmpty) {
       skillResolutionError = null;
       return const [];
-    }
-    if (references.length > 1) {
-      throw AiSkillResolutionException([
-        for (final reference in references)
-          AiSkillResolutionIssue(
-            reference: reference,
-            kind: AiSkillResolutionIssueKind.promptBudgetUnavailable,
-          ),
-      ]);
     }
     try {
       final resolver = _skillResolver;

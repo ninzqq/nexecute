@@ -92,7 +92,7 @@ Instructions'''),
   test('rejects unknown, malformed, and invalid frontmatter', () {
     expect(
       () => _decodeDocument('''---
-schemaVersion: 2
+schemaVersion: 99
 id: test
 name: Test
 description: Test skill

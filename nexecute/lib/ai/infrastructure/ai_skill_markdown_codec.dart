@@ -78,6 +78,13 @@ abstract final class AiSkillMarkdownCodec {
         'A body-only skill requires an id, name, and description.',
       );
     }
+    if (metadata?['category'] != null &&
+        !AiSkillCategory.values.any((c) => c.name == metadata!['category'])) {
+      throw const AiSkillDocumentException(
+        AiSkillDocumentErrorCode.invalidMetadata,
+        'Unsupported skill category.',
+      );
+    }
     final outputMode = _outputMode(outputModeName);
     if (parsed.instructions.trim().isEmpty) {
       throw const AiSkillDocumentException(
@@ -95,6 +102,10 @@ abstract final class AiSkillMarkdownCodec {
         instructions: parsed.instructions,
         isEnabled: isEnabled,
         outputMode: outputMode,
+        category:
+            metadata?['category'] == null
+                ? null
+                : AiSkillCategory.values.byName(_string(metadata!, 'category')),
         createdAt: importedAt,
         updatedAt: importedAt,
       );
@@ -116,7 +127,7 @@ id: ${skill.id}
 name: ${jsonEncode(skill.name)}
 description: ${jsonEncode(skill.description)}
 outputMode: ${skill.outputMode.name}
----
+${skill.category == null ? '' : 'category: ${skill.category!.name}\n'}---
 ${_normalizeLineEndings(skill.instructions)}''';
     final bytes = Uint8List.fromList(utf8.encode(document));
     if (bytes.length > aiMaxSkillDocumentBytes) {

@@ -1,3 +1,10 @@
+import 'package:nexecute/ai/application/ai_prompt_composer.dart';
+import 'package:nexecute/ai/application/ai_request_budget.dart';
+import 'package:nexecute/ai/application/ai_skill_resolver.dart';
+import 'package:nexecute/ai/domain/ai_chat_request.dart';
+import 'package:nexecute/ai/domain/ai_connection_profile.dart';
+import 'package:nexecute/ai/domain/ai_protocol.dart';
+import 'package:nexecute/ai/repositories/ai_connection_profile_store.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -10,12 +17,15 @@ final class AiSkillsController extends ChangeNotifier {
   AiSkillsController({
     required AiSkillStore store,
     AiSkillPreferencesStore? preferencesStore,
+    AiConnectionProfileStore? profileStore,
     DateTime Function()? clock,
   }) : _store = store,
        _preferencesStore = preferencesStore,
+       _profileStore = profileStore,
        _clock = clock ?? DateTime.now;
 
   final AiSkillStore _store;
+  final AiConnectionProfileStore? _profileStore;
   final AiSkillPreferencesStore? _preferencesStore;
   final DateTime Function() _clock;
   StreamSubscription<List<AiSkillMetadata>>? _skillsSubscription;
@@ -130,9 +140,12 @@ final class AiSkillsController extends ChangeNotifier {
     if (preferences == null) {
       throw StateError('Default skill preferences are unavailable.');
     }
+    final profile = await _profileStore?.getActiveProfile();
     final next =
         enabled
             ? [
+              if (profile?.allowMultipleSkills == true)
+                ...defaultSkills.where((s) => s.id != metadata.id),
               AiSkillReference(
                 id: metadata.id,
                 contentHash: metadata.contentHash,
@@ -144,6 +157,30 @@ final class AiSkillsController extends ChangeNotifier {
             ];
     if (enabled && !metadata.isEnabled) {
       throw StateError('Enable the skill before making it active by default.');
+    }
+    if (enabled) {
+      final resolved = await AiSkillResolver(store: _store).resolve(next);
+      final budgetProfile =
+          profile ??
+          AiConnectionProfile(
+            id: 'fallback',
+            name: 'Fallback',
+            protocol: AiProtocol.openAiCompatibleChat,
+            baseUrl: Uri.parse('http://localhost'),
+            modelId: 'unconfigured',
+          );
+      AiRequestBudget.validate(
+        AiChatRequest(
+          connectionProfile: budgetProfile,
+          conversationId: 'defaults',
+          messages: const [],
+          resolvedSkills: resolved,
+          systemInstruction: const AiPromptComposer().compose(
+            profilePreferences: budgetProfile.systemPrompt,
+            resolvedSkills: resolved,
+          ),
+        ),
+      );
     }
     await preferences.setDefaultSkills(next);
     defaultSkills = normalizeAiSkillReferences(next);

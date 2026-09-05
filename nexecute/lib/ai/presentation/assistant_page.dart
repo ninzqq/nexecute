@@ -93,7 +93,8 @@ class _AssistantPageState extends State<AssistantPage> {
       ),
       IconButton(
         key: const Key('assistant-conversation-list'),
-        tooltip: 'Conversations',
+        tooltip:
+            'Conversations · requests use the newest 24 completed messages',
         onPressed: _showConversations,
         icon: const Icon(Icons.history_rounded),
       ),
@@ -276,8 +277,17 @@ class _AssistantPageState extends State<AssistantPage> {
       key: const Key('assistant-message-list'),
       controller: _scrollController,
       padding: const EdgeInsets.fromLTRB(12, 18, 12, 12),
-      itemCount: _controller.messages.length,
+      itemCount: _controller.messages.length + 1,
       itemBuilder: (context, index) {
+        if (index == 0) {
+          return const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: Text(
+              'Context: newest 24 completed messages, beginning with a user turn. Older messages stay saved but are omitted. Skills stay intact.',
+            ),
+          );
+        }
+        index--;
         final message = _controller.messages[index];
         return _MessageBubble(
           message: message,
@@ -418,6 +428,8 @@ class _AssistantPageState extends State<AssistantPage> {
               skills: _skillCatalog,
               conversationReferences: _controller.conversationSkills,
               nextRequestReferences: _controller.nextRequestSkills,
+              allowMultiple:
+                  _controller.activeProfile?.allowMultipleSkills == true,
               onManage: () {
                 Navigator.pop(sheetContext);
                 _openSettings();
@@ -450,7 +462,10 @@ class _AssistantPageState extends State<AssistantPage> {
   Future<void> _showInstructionPreview() async {
     final profile = _controller.activeProfile;
     final metadata = {for (final skill in _skillCatalog) skill.id: skill};
-    final sources = <String>['Immutable Nexecute policy'];
+    final sources = <String>[
+      'Request history: newest 24 completed messages, beginning with a user turn. Older messages remain saved but are omitted. No local summary is substituted.',
+      'Immutable Nexecute policy',
+    ];
     if (profile?.systemPrompt.trim().isNotEmpty ?? false) {
       sources.add(
         'Connection profile preferences · ${profile!.name} · '
@@ -965,12 +980,14 @@ class _SkillPickerSheet extends StatefulWidget {
     required this.skills,
     required this.conversationReferences,
     required this.nextRequestReferences,
+    this.allowMultiple = false,
     required this.onManage,
   });
 
   final List<AiSkillMetadata> skills;
   final List<AiSkillReference> conversationReferences;
   final List<AiSkillReference>? nextRequestReferences;
+  final bool allowMultiple;
   final VoidCallback onManage;
 
   @override
@@ -1014,10 +1031,24 @@ class _SkillPickerSheetState extends State<_SkillPickerSheet> {
       height: MediaQuery.sizeOf(context).height * 0.75,
       child: Column(
         children: [
+          for (final category in AiSkillCategory.values)
+            if (widget.skills
+                    .where(
+                      (s) =>
+                          _selectedIds.contains(s.id) && s.category == category,
+                    )
+                    .length >
+                1)
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: Text(
+                  'Conflict warning: multiple ${category.name} skills. Review their instructions. Precedence: ${(widget.skills.where((s) => _selectedIds.contains(s.id) && s.category == category).map((s) => s.id).toList()..sort()).join(' → ')} (later wins).',
+                ),
+              ),
           ListTile(
             title: const Text('Choose active skills'),
             subtitle: const Text(
-              'Choose one enabled skill. Multi-skill budgeting is added in Step 11E.',
+              'Select enabled skills. Instructions run in skill-ID order; later skills take precedence among equal-priority preferences. Budget checks run before sending.',
             ),
             trailing: IconButton(
               tooltip: 'Manage skills in Settings',
@@ -1126,7 +1157,7 @@ class _SkillPickerSheetState extends State<_SkillPickerSheet> {
                 FilledButton(
                   key: const Key('assistant-skill-apply'),
                   onPressed:
-                      _selectedIds.length > 1
+                      (_selectedIds.length > 1 && !widget.allowMultiple)
                           ? null
                           : () {
                             final references = [
@@ -1147,7 +1178,9 @@ class _SkillPickerSheetState extends State<_SkillPickerSheet> {
                             );
                           },
                   child: Text(
-                    _selectedIds.length > 1 ? 'Select one skill' : 'Apply',
+                    (_selectedIds.length > 1 && !widget.allowMultiple)
+                        ? 'Select one skill'
+                        : 'Apply',
                   ),
                 ),
               ],
@@ -1625,27 +1658,29 @@ class _AssistantEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 52,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(height: 16),
-              Text(title, style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 8),
-              Text(message, textAlign: TextAlign.center),
-              if (actionLabel != null && onAction != null) ...[
-                const SizedBox(height: 18),
-                FilledButton(onPressed: onAction, child: Text(actionLabel!)),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  size: 52,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(height: 16),
+                Text(title, style: Theme.of(context).textTheme.headlineSmall),
+                const SizedBox(height: 8),
+                Text(message, textAlign: TextAlign.center),
+                if (actionLabel != null && onAction != null) ...[
+                  const SizedBox(height: 18),
+                  FilledButton(onPressed: onAction, child: Text(actionLabel!)),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -1663,7 +1698,10 @@ class _ErrorBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialBanner(
       key: const Key('assistant-error'),
-      content: Text(message),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 96),
+        child: SingleChildScrollView(child: Text(message)),
+      ),
       leading: const Icon(Icons.error_outline_rounded),
       actions: [TextButton(onPressed: onDismiss, child: const Text('Dismiss'))],
     );

@@ -15,6 +15,8 @@ class AiConnectionProfileCodec {
       'credentialReference': profile.credentialReference,
       'reasoningEffort': profile.reasoningEffort.name,
       'maxOutputTokens': profile.maxOutputTokens,
+      'contextWindowTokens': profile.contextWindowTokens,
+      'allowMultipleSkills': profile.allowMultipleSkills,
       'connectionTimeoutSeconds': profile.connectionTimeout.inSeconds,
       'responseIdleTimeoutSeconds': profile.responseIdleTimeout.inSeconds,
       'systemPrompt': profile.systemPrompt,
@@ -50,6 +52,10 @@ class AiConnectionProfileCodec {
       );
     }
 
+    if (map['allowMultipleSkills'] != null &&
+        map['allowMultipleSkills'] is! bool) {
+      throw const FormatException('Invalid multi-skill setting');
+    }
     return AiConnectionProfile(
       id: id,
       name: name,
@@ -66,6 +72,14 @@ class AiConnectionProfileCodec {
                 _requiredString(map, 'reasoningEffort'),
                 'reasoningEffort',
               ),
+      allowMultipleSkills: map['allowMultipleSkills'] == true,
+      contextWindowTokens: _optionalBoundedInt(
+        map,
+        'contextWindowTokens',
+        aiDefaultContextWindowTokens,
+        minimum: 2048,
+        maximum: aiMaxContextWindowTokens,
+      ),
       maxOutputTokens: _optionalBoundedInt(
         map,
         'maxOutputTokens',

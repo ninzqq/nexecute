@@ -14,7 +14,7 @@ class FileSystemAiSkillStore implements AiSkillStore {
   FileSystemAiSkillStore({required AiSkillDirectoryProvider directoryProvider})
     : _directoryProvider = directoryProvider;
 
-  static const _indexSchemaVersion = 1;
+  static const _indexSchemaVersion = 2;
   static const _indexFileName = 'index.v1.json';
   static const _bodiesDirectoryName = 'bodies';
   static const _maxIndexBytes = 8 * 1024 * 1024;
@@ -85,6 +85,7 @@ class FileSystemAiSkillStore implements AiSkillStore {
         instructions: instructions,
         isEnabled: metadata.isEnabled,
         outputMode: metadata.outputMode,
+        category: metadata.category,
         createdAt: metadata.createdAt,
         updatedAt: metadata.updatedAt,
       );
@@ -256,6 +257,9 @@ class FileSystemAiSkillStore implements AiSkillStore {
       }
       final decoded = jsonDecode(utf8.decode(bytes, allowMalformed: false));
       final loaded = _decodeIndex(decoded);
+      if ((decoded as Map)['schemaVersion'] == 1) {
+        await _writeIndex(root, loaded);
+      }
       _metadata
         ..clear()
         ..addEntries(loaded.map((item) => MapEntry(item.id, item)));
@@ -491,10 +495,13 @@ List<AiSkillMetadata> _decodeIndex(Object? value) {
         'schemaVersion',
         'skills',
       }).isNotEmpty ||
-      value['schemaVersion'] != FileSystemAiSkillStore._indexSchemaVersion ||
+      (value['schemaVersion'] != 1 &&
+          value['schemaVersion'] !=
+              FileSystemAiSkillStore._indexSchemaVersion) ||
       value['skills'] is! List) {
     throw const FormatException('Invalid skill metadata index root.');
   }
+  final legacy = value['schemaVersion'] == 1;
   final values = value['skills'] as List;
   if (values.length > FileSystemAiSkillStore._maxSkills) {
     throw const FormatException('Too many skills in metadata index.');
@@ -505,13 +512,14 @@ List<AiSkillMetadata> _decodeIndex(Object? value) {
     if (value is! Map<String, dynamic>) {
       throw const FormatException('Invalid skill metadata entry.');
     }
-    final expectedFields = const {
+    final expectedFields = {
       'schemaVersion',
       'id',
       'name',
       'description',
       'isEnabled',
       'outputMode',
+      if (!legacy) 'category',
       'contentHash',
       'createdAt',
       'updatedAt',
@@ -530,6 +538,8 @@ List<AiSkillMetadata> _decodeIndex(Object? value) {
         description: _requiredString(value, 'description'),
         isEnabled: _requiredBool(value, 'isEnabled'),
         outputMode: _outputMode(_requiredString(value, 'outputMode')),
+        category:
+            value['category'] == null ? null : _category(value['category']),
         contentHash: _requiredString(value, 'contentHash'),
         createdAt: _requiredDate(value, 'createdAt'),
         updatedAt: _requiredDate(value, 'updatedAt'),
@@ -546,6 +556,7 @@ Map<String, Object?> _metadataToJson(AiSkillMetadata value) => {
   'description': value.description,
   'isEnabled': value.isEnabled,
   'outputMode': value.outputMode.name,
+  'category': value.category?.name,
   'contentHash': value.contentHash,
   'createdAt': value.createdAt.toIso8601String(),
   'updatedAt': value.updatedAt.toIso8601String(),
@@ -617,3 +628,10 @@ int _compareMetadata(AiSkillMetadata left, AiSkillMetadata right) {
 
 String _normalizeLineEndings(String value) =>
     value.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+
+AiSkillCategory _category(Object? value) {
+  for (final category in AiSkillCategory.values) {
+    if (category.name == value) return category;
+  }
+  throw const FormatException('Invalid skill category.');
+}

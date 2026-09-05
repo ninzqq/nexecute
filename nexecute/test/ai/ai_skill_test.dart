@@ -35,10 +35,13 @@ void main() {
       'name',
       'description',
       'outputMode',
+      'category',
     });
     expect(
       AiSkillDocumentContract.requiredFrontmatterFields,
-      AiSkillDocumentContract.supportedFrontmatterFields,
+      AiSkillDocumentContract.supportedFrontmatterFields.difference({
+        'category',
+      }),
     );
   });
 
@@ -100,7 +103,7 @@ void main() {
   test('rejects unsupported versions and invalid identifiers', () {
     expect(
       () => AiSkill(
-        schemaVersion: 2,
+        schemaVersion: 99,
         id: 'suomen-kieli',
         name: 'Suomen kieli',
         description: 'Kuvaus',

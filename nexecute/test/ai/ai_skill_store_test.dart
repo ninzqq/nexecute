@@ -36,6 +36,44 @@ void main() {
     _skillStoreContract(createStore);
 
     test(
+      'migrates v1 metadata atomically without changing pinned hashes or reading bodies',
+      () async {
+        final legacy = AiSkill(
+          schemaVersion: 1,
+          id: 'legacy',
+          name: 'Legacy',
+          description: 'Test',
+          instructions: 'Original',
+          createdAt: DateTime.utc(2026),
+          updatedAt: DateTime.utc(2026),
+        );
+        final store = createStore();
+        await store.saveSkill(legacy);
+        store.dispose();
+        final index = File(path.join(directory.path, 'index.v1.json'));
+        final data =
+            jsonDecode(await index.readAsString()) as Map<String, dynamic>;
+        data['schemaVersion'] = 1;
+        for (final entry in data['skills'] as List) {
+          (entry as Map).remove('category');
+        }
+        await index.writeAsString(jsonEncode(data));
+        final reopened = createStore();
+        addTearDown(reopened.dispose);
+        expect(
+          (await reopened.getSkills()).single.contentHash,
+          legacy.contentHash,
+        );
+        expect(jsonDecode(await index.readAsString())['schemaVersion'], 2);
+        expect((await reopened.getSkill('legacy'))!.instructions, 'Original');
+        expect(
+          (await reopened.getSkill('legacy'))!.contentHash,
+          legacy.contentHash,
+        );
+      },
+    );
+
+    test(
       'persists searchable metadata separately from immutable bodies',
       () async {
         final store = createStore();

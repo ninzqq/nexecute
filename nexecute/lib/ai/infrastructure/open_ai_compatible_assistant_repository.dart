@@ -1,3 +1,4 @@
+import 'package:nexecute/ai/application/ai_request_budget.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -180,6 +181,10 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
 
   @override
   Future<AiResponseHandle> startResponse(AiChatRequest request) async {
+    AiRequestBudget.validate(
+      request,
+      reserveContinuation: request.continuationMessages.isEmpty,
+    );
     final abort = Completer<void>();
     return StreamAiResponseHandle(
       events: _streamResponse(request, abort.future),

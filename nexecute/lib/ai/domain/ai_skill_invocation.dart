@@ -50,6 +50,7 @@ final class AiResolvedSkillInvocation {
         displayName: skill.name,
         contentHash: skill.contentHash,
         instructions: skill.instructions,
+        category: skill.category,
       );
 
   const AiResolvedSkillInvocation._({
@@ -57,12 +58,14 @@ final class AiResolvedSkillInvocation {
     required this.displayName,
     required this.contentHash,
     required this.instructions,
+    required this.category,
   });
 
   final String id;
   final String displayName;
   final String contentHash;
   final String instructions;
+  final AiSkillCategory? category;
 
   AiSkillReference get reference =>
       AiSkillReference(id: id, contentHash: contentHash);

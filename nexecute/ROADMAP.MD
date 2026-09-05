@@ -1159,8 +1159,8 @@ or code blocks as dependencies or executable content.
 - [x] Add strict versioned decoding, duplicate-ID conflict handling,
   deterministic filename normalization, and protection against path traversal,
   symbolic-link traversal, and oversized imports.
-- [ ] Add an ordered metadata-index migration when the first persisted schema
-  change is introduced; version 1 has no legacy index to migrate.
+- [x] Add an ordered metadata-index migration when the first persisted schema
+  change is introduced; version 1 migrates to the category-aware index.
 - [x] Keep skills local in the first release, matching connection-profile
   privacy. Provide explicit `SKILL.md` import and export before considering a
   synchronized Firestore collection, security rules, conflict resolution, and
@@ -1224,7 +1224,7 @@ skill-free.
   individual skills or the complete set to be deactivated quickly.
 - [x] Support an optional local default-active set with revision conflict checks,
   but never make newly imported skills active automatically.
-- [ ] Apply the Step 11E combined prompt budget to the default-active set before
+- [x] Apply the Step 11E combined prompt budget to the default-active set before
   enabling budgeted multi-skill activation.
 - [x] Preview the composed instruction sources and their order without including
   credentials, attached application data, or hidden provider payloads.
@@ -1241,30 +1241,48 @@ one-request scope, and labels inactive, disabled, changed, missing, and storage-
 unavailable states. Its source-order preview includes only safe metadata, and a
 mismatch requires review or an explicit skill-free send. Local default
 references contain only IDs and hashes and apply only when starting a new
-conversation. Step 11E still owns combined prompt-budget enforcement before the
-interface treats multi-skill sets as generally safe.
+conversation. Step 11E applies combined prompt-budget enforcement and keeps
+multi-skill sets behind an explicit connection opt-in.
 
 ##### Step 11E: context budgeting and conflict handling
 
-- [ ] Add provider-neutral request-budget accounting before allowing multiple
+**Status:** Completed. Conservative byte accounting, explicit context settings,
+whole-turn history bounds, category conflicts, and opt-in multi-skill activation.
+
+- [x] Add provider-neutral request-budget accounting before allowing multiple
   active skills. Reserve space for the model output, conversation history,
   attached context, tool continuations, and fixed policy before allocating space
   to skill instructions.
-- [ ] Add an explicit context-window setting when a trustworthy model-reported
+- [x] Add an explicit context-window setting when a trustworthy model-reported
   value is unavailable. Use a conservative fallback for unconfigured models and
   never silently exceed, truncate, or discard an active skill.
-- [ ] Enforce both a per-skill character limit and a combined active-instruction
+- [x] Enforce both a per-skill character limit and a combined active-instruction
   budget. Block sending with actionable guidance when the active set cannot fit.
-- [ ] Send no inactive skill bodies and avoid sending even the complete skill
+- [x] Send no inactive skill bodies and avoid sending even the complete skill
   catalog to the model. Initial selection and catalog search should remain local
   and deterministic rather than relying on model-selected automatic activation.
-- [ ] Add optional skill categories such as language, domain, workflow, and
+- [x] Add optional skill categories such as language, domain, workflow, and
   output style. Warn about multiple active skills in a mutually exclusive
   category and show their deterministic precedence rather than guessing which
   instruction should win.
-- [ ] Define a bounded conversation-history policy so a long conversation does
+- [x] Define a bounded conversation-history policy so a long conversation does
   not eventually crowd out fixed policy and active skills. Make any omission or
   local summary visible instead of silently changing request semantics.
+
+Budgeting uses one token per UTF-8 byte plus explicit framing, output, and
+continuation reserves. Unconfigured profiles use an 8,192-token context window;
+users must set the actual server context before larger requests. The active
+instruction limit is 32,000 characters, with the existing 16,000-character
+per-skill limit. Every tool continuation is checked again before transmission.
+History includes at most 24 completed messages and starts with a user turn;
+omissions are described in the conversation and instruction preview. Nothing
+is summarized or truncated to fit. Multi-skill activation is an explicit,
+default-off connection setting pending model quality validation. Default sets
+are resolved and budgeted on selection and rechecked with every actual request.
+Skill schema 2 adds optional categories. Ordered metadata migration preserves
+version-1 bodies and hashes, including existing conversation revision pins.
+Verification: 231 AI tests passed, including budget boundaries, no-write failure,
+whole-turn history, migration, and the existing theme/layout coverage.
 
 ##### Step 11F: later tool-aware skills
 

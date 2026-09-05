@@ -2,7 +2,10 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 
-const aiSkillSchemaVersion = 1;
+const aiSkillSchemaVersion = 2;
+
+enum AiSkillCategory { language, domain, workflow, outputStyle }
+
 const aiMaxSkillIdCharacters = 64;
 const aiMaxSkillNameCharacters = 100;
 const aiMaxSkillDescriptionCharacters = 500;
@@ -29,8 +32,15 @@ abstract final class AiSkillDocumentContract {
     'name',
     'description',
     'outputMode',
+    'category',
   };
-  static const requiredFrontmatterFields = supportedFrontmatterFields;
+  static const requiredFrontmatterFields = {
+    'schemaVersion',
+    'id',
+    'name',
+    'description',
+    'outputMode',
+  };
 }
 
 /// Version 1 skills can affect text generation only.
@@ -70,10 +80,16 @@ final class AiSkill {
     required String instructions,
     bool isEnabled = true,
     AiSkillOutputMode outputMode = AiSkillOutputMode.text,
+    AiSkillCategory? category,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) {
     _validateSchemaVersion(schemaVersion);
+    if (schemaVersion == 1 && category != null) {
+      throw const FormatException(
+        'Version 1 skills cannot declare a category.',
+      );
+    }
     _validateId(id);
     _validateSingleLineText(
       name,
@@ -103,6 +119,7 @@ final class AiSkill {
       instructions: instructions,
       isEnabled: isEnabled,
       outputMode: outputMode,
+      category: category,
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
@@ -116,6 +133,7 @@ final class AiSkill {
     required this.instructions,
     required this.isEnabled,
     required this.outputMode,
+    required this.category,
     required this.createdAt,
     required this.updatedAt,
   }) : contentHash = _contentHash(
@@ -125,6 +143,7 @@ final class AiSkill {
          description: description,
          instructions: instructions,
          outputMode: outputMode,
+         category: category,
        );
 
   final int schemaVersion;
@@ -134,6 +153,7 @@ final class AiSkill {
   final String instructions;
   final bool isEnabled;
   final AiSkillOutputMode outputMode;
+  final AiSkillCategory? category;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -150,16 +170,19 @@ final class AiSkill {
     String? instructions,
     bool? isEnabled,
     AiSkillOutputMode? outputMode,
+    AiSkillCategory? category,
+    bool clearCategory = false,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => AiSkill(
-    schemaVersion: schemaVersion,
+    schemaVersion: category != null ? aiSkillSchemaVersion : schemaVersion,
     id: id ?? this.id,
     name: name ?? this.name,
     description: description ?? this.description,
     instructions: instructions ?? this.instructions,
     isEnabled: isEnabled ?? this.isEnabled,
     outputMode: outputMode ?? this.outputMode,
+    category: clearCategory ? null : category ?? this.category,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -174,11 +197,17 @@ final class AiSkillMetadata {
     required String description,
     required bool isEnabled,
     required AiSkillOutputMode outputMode,
+    AiSkillCategory? category,
     required String contentHash,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) {
     _validateSchemaVersion(schemaVersion);
+    if (schemaVersion == 1 && category != null) {
+      throw const FormatException(
+        'Version 1 skills cannot declare a category.',
+      );
+    }
     _validateId(id);
     _validateSingleLineText(
       name,
@@ -211,6 +240,7 @@ final class AiSkillMetadata {
       description: description,
       isEnabled: isEnabled,
       outputMode: outputMode,
+      category: category,
       contentHash: contentHash,
       createdAt: createdAt,
       updatedAt: updatedAt,
@@ -224,6 +254,7 @@ final class AiSkillMetadata {
     description: skill.description,
     isEnabled: skill.isEnabled,
     outputMode: skill.outputMode,
+    category: skill.category,
     contentHash: skill.contentHash,
     createdAt: skill.createdAt,
     updatedAt: skill.updatedAt,
@@ -236,6 +267,7 @@ final class AiSkillMetadata {
     required this.description,
     required this.isEnabled,
     required this.outputMode,
+    required this.category,
     required this.contentHash,
     required this.createdAt,
     required this.updatedAt,
@@ -247,13 +279,14 @@ final class AiSkillMetadata {
   final String description;
   final bool isEnabled;
   final AiSkillOutputMode outputMode;
+  final AiSkillCategory? category;
   final String contentHash;
   final DateTime createdAt;
   final DateTime updatedAt;
 }
 
 void _validateSchemaVersion(int value) {
-  if (value != aiSkillSchemaVersion) {
+  if (value < 1 || value > aiSkillSchemaVersion) {
     throw AiSkillValidationException(
       AiSkillValidationErrorCode.unsupportedVersion,
       'Unsupported skill schema version: $value.',
@@ -335,6 +368,7 @@ String _contentHash({
   required String description,
   required String instructions,
   required AiSkillOutputMode outputMode,
+  AiSkillCategory? category,
 }) =>
     sha256
         .convert(
@@ -346,6 +380,7 @@ String _contentHash({
               description,
               outputMode.name,
               _normalizeLineEndings(instructions),
+              if (schemaVersion >= 2) category?.name,
             ]),
           ),
         )

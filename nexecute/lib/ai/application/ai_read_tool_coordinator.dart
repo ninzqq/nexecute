@@ -1,3 +1,4 @@
+import 'package:nexecute/ai/application/ai_request_budget.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -134,6 +135,12 @@ class _AiReadToolSession {
   Stream<AiStreamEvent> run() async* {
     while (!_cancelled) {
       final roundRequest = _requestForCurrentScope();
+      try {
+        AiRequestBudget.validate(roundRequest, reserveContinuation: false);
+      } on AiRequestBudgetException catch (error) {
+        yield _failure(error.message, 'context_budget_exceeded');
+        return;
+      }
       AiResponseHandle handle;
       try {
         handle = await assistantRepository.startResponse(roundRequest);

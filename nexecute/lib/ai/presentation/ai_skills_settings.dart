@@ -1,3 +1,4 @@
+import 'package:nexecute/ai/repositories/ai_connection_profile_store.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -36,6 +37,7 @@ class _AiSkillsSettingsState extends State<AiSkillsSettings> {
     final controller = AiSkillsController(
       store: store,
       preferencesStore: context.read<AiSkillPreferencesStore?>(),
+      profileStore: context.read<AiConnectionProfileStore?>(),
     );
     controller.addListener(_onChanged);
     _controller = controller;
@@ -246,6 +248,7 @@ class _AiSkillsSettingsState extends State<AiSkillsSettings> {
         name: _boundedCopyName(source.name),
         description: source.description,
         instructions: source.instructions,
+        category: source.category,
         isEnabled: source.isEnabled,
         createdAt: now,
         updatedAt: now,
@@ -554,6 +557,7 @@ class _SkillEditorDialogState extends State<_SkillEditorDialog> {
   late final TextEditingController _description;
   late final TextEditingController _instructions;
   late bool _enabled;
+  AiSkillCategory? _category;
   bool _saving = false;
   String? _error;
 
@@ -568,6 +572,7 @@ class _SkillEditorDialogState extends State<_SkillEditorDialog> {
     _description = TextEditingController(text: source?.description ?? '');
     _instructions = TextEditingController(text: source?.instructions ?? '');
     _enabled = source?.isEnabled ?? true;
+    _category = source?.category;
   }
 
   @override
@@ -652,6 +657,18 @@ class _SkillEditorDialogState extends State<_SkillEditorDialog> {
                       ),
                 ),
                 const SizedBox(height: 10),
+                DropdownButtonFormField<AiSkillCategory>(
+                  initialValue: _category,
+                  decoration: const InputDecoration(
+                    labelText: 'Category (optional)',
+                  ),
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('None')),
+                    for (final c in AiSkillCategory.values)
+                      DropdownMenuItem(value: c, child: Text(c.name)),
+                  ],
+                  onChanged: (value) => setState(() => _category = value),
+                ),
                 TextFormField(
                   key: const Key('ai-skill-instructions-field'),
                   controller: _instructions,
@@ -728,6 +745,7 @@ class _SkillEditorDialogState extends State<_SkillEditorDialog> {
         name: _name.text,
         description: _description.text,
         instructions: _instructions.text,
+        category: _category,
         isEnabled: _enabled,
         createdAt: original?.createdAt ?? widget.initial?.createdAt ?? now,
         updatedAt: original == null ? now : _monotonicNow(original.updatedAt),

@@ -542,6 +542,8 @@ class _AiConnectionProfileEditorState
   late final TextEditingController _baseUrlController;
   late final TextEditingController _modelController;
   late final TextEditingController _maxOutputTokensController;
+  late final TextEditingController _contextWindowController;
+  late bool _allowMultipleSkills;
   late final TextEditingController _connectionTimeoutController;
   late final TextEditingController _responseIdleTimeoutController;
   late final TextEditingController _systemPromptController;
@@ -568,6 +570,12 @@ class _AiConnectionProfileEditorState
       text: profile?.baseUrl.toString() ?? '',
     );
     _modelController = TextEditingController(text: profile?.modelId ?? '');
+    _allowMultipleSkills = profile?.allowMultipleSkills ?? false;
+    _contextWindowController = TextEditingController(
+      text:
+          (profile?.contextWindowTokens ?? aiDefaultContextWindowTokens)
+              .toString(),
+    );
     _maxOutputTokensController = TextEditingController(
       text: (profile?.maxOutputTokens ?? aiDefaultMaxOutputTokens).toString(),
     );
@@ -600,6 +608,7 @@ class _AiConnectionProfileEditorState
     _baseUrlController.dispose();
     _modelController.dispose();
     _maxOutputTokensController.dispose();
+    _contextWindowController.dispose();
     _connectionTimeoutController.dispose();
     _responseIdleTimeoutController.dispose();
     _systemPromptController.dispose();
@@ -792,6 +801,34 @@ class _AiConnectionProfileEditorState
                       },
                     ),
                     const SizedBox(height: 14),
+                    TextFormField(
+                      key: const Key('ai-profile-context-window-field'),
+                      controller: _contextWindowController,
+                      decoration: const InputDecoration(
+                        labelText: 'Context window (tokens)',
+                        helperText:
+                            'Set the context actually configured on the server. Default: 8192. Requests use a conservative UTF-8 byte estimate.',
+                        helperMaxLines: 4,
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator:
+                          (value) => _boundedIntegerError(
+                            value,
+                            label: 'context window',
+                            minimum: 2048,
+                            maximum: aiMaxContextWindowTokens,
+                          ),
+                    ),
+                    SwitchListTile(
+                      title: const Text('Allow multiple active skills'),
+                      subtitle: const Text(
+                        'Experimental. Verify quality with your model first. Combined budget checks always apply.',
+                      ),
+                      value: _allowMultipleSkills,
+                      onChanged:
+                          (value) =>
+                              setState(() => _allowMultipleSkills = value),
+                    ),
                     TextFormField(
                       key: const Key('ai-profile-max-output-tokens-field'),
                       controller: _maxOutputTokensController,
@@ -1157,6 +1194,8 @@ class _AiConnectionProfileEditorState
       credentialReference: widget.profile?.credentialReference,
       reasoningEffort: _reasoningEffort,
       maxOutputTokens: int.parse(_maxOutputTokensController.text.trim()),
+      contextWindowTokens: int.parse(_contextWindowController.text.trim()),
+      allowMultipleSkills: _allowMultipleSkills,
       connectionTimeout: Duration(
         seconds: int.parse(_connectionTimeoutController.text.trim()),
       ),
