@@ -490,6 +490,17 @@ scheduler until the remaining implementation and verification slices are
 complete. The adapter has an injectable initialization boundary so construction
 failure remains isolated from Keychain and core services.
 
+**Notification implementation slice 2 complete:** A plugin-independent
+planner builds the complete desired request set for one account using the
+shared recurrence rules. It produces account- and occurrence-scoped
+deterministic identifiers, explicit one-shot occurrences within the rolling
+24-month horizon, nearest-first ordering, and the global 48-request capacity.
+Deterministic coverage pins month-end clamping, leap-day mapping, reminder
+offsets across midnight, and spring-forward and fall-back behavior in a known
+IANA time zone. The planner is intentionally not connected to production
+composition yet; the next slice will reconcile this desired set with pending
+operating-system requests and device-level enablement.
+
 #### Phase 5: web follow-up
 
 - [ ] Configure the Flutter Web Firebase application, authorized authentication
