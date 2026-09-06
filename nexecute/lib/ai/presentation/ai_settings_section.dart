@@ -6,6 +6,7 @@ import 'package:nexecute/ai/domain/ai_connection_profile.dart';
 import 'package:nexecute/ai/domain/ai_connection_result.dart';
 import 'package:nexecute/ai/domain/ai_diagnostic.dart';
 import 'package:nexecute/ai/domain/ai_model_info.dart';
+import 'package:nexecute/ai/domain/ai_provider.dart';
 import 'package:nexecute/ai/domain/ai_protocol.dart';
 import 'package:nexecute/ai/presentation/ai_diagnostic_panel.dart';
 import 'package:nexecute/ai/presentation/ai_endpoint_validation.dart';
@@ -15,6 +16,7 @@ import 'package:nexecute/ai/repositories/ai_assistant_repository.dart';
 import 'package:nexecute/ai/repositories/ai_connection_profile_store.dart';
 import 'package:nexecute/ai/repositories/ai_credential_store.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AiSettingsSection extends StatefulWidget {
   const AiSettingsSection({super.key});
@@ -77,7 +79,7 @@ class _AiSettingsSectionState extends State<AiSettingsSection> {
         ),
         const SizedBox(height: 4),
         Text(
-          'Configure local model servers and private AI gateways. AI remains optional and never blocks the rest of Nexecute.',
+          'Configure local models or optional BYOK cloud providers. AI remains optional and never blocks the rest of Nexecute.',
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         const SizedBox(height: 16),
@@ -142,7 +144,7 @@ class _AiSettingsSectionState extends State<AiSettingsSection> {
     try {
       await controller.saveProfile(
         result.profile,
-        bearerToken: result.bearerToken,
+        credential: result.credential,
       );
     } catch (error) {
       if (!mounted) return;
@@ -320,7 +322,7 @@ class _ProfileCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          '${profile.protocol.label} · ${profile.modelId}',
+                          '${profile.provider.label} · ${profile.modelId}',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                         const SizedBox(height: 2),
@@ -339,6 +341,16 @@ class _ProfileCard extends StatelessWidget {
                               ?.copyWith(color: colorScheme.onSurfaceVariant),
                         ),
                         const SizedBox(height: 5),
+                        if (profile.provider.hosted &&
+                            !profile.hostedInferenceEnabled) ...[
+                          Text(
+                            'Cloud requests disabled',
+                            key: Key('ai-profile-cloud-disabled-${profile.id}'),
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(color: colorScheme.tertiary),
+                          ),
+                          const SizedBox(height: 3),
+                        ],
                         _CapabilitySummary(profile: profile),
                       ],
                     ),
@@ -528,11 +540,11 @@ class _AiConnectionProfileEditor extends StatefulWidget {
 class _AiConnectionProfileEditResult {
   const _AiConnectionProfileEditResult({
     required this.profile,
-    this.bearerToken,
+    this.credential,
   });
 
   final AiConnectionProfile profile;
-  final String? bearerToken;
+  final String? credential;
 }
 
 class _AiConnectionProfileEditorState
@@ -549,6 +561,8 @@ class _AiConnectionProfileEditorState
   late final TextEditingController _systemPromptController;
   late final TextEditingController _credentialController;
   late final String _profileId;
+  late AiProviderKind _providerKind;
+  late bool _hostedInferenceEnabled;
   late AiProtocol _protocol;
   late AiAuthenticationMode _authenticationMode;
   late AiReasoningEffort _reasoningEffort;
@@ -594,6 +608,8 @@ class _AiConnectionProfileEditorState
       text: profile?.systemPrompt ?? aiDefaultSystemPrompt,
     );
     _credentialController = TextEditingController();
+    _providerKind = profile?.providerKind ?? AiProviderKind.custom;
+    _hostedInferenceEnabled = profile?.hostedInferenceEnabled ?? false;
     _protocol = profile?.protocol ?? AiProtocol.openAiCompatibleChat;
     _authenticationMode =
         profile?.authenticationMode ?? AiAuthenticationMode.none;
@@ -645,38 +661,67 @@ class _AiConnectionProfileEditorState
                               : null,
                 ),
                 const SizedBox(height: 14),
-                DropdownButtonFormField<AiProtocol>(
-                  key: const Key('ai-profile-protocol-field'),
-                  initialValue: _protocol,
+                DropdownButtonFormField<AiProviderKind>(
+                  key: const Key('ai-profile-provider-field'),
+                  initialValue: _providerKind,
                   isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Protocol'),
+                  decoration: const InputDecoration(labelText: 'Provider'),
                   items: [
-                    for (final protocol in AiProtocol.values)
+                    for (final descriptor in AiProviderCatalog.values)
                       DropdownMenuItem(
-                        value: protocol,
-                        child: Text(
-                          protocol.label,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        value: descriptor.kind,
+                        child: Text(descriptor.label),
                       ),
                   ],
                   onChanged: (value) {
-                    if (value == null) return;
-                    setState(() {
-                      _protocol = value;
-                      _models = const [];
-                      _discoveryMessage = null;
-                      _discoveryDiagnostic = null;
-                    });
+                    if (value != null) _selectProvider(value);
                   },
                 ),
+                const SizedBox(height: 14),
+                if (_provider.hosted)
+                  InputDecorator(
+                    key: const Key('ai-profile-fixed-protocol'),
+                    decoration: const InputDecoration(labelText: 'Protocol'),
+                    child: Text(_protocol.label),
+                  )
+                else
+                  DropdownButtonFormField<AiProtocol>(
+                    key: const Key('ai-profile-protocol-field'),
+                    initialValue: _protocol,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Protocol'),
+                    items: [
+                      for (final protocol in AiProtocol.values)
+                        DropdownMenuItem(
+                          value: protocol,
+                          child: Text(
+                            protocol.label,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() {
+                        _protocol = value;
+                        _models = const [];
+                        _discoveryMessage = null;
+                        _discoveryDiagnostic = null;
+                      });
+                    },
+                  ),
                 const SizedBox(height: 14),
                 TextFormField(
                   key: const Key('ai-profile-url-field'),
                   controller: _baseUrlController,
-                  decoration: const InputDecoration(
+                  readOnly: _provider.hosted,
+                  decoration: InputDecoration(
                     labelText: 'Base URL',
                     hintText: 'https://ai-pc.example.ts.net/v1',
+                    helperText:
+                        _provider.hosted
+                            ? 'Locked to the official ${_provider.label} endpoint.'
+                            : null,
                   ),
                   keyboardType: TextInputType.url,
                   autocorrect: false,
@@ -1002,35 +1047,42 @@ class _AiConnectionProfileEditorState
                   ],
                 ),
                 const SizedBox(height: 6),
-                DropdownButtonFormField<AiAuthenticationMode>(
-                  key: const Key('ai-profile-auth-field'),
-                  initialValue: _authenticationMode,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Authentication',
-                  ),
-                  items: [
-                    for (final mode in AiAuthenticationMode.values)
-                      DropdownMenuItem(
-                        value: mode,
-                        enabled: _authenticationModeEnabled(mode),
-                        child: Text(
-                          mode.label,
-                          overflow: TextOverflow.ellipsis,
+                if (_provider.hosted)
+                  const InputDecorator(
+                    key: Key('ai-profile-fixed-authentication'),
+                    decoration: InputDecoration(labelText: 'Authentication'),
+                    child: Text('Secure API credential'),
+                  )
+                else
+                  DropdownButtonFormField<AiAuthenticationMode>(
+                    key: const Key('ai-profile-auth-field'),
+                    initialValue: _authenticationMode,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Authentication',
+                    ),
+                    items: [
+                      for (final mode in AiAuthenticationMode.values)
+                        DropdownMenuItem(
+                          value: mode,
+                          enabled: _authenticationModeEnabled(mode),
+                          child: Text(
+                            mode.label,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() {
-                        _authenticationMode = value;
-                        if (value != AiAuthenticationMode.bearerToken) {
-                          _credentialController.clear();
-                        }
-                      });
-                    }
-                  },
-                ),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() {
+                          _authenticationMode = value;
+                          if (value != AiAuthenticationMode.bearerToken) {
+                            _credentialController.clear();
+                          }
+                        });
+                      }
+                    },
+                  ),
                 if (_authenticationMode ==
                     AiAuthenticationMode.bearerToken) ...[
                   const SizedBox(height: 14),
@@ -1043,12 +1095,12 @@ class _AiConnectionProfileEditorState
                     maxLength: aiMaxCredentialCharacters,
                     decoration: InputDecoration(
                       labelText:
-                          widget.profile?.credentialReference == null
-                              ? 'Bearer token'
-                              : 'Replace bearer token',
+                          !_hasCredentialForSelectedProvider
+                              ? 'API credential'
+                              : 'Replace API credential',
                       helperMaxLines: 3,
                       helperText:
-                          widget.profile?.credentialReference == null
+                          !_hasCredentialForSelectedProvider
                               ? 'Stored only in this device’s secure credential storage.'
                               : 'Leave blank to keep the saved token. Choose None above to remove it.',
                       suffixIcon: IconButton(
@@ -1072,8 +1124,8 @@ class _AiConnectionProfileEditorState
                         return null;
                       }
                       if ((value?.trim().isEmpty ?? true) &&
-                          widget.profile?.credentialReference == null) {
-                        return 'Enter a bearer token.';
+                          !_hasCredentialForSelectedProvider) {
+                        return 'Enter an API credential.';
                       }
                       return null;
                     },
@@ -1083,19 +1135,32 @@ class _AiConnectionProfileEditorState
                     const SizedBox(height: 8),
                     const _InlineWarning(
                       message:
-                          'A bearer token sent over plain HTTP is visible on the network. Prefer HTTPS even for private endpoints.',
+                          'An API credential sent over plain HTTP is visible on the network. Prefer HTTPS even for private endpoints.',
                     ),
                   ],
                 ],
                 const SizedBox(height: 6),
-                Text(
-                  !widget.settingsController.credentialStorageAvailable
-                      ? kIsWeb
-                          ? 'Direct endpoint credentials are unavailable on web. Use a user-owned gateway instead.'
-                          : 'Secure endpoint credentials are not configured for this platform yet.'
-                      : 'Bearer tokens are for local or private endpoints. They use this device’s secure storage and are never saved in the connection profile or Firestore. Hosted-provider BYOK and API-key headers are not available yet.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
+                if (_provider.hosted)
+                  _HostedProviderDisclosure(
+                    provider: _provider,
+                    enabled: _hostedInferenceEnabled,
+                    credentialStorageAvailable:
+                        widget.settingsController.credentialStorageAvailable,
+                    onChanged:
+                        kIsWeb
+                            ? null
+                            : (value) =>
+                                setState(() => _hostedInferenceEnabled = value),
+                  )
+                else
+                  Text(
+                    !widget.settingsController.credentialStorageAvailable
+                        ? kIsWeb
+                            ? 'Direct endpoint credentials are unavailable on Web. Use a user-owned gateway instead.'
+                            : 'Secure endpoint credentials are not configured for this platform yet.'
+                        : 'Optional credentials use this device’s secure storage and are never saved in the connection profile or Firestore.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
               ],
             ),
           ),
@@ -1171,7 +1236,7 @@ class _AiConnectionProfileEditorState
           baseUrl: validation.uri!,
           fallbackModelId: _modelController.text.trim(),
         ),
-        bearerToken:
+        credential:
             _authenticationMode == AiAuthenticationMode.bearerToken &&
                     _credentialController.text.trim().isNotEmpty
                 ? _credentialController.text.trim()
@@ -1190,8 +1255,13 @@ class _AiConnectionProfileEditorState
       protocol: _protocol,
       baseUrl: baseUrl,
       modelId: fallbackModelId,
+      providerKind: _providerKind,
+      hostedInferenceEnabled: _hostedInferenceEnabled,
       authenticationMode: _authenticationMode,
-      credentialReference: widget.profile?.credentialReference,
+      credentialReference:
+          _hasCredentialForSelectedProvider
+              ? widget.profile?.credentialReference
+              : null,
       reasoningEffort: _reasoningEffort,
       maxOutputTokens: int.parse(_maxOutputTokensController.text.trim()),
       contextWindowTokens: int.parse(_contextWindowController.text.trim()),
@@ -1205,6 +1275,32 @@ class _AiConnectionProfileEditorState
       systemPrompt: _systemPromptController.text.trim(),
       capabilityOverrides: _capabilityOverrides,
     );
+  }
+
+  AiProviderDescriptor get _provider =>
+      AiProviderCatalog.descriptor(_providerKind);
+
+  void _selectProvider(AiProviderKind kind) {
+    final descriptor = AiProviderCatalog.descriptor(kind);
+    setState(() {
+      _providerKind = kind;
+      _models = const [];
+      _discoveryMessage = null;
+      _discoveryDiagnostic = null;
+      _credentialController.clear();
+      if (descriptor.hosted) {
+        _protocol = descriptor.protocol;
+        _authenticationMode = descriptor.authenticationMode;
+        _baseUrlController.text = descriptor.trustedBaseUrl!;
+        _hostedInferenceEnabled = false;
+        if (_nameController.text.trim().isEmpty) {
+          _nameController.text = descriptor.label;
+        }
+      } else {
+        _hostedInferenceEnabled = false;
+      }
+      _updateUrlWarning();
+    });
   }
 
   _CapabilityChoice _choiceFor(AiCapability capability) {
@@ -1228,6 +1324,10 @@ class _AiConnectionProfileEditorState
 
   bool get _hasUsableSavedCredential =>
       _authenticationMode != AiAuthenticationMode.bearerToken ||
+      _hasCredentialForSelectedProvider;
+
+  bool get _hasCredentialForSelectedProvider =>
+      widget.profile?.providerKind == _providerKind &&
       widget.profile?.credentialReference != null;
 
   bool _authenticationModeEnabled(AiAuthenticationMode mode) {
@@ -1254,6 +1354,89 @@ class _AiConnectionProfileEditorState
     }
     return null;
   }
+}
+
+class _HostedProviderDisclosure extends StatelessWidget {
+  const _HostedProviderDisclosure({
+    required this.provider,
+    required this.enabled,
+    required this.credentialStorageAvailable,
+    required this.onChanged,
+  });
+
+  final AiProviderDescriptor provider;
+  final bool enabled;
+  final bool credentialStorageAvailable;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final canEnable = credentialStorageAvailable && onChanged != null;
+    return Card(
+      key: const Key('ai-hosted-provider-disclosure'),
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SwitchListTile(
+              key: const Key('ai-profile-hosted-enabled-field'),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Enable cloud requests'),
+              subtitle: Text(
+                'Prompts, active skill instructions, selected application '
+                'context, tool results, and proposal source text may be sent '
+                'to ${provider.label}. Provider billing and data-use terms apply.',
+              ),
+              value: enabled,
+              onChanged: canEnable ? onChanged : null,
+            ),
+            if (!credentialStorageAvailable)
+              Text(
+                kIsWeb
+                    ? 'Direct cloud credentials are unavailable on Web. Use a user-owned gateway.'
+                    : 'Secure credential storage is unavailable on this device.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            const SizedBox(height: 6),
+            Text(
+              'The configured context and output limits apply. Nexecute does '
+              'not inspect billing or guarantee an exact request cost.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              children: [
+                if (provider.documentationUrl case final url?)
+                  TextButton(
+                    onPressed: () => _openExternalUrl(url),
+                    child: const Text('API documentation'),
+                  ),
+                if (provider.keyManagementUrl case final url?)
+                  TextButton(
+                    onPressed: () => _openExternalUrl(url),
+                    child: const Text('Manage keys'),
+                  ),
+                if (provider.billingUrl case final url?)
+                  TextButton(
+                    onPressed: () => _openExternalUrl(url),
+                    child: const Text('Billing and pricing'),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+Future<void> _openExternalUrl(String value) async {
+  final uri = Uri.parse(value);
+  await launchUrl(uri, mode: LaunchMode.externalApplication);
 }
 
 class _InlineWarning extends StatelessWidget {

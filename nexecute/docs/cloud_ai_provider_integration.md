@@ -110,6 +110,10 @@ must not enter synchronized conversations.
 
 ### Phase A: shared hosted-provider foundation
 
+**Status:** Complete. The shared provider identity, trusted presets, explicit
+cloud activation, native credential lifecycle, adapter routing, Web rejection,
+and environment-only quality-runner credential path are implemented.
+
 1. Add `AiProviderKind` with backward-compatible profile decoding.
 2. Add the provider descriptor registry and fixed trusted endpoint presets.
 3. Add explicit hosted-inference activation and transmission/cost disclosure.

@@ -1,5 +1,6 @@
 import 'package:nexecute/ai/domain/ai_connection_profile.dart';
 import 'package:nexecute/ai/domain/ai_protocol.dart';
+import 'package:nexecute/ai/domain/ai_provider.dart';
 
 class AiConnectionProfileCodec {
   const AiConnectionProfileCodec._();
@@ -11,6 +12,8 @@ class AiConnectionProfileCodec {
       'protocol': profile.protocol.name,
       'baseUrl': profile.baseUrl.toString(),
       'modelId': profile.modelId,
+      'providerKind': profile.providerKind.name,
+      'hostedInferenceEnabled': profile.hostedInferenceEnabled,
       'authenticationMode': profile.authenticationMode.name,
       'credentialReference': profile.credentialReference,
       'reasoningEffort': profile.reasoningEffort.name,
@@ -40,6 +43,18 @@ class AiConnectionProfileCodec {
       throw const FormatException('Invalid AI connection profile baseUrl');
     }
     final modelId = _requiredString(map, 'modelId');
+    final providerKind =
+        map['providerKind'] == null
+            ? AiProviderKind.custom
+            : _enumValue(
+              AiProviderKind.values,
+              _requiredString(map, 'providerKind'),
+              'providerKind',
+            );
+    if (map['hostedInferenceEnabled'] != null &&
+        map['hostedInferenceEnabled'] is! bool) {
+      throw const FormatException('Invalid hosted inference setting');
+    }
     final authenticationMode = _enumValue(
       AiAuthenticationMode.values,
       _requiredString(map, 'authenticationMode'),
@@ -62,6 +77,8 @@ class AiConnectionProfileCodec {
       protocol: protocol,
       baseUrl: baseUrl,
       modelId: modelId,
+      providerKind: providerKind,
+      hostedInferenceEnabled: map['hostedInferenceEnabled'] == true,
       authenticationMode: authenticationMode,
       credentialReference: credentialReference as String?,
       reasoningEffort:

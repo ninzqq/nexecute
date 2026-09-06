@@ -122,7 +122,7 @@ void main() {
     );
   });
 
-  test('stores, replaces, and removes bearer tokens separately', () async {
+  test('stores, replaces, and removes API credentials separately', () async {
     final store = FakeAiConnectionProfileStore();
     addTearDown(store.dispose);
     final credentialStore = FakeAiCredentialStore();
@@ -138,14 +138,14 @@ void main() {
       clearCredentialReference: true,
     );
 
-    await controller.saveProfile(bearerProfile, bearerToken: 'first-secret');
+    await controller.saveProfile(bearerProfile, credential: 'first-secret');
     final firstSaved = controller.profiles.single;
     final firstReference = firstSaved.credentialReference!;
 
     expect(firstReference, startsWith('secure-storage:'));
     expect(credentialStore.credentials[firstReference], 'first-secret');
 
-    await controller.saveProfile(firstSaved, bearerToken: 'second-secret');
+    await controller.saveProfile(firstSaved, credential: 'second-secret');
     final secondSaved = controller.profiles.single;
     final secondReference = secondSaved.credentialReference!;
 
@@ -186,6 +186,7 @@ void main() {
 
     expect(duplicate.authenticationMode, AiAuthenticationMode.bearerToken);
     expect(duplicate.credentialReference, isNull);
+    expect(duplicate.hostedInferenceEnabled, isFalse);
     expect(credentialStore.credentials, hasLength(1));
 
     await controller.deleteProfile(original.id);
@@ -195,6 +196,48 @@ void main() {
       credentialStore.deletedReferences,
       contains('secure-storage:original'),
     );
+  });
+
+  test('requires a fresh credential when changing providers', () async {
+    final oldReference = 'secure-storage:old-provider';
+    final credentialStore = FakeAiCredentialStore(
+      credentials: {oldReference: 'old-secret'},
+    );
+    final original = _profile().copyWith(
+      authenticationMode: AiAuthenticationMode.bearerToken,
+      credentialReference: oldReference,
+    );
+    final store = FakeAiConnectionProfileStore(profiles: [original]);
+    addTearDown(store.dispose);
+    final controller = AiSettingsController(
+      profileStore: store,
+      assistantRepository: FakeAiAssistantRepository(),
+      credentialStore: credentialStore,
+    );
+    addTearDown(controller.dispose);
+    await controller.initialize();
+    final gemini = AiProviderCatalog.googleGemini;
+    final changedProvider = original.copyWith(
+      providerKind: gemini.kind,
+      protocol: gemini.protocol,
+      baseUrl: gemini.trustedBaseUri,
+      authenticationMode: gemini.authenticationMode,
+      hostedInferenceEnabled: true,
+      clearCredentialReference: true,
+    );
+
+    await expectLater(
+      controller.saveProfile(changedProvider),
+      throwsA(isA<AiCredentialStoreException>()),
+    );
+    expect(credentialStore.credentials[oldReference], 'old-secret');
+
+    await controller.saveProfile(changedProvider, credential: 'new-secret');
+
+    expect(controller.profiles.single.providerKind, gemini.kind);
+    expect(controller.profiles.single.credentialReference, isNot(oldReference));
+    expect(credentialStore.credentials[oldReference], isNull);
+    expect(credentialStore.deletedReferences, contains(oldReference));
   });
 }
 

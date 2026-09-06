@@ -7,6 +7,84 @@ import 'package:provider/provider.dart';
 import '../support/fake_ai_dependencies.dart';
 
 void main() {
+  testWidgets('creates an explicitly enabled hosted provider preset', (
+    tester,
+  ) async {
+    final store = FakeAiConnectionProfileStore();
+    final credentialStore = FakeAiCredentialStore();
+    addTearDown(store.dispose);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<AiConnectionProfileStore>.value(value: store),
+          Provider<AiCredentialStore>.value(value: credentialStore),
+          Provider<AiAssistantRepository>.value(
+            value: FakeAiAssistantRepository(),
+          ),
+        ],
+        child: const MaterialApp(home: Scaffold(body: AiSettingsSection())),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('ai-add-profile')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('ai-profile-provider-field')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Google Gemini API').last);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('ai-profile-fixed-protocol')), findsOneWidget);
+    expect(
+      find.byKey(const Key('ai-profile-fixed-authentication')),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<EditableText>(
+            find.descendant(
+              of: find.byKey(const Key('ai-profile-url-field')),
+              matching: find.byType(EditableText),
+            ),
+          )
+          .readOnly,
+      isTrue,
+    );
+    expect(
+      find.byKey(const Key('ai-hosted-provider-disclosure')),
+      findsOneWidget,
+    );
+
+    await tester.enterText(
+      find.byKey(const Key('ai-profile-model-field')),
+      'gemini-model',
+    );
+    await tester.ensureVisible(
+      find.byKey(const Key('ai-profile-bearer-token-field')),
+    );
+    await tester.enterText(
+      find.byKey(const Key('ai-profile-bearer-token-field')),
+      'cloud-secret',
+    );
+    await tester.ensureVisible(
+      find.byKey(const Key('ai-profile-hosted-enabled-field')),
+    );
+    await tester.tap(find.byKey(const Key('ai-profile-hosted-enabled-field')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('ai-profile-save')));
+    await tester.tap(find.byKey(const Key('ai-profile-save')));
+    await tester.pumpAndSettle();
+
+    final saved = (await store.getProfiles()).single;
+    expect(saved.providerKind, AiProviderKind.googleGemini);
+    expect(saved.protocol, AiProtocol.openAiCompatibleChat);
+    expect(saved.baseUrl, AiProviderCatalog.googleGemini.trustedBaseUri);
+    expect(saved.hostedInferenceEnabled, isTrue);
+    expect(saved.credentialReference, isNotNull);
+    expect(credentialStore.savedCredentials, ['cloud-secret']);
+  });
+
   testWidgets('adds, activates, discovers models, and tests a connection', (
     tester,
   ) async {

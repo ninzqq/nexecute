@@ -70,13 +70,16 @@ class AiSettingsController extends ChangeNotifier {
 
   Future<void> saveProfile(
     AiConnectionProfile profile, {
-    String? bearerToken,
+    String? credential,
   }) async {
     final shouldActivate = _profiles.isEmpty;
     final existing = _profileWithId(profile.id);
     final oldReference =
         existing?.credentialReference ?? profile.credentialReference;
-    final normalizedToken = bearerToken?.trim();
+    final providerChanged =
+        existing != null && existing.providerKind != profile.providerKind;
+    final reusableReference = providerChanged ? null : oldReference;
+    final normalizedCredential = credential?.trim();
     String? newReference;
     late final AiConnectionProfile profileToSave;
 
@@ -86,14 +89,18 @@ class AiSettingsController extends ChangeNotifier {
           'Secure endpoint credentials are not available on this platform.',
         );
       }
-      if (normalizedToken?.isNotEmpty ?? false) {
-        newReference = await _credentialStore.saveCredential(normalizedToken!);
+      if (normalizedCredential?.isNotEmpty ?? false) {
+        newReference = await _credentialStore.saveCredential(
+          normalizedCredential!,
+        );
         profileToSave = profile.copyWith(credentialReference: newReference);
-      } else if (oldReference != null) {
-        profileToSave = profile.copyWith(credentialReference: oldReference);
+      } else if (reusableReference != null) {
+        profileToSave = profile.copyWith(
+          credentialReference: reusableReference,
+        );
       } else {
         throw const AiCredentialStoreException(
-          'Enter a bearer token for this connection.',
+          'Enter an API credential for this connection.',
         );
       }
     } else if (profile.authenticationMode.requiresCredential) {
@@ -122,9 +129,9 @@ class AiSettingsController extends ChangeNotifier {
       }
       rethrow;
     }
-    if (newReference != null &&
-        oldReference != null &&
-        oldReference != newReference) {
+    if (oldReference != null &&
+        (providerChanged ||
+            (newReference != null && oldReference != newReference))) {
       await _credentialStore.deleteCredential(oldReference);
     }
     if (shouldActivate) {
@@ -141,6 +148,7 @@ class AiSettingsController extends ChangeNotifier {
       id: _idFactory(),
       name: '${profile.name} copy',
       clearCredentialReference: true,
+      hostedInferenceEnabled: false,
     );
     await _profileStore.saveProfile(duplicate);
     await _reloadAndNotify();

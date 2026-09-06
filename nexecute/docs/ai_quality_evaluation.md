@@ -59,6 +59,18 @@ dart run tool/run_ai_quality_evaluation.dart \
   --output evaluation/results/comparison-run.json
 ```
 
+For a credentialed OpenAI-compatible endpoint, put the credential in an
+environment variable and pass only its name. The value stays in memory and is
+never written to the report or command output:
+
+```sh
+NEXECUTE_AI_API_KEY=your-key dart run tool/run_ai_quality_evaluation.dart \
+  --base-url https://provider.example/v1 \
+  --model your-model-id \
+  --model-version your-model-version \
+  --credential-env NEXECUTE_AI_API_KEY
+```
+
 The runner sends chat and attached-context cases with Nexecute's current
 production chat system prompt. Attached-context fixtures become the same
 canonical, bounded, untrusted envelope used by the app. Note-to-task and

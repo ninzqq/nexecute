@@ -33,6 +33,8 @@ void main() {
     expect(restored.protocol, profile.protocol);
     expect(restored.baseUrl, profile.baseUrl);
     expect(restored.modelId, profile.modelId);
+    expect(restored.providerKind, profile.providerKind);
+    expect(restored.hostedInferenceEnabled, profile.hostedInferenceEnabled);
     expect(restored.authenticationMode, profile.authenticationMode);
     expect(restored.credentialReference, profile.credentialReference);
     expect(restored.reasoningEffort, profile.reasoningEffort);
@@ -58,6 +60,31 @@ void main() {
     expect(restored.connectionTimeout, aiDefaultConnectionTimeout);
     expect(restored.responseIdleTimeout, aiDefaultResponseIdleTimeout);
     expect(restored.systemPrompt, aiDefaultSystemPrompt);
+    expect(restored.providerKind, AiProviderKind.custom);
+    expect(restored.hostedInferenceEnabled, isFalse);
+  });
+
+  test('round-trips an explicitly enabled hosted provider', () {
+    final descriptor = AiProviderCatalog.googleGemini;
+    final profile = AiConnectionProfile(
+      id: 'gemini',
+      name: 'Gemini',
+      providerKind: descriptor.kind,
+      protocol: descriptor.protocol,
+      baseUrl: descriptor.trustedBaseUri!,
+      modelId: 'model-id',
+      authenticationMode: descriptor.authenticationMode,
+      credentialReference: 'secure:credential',
+      hostedInferenceEnabled: true,
+    );
+
+    final restored = AiConnectionProfileCodec.fromMap(
+      AiConnectionProfileCodec.toMap(profile),
+    );
+
+    expect(restored.providerKind, AiProviderKind.googleGemini);
+    expect(restored.hostedInferenceEnabled, isTrue);
+    expect(restored.hasTrustedProviderConfiguration, isTrue);
   });
 
   test('rejects unknown enum values instead of guessing', () {

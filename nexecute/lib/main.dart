@@ -167,13 +167,18 @@ class NexecuteState extends State<Nexecute> {
           value: _platformServices.aiCredentialStore,
         ),
         Provider<AiAssistantRepository>(
-          create:
-              (context) => OpenAiCompatibleAssistantRepository(
-                credentialStore: context.read<AiCredentialStore>(),
-              ),
+          create: (context) {
+            final openAiCompatible = OpenAiCompatibleAssistantRepository(
+              credentialStore: context.read<AiCredentialStore>(),
+            );
+            return RoutingAiAssistantRepository(
+              adapters: {AiProtocol.openAiCompatibleChat: openAiCompatible},
+              disposers: [openAiCompatible.dispose],
+            );
+          },
           dispose:
               (_, repository) =>
-                  (repository as OpenAiCompatibleAssistantRepository).dispose(),
+                  (repository as RoutingAiAssistantRepository).dispose(),
         ),
         Provider<AiConnectionProfileStore>(
           create: (_) => SharedPreferencesAiConnectionProfileStore(),

@@ -1407,20 +1407,20 @@ must remain usable when skill storage or an imported file is unavailable.
 
 #### Step 13: native hosted-provider BYOK
 
-**Status:** Planned. The staged design and provider research are recorded in
-`docs/cloud_ai_provider_integration.md`.
+**Status:** In progress. Step 13A is complete; the staged design and provider
+research are recorded in `docs/cloud_ai_provider_integration.md`.
 
 ##### Step 13A: shared hosted-provider boundary
 
-- [ ] Add a provider identity separate from the wire protocol, migrate existing
+- [x] Add a provider identity separate from the wire protocol, migrate existing
   profiles to custom OpenAI-compatible, and define app-owned provider presets.
-- [ ] Keep hosted credentials in existing native secure storage with only
+- [x] Keep hosted credentials in existing native secure storage with only
   opaque references in profiles; make credential terminology provider-neutral.
-- [ ] Add explicit cloud-API activation, cost/transmission disclosure, trusted
+- [x] Add explicit cloud-API activation, cost/transmission disclosure, trusted
   endpoint locking, provider billing/key-management links, and Web rejection.
-- [ ] Route profiles to protocol-specific adapters without changing existing
+- [x] Route profiles to protocol-specific adapters without changing existing
   Ollama behavior or allowing provider availability to block application start.
-- [ ] Extend the opt-in quality runner to accept a credential from the
+- [x] Extend the opt-in quality runner to accept a credential from the
   environment without persisting or printing it.
 
 ##### Step 13B: Gemini compatibility pilot

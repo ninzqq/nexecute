@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:nexecute/ai/domain/ai_connection_profile.dart';
 import 'package:nexecute/ai/domain/ai_protocol.dart';
 import 'package:nexecute/ai/infrastructure/open_ai_compatible_assistant_repository.dart';
+import 'package:nexecute/ai/repositories/ai_credential_store.dart';
 
 import 'ai_quality_evaluation.dart';
 
@@ -73,6 +74,21 @@ Future<void> main(List<String> arguments) async {
     return;
   }
 
+  const credentialReference = 'quality-evaluation:environment';
+  final credentialEnvironmentVariable = options.credentialEnvironmentVariable;
+  final credential =
+      credentialEnvironmentVariable == null
+          ? null
+          : Platform.environment[credentialEnvironmentVariable]?.trim();
+  if (credentialEnvironmentVariable != null &&
+      (credential == null || credential.isEmpty)) {
+    stderr.writeln(
+      'The requested credential environment variable is unset or empty.',
+    );
+    exitCode = 1;
+    return;
+  }
+
   final profile = AiConnectionProfile(
     id: 'quality-evaluation',
     name: 'Quality evaluation',
@@ -82,8 +98,21 @@ Future<void> main(List<String> arguments) async {
     contextWindowTokens: options.contextWindowTokens,
     allowMultipleSkills: options.allowMultipleSkills,
     reasoningEffort: AiReasoningEffort.none,
+    authenticationMode:
+        credential == null
+            ? AiAuthenticationMode.none
+            : AiAuthenticationMode.bearerToken,
+    credentialReference: credential == null ? null : credentialReference,
   );
-  final repository = OpenAiCompatibleAssistantRepository();
+  final repository = OpenAiCompatibleAssistantRepository(
+    credentialStore:
+        credential == null
+            ? null
+            : _EnvironmentCredentialStore(
+              reference: credentialReference,
+              credential: credential,
+            ),
+  );
   try {
     final evaluator = AiQualityEvaluator(repository: repository);
     final report = await evaluator.run(
@@ -147,6 +176,7 @@ class _Options {
     this.modelVersion,
     this.outputPath,
     this.caseIds,
+    this.credentialEnvironmentVariable,
     this.contextWindowTokens = aiDefaultContextWindowTokens,
     this.allowMultipleSkills = false,
   });
@@ -163,6 +193,7 @@ class _Options {
     String? modelVersion;
     String? outputPath;
     Set<String>? caseIds;
+    String? credentialEnvironmentVariable;
 
     for (var index = 0; index < arguments.length; index++) {
       final argument = arguments[index];
@@ -202,6 +233,15 @@ class _Options {
             for (final value in nextValue().split(','))
               if (value.trim().isNotEmpty) value.trim(),
           };
+        case '--credential-env':
+          credentialEnvironmentVariable = nextValue();
+          if (!RegExp(
+            r'^[A-Za-z_][A-Za-z0-9_]*$',
+          ).hasMatch(credentialEnvironmentVariable)) {
+            throw const FormatException(
+              '--credential-env must name an environment variable.',
+            );
+          }
         case '--dry-run':
           dryRun = true;
         case '--help' || '-h':
@@ -220,6 +260,7 @@ class _Options {
       modelVersion: modelVersion,
       outputPath: outputPath,
       caseIds: caseIds,
+      credentialEnvironmentVariable: credentialEnvironmentVariable,
       contextWindowTokens: contextWindowTokens,
       allowMultipleSkills: allowMultipleSkills,
     );
@@ -234,6 +275,7 @@ class _Options {
   final String? modelVersion;
   final String? outputPath;
   final Set<String>? caseIds;
+  final String? credentialEnvironmentVariable;
   final int contextWindowTokens;
   final bool allowMultipleSkills;
 }
@@ -260,6 +302,34 @@ Options:
   --context-window <n>    Verified runtime context tokens (default: 8192)
   --allow-multiple-skills Enable explicit multi-skill evaluation
   --case <id,id>          Run only the listed stable case IDs
+  --credential-env <name> Read an API credential from this environment variable
   --dry-run               Validate and list cases without contacting a server
   --help                  Show this help
 ''';
+
+final class _EnvironmentCredentialStore implements AiCredentialStore {
+  const _EnvironmentCredentialStore({
+    required this.reference,
+    required this.credential,
+  });
+
+  final String reference;
+  final String credential;
+
+  @override
+  bool get isAvailable => true;
+
+  @override
+  Future<void> deleteCredential(String reference) {
+    throw UnsupportedError('The evaluation credential is read-only.');
+  }
+
+  @override
+  Future<String?> readCredential(String candidateReference) async =>
+      candidateReference == reference ? credential : null;
+
+  @override
+  Future<String> saveCredential(String credential) {
+    throw UnsupportedError('The evaluation credential is read-only.');
+  }
+}

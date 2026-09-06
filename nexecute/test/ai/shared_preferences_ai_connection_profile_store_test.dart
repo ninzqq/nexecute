@@ -81,7 +81,7 @@ void main() {
       clearCredentialReference: true,
     );
 
-    await controller.saveProfile(profile, bearerToken: 'private-bearer-token');
+    await controller.saveProfile(profile, credential: 'private-bearer-token');
 
     final preferences = await SharedPreferences.getInstance();
     final persistedStrings = preferences

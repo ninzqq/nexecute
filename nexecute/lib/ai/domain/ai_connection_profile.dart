@@ -1,4 +1,5 @@
 import 'package:nexecute/ai/domain/ai_protocol.dart';
+import 'package:nexecute/ai/domain/ai_provider.dart';
 
 const aiDefaultContextWindowTokens = 8192;
 const aiMaxContextWindowTokens = 2097152;
@@ -36,6 +37,8 @@ class AiConnectionProfile {
     required this.protocol,
     required this.baseUrl,
     required this.modelId,
+    this.providerKind = AiProviderKind.custom,
+    this.hostedInferenceEnabled = false,
     this.authenticationMode = AiAuthenticationMode.none,
     this.credentialReference,
     this.reasoningEffort = AiReasoningEffort.automatic,
@@ -53,6 +56,8 @@ class AiConnectionProfile {
   final AiProtocol protocol;
   final Uri baseUrl;
   final String modelId;
+  final AiProviderKind providerKind;
+  final bool hostedInferenceEnabled;
   final AiAuthenticationMode authenticationMode;
   final String? credentialReference;
   final AiReasoningEffort reasoningEffort;
@@ -67,6 +72,21 @@ class AiConnectionProfile {
   bool get hasRequiredCredential =>
       !authenticationMode.requiresCredential ||
       (credentialReference?.trim().isNotEmpty ?? false);
+
+  AiProviderDescriptor get provider =>
+      AiProviderCatalog.descriptor(providerKind);
+
+  bool get hasTrustedProviderConfiguration =>
+      provider.matchesTrustedConfiguration(
+        candidateProtocol: protocol,
+        candidateAuthenticationMode: authenticationMode,
+        candidateBaseUrl: baseUrl,
+      );
+
+  bool canSendRequests({required bool isWeb}) =>
+      isValid &&
+      hasTrustedProviderConfiguration &&
+      (!provider.hosted || (hostedInferenceEnabled && !isWeb));
 
   bool get isValid =>
       id.trim().isNotEmpty &&
@@ -84,7 +104,8 @@ class AiConnectionProfile {
       responseIdleTimeout > Duration.zero &&
       responseIdleTimeout <= Duration(seconds: aiMaxTimeoutSeconds) &&
       systemPrompt.length <= aiMaxSystemPromptCharacters &&
-      hasRequiredCredential;
+      hasRequiredCredential &&
+      hasTrustedProviderConfiguration;
 
   AiCapabilityState capabilityState(AiCapability capability) {
     final override = capabilityOverrides[capability];
@@ -113,6 +134,8 @@ class AiConnectionProfile {
     AiProtocol? protocol,
     Uri? baseUrl,
     String? modelId,
+    AiProviderKind? providerKind,
+    bool? hostedInferenceEnabled,
     AiAuthenticationMode? authenticationMode,
     String? credentialReference,
     bool clearCredentialReference = false,
@@ -131,6 +154,9 @@ class AiConnectionProfile {
       protocol: protocol ?? this.protocol,
       baseUrl: baseUrl ?? this.baseUrl,
       modelId: modelId ?? this.modelId,
+      providerKind: providerKind ?? this.providerKind,
+      hostedInferenceEnabled:
+          hostedInferenceEnabled ?? this.hostedInferenceEnabled,
       authenticationMode: authenticationMode ?? this.authenticationMode,
       credentialReference:
           clearCredentialReference
