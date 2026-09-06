@@ -1407,19 +1407,52 @@ must remain usable when skill storage or an imported file is unavailable.
 
 #### Step 13: native hosted-provider BYOK
 
-- [ ] Add platform secure storage for native OpenAI and Anthropic credentials;
-  keep only opaque credential references in connection profiles.
-- [ ] Add an OpenAI Responses adapter and an Anthropic Messages adapter behind
-  the existing normalized repository.
-- [ ] Support multiple saved Local, OpenAI, and Anthropic profiles and let the
-  user select the active profile without exposing its credential.
-- [ ] Use trusted provider endpoint defaults and warn before sending a provider
-  key to a customized hostname.
-- [ ] Keep paid inference disabled until the user explicitly enables it and
-  configures request/token limits and provider-side spending controls.
-- [ ] Never request or store provider organization/admin keys merely to inspect
-  authoritative billing information.
-- [ ] Disable direct hosted-provider credentials on Flutter Web.
+**Status:** Planned. The staged design and provider research are recorded in
+`docs/cloud_ai_provider_integration.md`.
+
+##### Step 13A: shared hosted-provider boundary
+
+- [ ] Add a provider identity separate from the wire protocol, migrate existing
+  profiles to custom OpenAI-compatible, and define app-owned provider presets.
+- [ ] Keep hosted credentials in existing native secure storage with only
+  opaque references in profiles; make credential terminology provider-neutral.
+- [ ] Add explicit cloud-API activation, cost/transmission disclosure, trusted
+  endpoint locking, provider billing/key-management links, and Web rejection.
+- [ ] Route profiles to protocol-specific adapters without changing existing
+  Ollama behavior or allowing provider availability to block application start.
+- [ ] Extend the opt-in quality runner to accept a credential from the
+  environment without persisting or printing it.
+
+##### Step 13B: Gemini compatibility pilot
+
+- [ ] Add a Gemini preset using Google's official OpenAI-compatible endpoint,
+  bearer authentication, client-identification header, and the existing Chat
+  Completions adapter.
+- [ ] Verify model discovery, streaming chat, cancellation, app-owned read
+  tools, structured Note workflows, diagnostics, redaction, and quality-suite
+  behavior before confirming model capabilities.
+- [ ] Keep Gemini-specific hosted tools and native API features outside the
+  pilot; adopt a native adapter later only when a required feature justifies it.
+
+##### Step 13C: native provider adapters
+
+- [ ] Add an OpenAI Responses adapter behind the normalized repository without
+  enabling provider-hosted tools or provider-side conversation persistence.
+- [ ] Add an Anthropic Messages adapter with its required version header,
+  content-block streaming, and tool continuation mapping.
+- [ ] Cover both adapters with deterministic wire, malformed-stream, timeout,
+  cancellation, usage, tool, authentication, and privacy tests.
+
+##### Step 13D: comparison and rollout
+
+- [ ] Compare cost-conscious models from Gemini, OpenAI, and Anthropic using the
+  same versioned quality suite, generation limits, and repetitions.
+- [ ] Enable providers independently only after an explicit live run records
+  model identity, quality, latency, token usage, and failure behavior without
+  committing credentials or personal content.
+- [ ] Keep provider-side budgets, quotas, prepaid balances, alerts, and key
+  restrictions authoritative; never call billing or admin APIs with elevated
+  credentials merely to estimate spending.
 
 #### Step 14: optional user-owned gateway for web
 
