@@ -71,6 +71,17 @@ NEXECUTE_AI_API_KEY=your-key dart run tool/run_ai_quality_evaluation.dart \
   --credential-env NEXECUTE_AI_API_KEY
 ```
 
+For Gemini, select the provider preset so the runner uses the trusted Google
+endpoint and sends Nexecute's client-identification header:
+
+```sh
+GEMINI_API_KEY=your-key dart run tool/run_ai_quality_evaluation.dart \
+  --provider gemini \
+  --credential-env GEMINI_API_KEY \
+  --model gemini-model-id \
+  --model-version exact-model-version
+```
+
 The runner sends chat and attached-context cases with Nexecute's current
 production chat system prompt. Attached-context fixtures become the same
 canonical, bounded, untrusted envelope used by the app. Note-to-task and

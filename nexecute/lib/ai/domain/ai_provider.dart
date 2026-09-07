@@ -2,6 +2,8 @@ import 'package:nexecute/ai/domain/ai_protocol.dart';
 
 enum AiProviderKind { custom, googleGemini, openAI, anthropic }
 
+const nexecuteGeminiApiClient = 'nexecute-oai/1.0.0';
+
 final class AiProviderDescriptor {
   const AiProviderDescriptor({
     required this.kind,
@@ -13,6 +15,7 @@ final class AiProviderDescriptor {
     this.documentationUrl,
     this.keyManagementUrl,
     this.billingUrl,
+    this.requestHeaders = const {},
   });
 
   final AiProviderKind kind;
@@ -24,6 +27,7 @@ final class AiProviderDescriptor {
   final String? documentationUrl;
   final String? keyManagementUrl;
   final String? billingUrl;
+  final Map<String, String> requestHeaders;
 
   Uri? get trustedBaseUri =>
       trustedBaseUrl == null ? null : Uri.parse(trustedBaseUrl!);
@@ -65,6 +69,7 @@ abstract final class AiProviderCatalog {
     documentationUrl: 'https://ai.google.dev/gemini-api/docs',
     keyManagementUrl: 'https://aistudio.google.com/app/apikey',
     billingUrl: 'https://ai.google.dev/gemini-api/docs/pricing',
+    requestHeaders: {'x-goog-api-client': nexecuteGeminiApiClient},
   );
 
   static const openAI = AiProviderDescriptor(

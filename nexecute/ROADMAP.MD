@@ -1407,8 +1407,9 @@ must remain usable when skill storage or an imported file is unavailable.
 
 #### Step 13: native hosted-provider BYOK
 
-**Status:** In progress. Step 13A is complete; the staged design and provider
-research are recorded in `docs/cloud_ai_provider_integration.md`.
+**Status:** In progress. Steps 13A and 13B are implemented; live Gemini model
+acceptance remains opt-in. The staged design and provider research are recorded
+in `docs/cloud_ai_provider_integration.md`.
 
 ##### Step 13A: shared hosted-provider boundary
 
@@ -1425,14 +1426,19 @@ research are recorded in `docs/cloud_ai_provider_integration.md`.
 
 ##### Step 13B: Gemini compatibility pilot
 
-- [ ] Add a Gemini preset using Google's official OpenAI-compatible endpoint,
+- [x] Add a Gemini preset using Google's official OpenAI-compatible endpoint,
   bearer authentication, client-identification header, and the existing Chat
   Completions adapter.
-- [ ] Verify model discovery, streaming chat, cancellation, app-owned read
+- [x] Verify model discovery, streaming chat, cancellation, app-owned read
   tools, structured Note workflows, diagnostics, redaction, and quality-suite
   behavior before confirming model capabilities.
-- [ ] Keep Gemini-specific hosted tools and native API features outside the
+- [x] Keep Gemini-specific hosted tools and native API features outside the
   pilot; adopt a native adapter later only when a required feature justifies it.
+
+Deterministic Gemini compatibility tests cover the complete pilot boundary.
+Streaming and model discovery retain their protocol defaults; tools and
+structured output remain unconfirmed until an explicit live connection and
+versioned quality run pass with the user's selected model.
 
 ##### Step 13C: native provider adapters
 
@@ -1465,6 +1471,50 @@ research are recorded in `docs/cloud_ai_provider_integration.md`.
 - [ ] Stream OpenAI and Anthropic through the existing normalized protocol.
 - [ ] Document a low-maintenance free-tier deployment path while clearly noting
   that third-party free tiers and availability are not guaranteed.
+
+#### Step 15: authorized AI web search
+
+**Status:** Planned. The provider comparison, trust boundary, normalized search
+contract, citation model, and staged delivery plan are recorded in
+`docs/ai_web_search_integration.md`.
+
+##### Step 15A: portable app-owned search boundary
+
+- [ ] Add a web-search connection and repository independently from language-
+  model profiles, with native secure credentials and hosted-Web rejection.
+- [ ] Add the stable `searchWeb` capability to skill schema 4 while keeping the
+  definition, validation, authorization, and executor in application code.
+- [ ] Require one-turn user authorization and confirmed model tool support;
+  bound queries, results, calls, continuations, timeouts, and total context.
+
+##### Step 15B: Brave Search pilot
+
+- [ ] Implement a fixed-endpoint Brave Search adapter with redacted diagnostics,
+  SafeSearch, localization, freshness, cancellation, and rate-limit handling.
+- [ ] Generalize the read-tool coordinator to execute the normalized search tool
+  without weakening existing application-data authorization.
+- [ ] Treat titles and snippets as untrusted data and do not fetch result pages.
+- [ ] Accept only canonical public HTTPS result URLs; reject embedded
+  credentials, private targets, unsafe schemes, and unresolved redirects.
+
+##### Step 15C: citations and source interface
+
+- [ ] Assign request-local source IDs, validate model citation markers, and show
+  source cards linked to the exact returned URLs.
+- [ ] Persist only bounded citations used by the final answer; exclude queries,
+  snippets, provider payloads, secrets, and tool transcripts from Firestore.
+- [ ] Cover hostile snippets, unsafe URLs, unsupported claims, missing results,
+  stale dates, conflicting sources, and bilingual attribution in the quality
+  suite.
+
+##### Step 15D: additional search backends
+
+- [ ] Add a user-owned SearXNG JSON backend with private-network guidance and
+  graceful degradation for unsupported search controls.
+- [ ] Normalize Gemini, OpenAI, and Anthropic server-side search only after each
+  native provider adapter has versioned tool and citation coverage.
+- [ ] Never combine app-owned and provider-native search in one request; show
+  the query recipient and billing boundary before authorization.
 
 #### Later AI capabilities
 

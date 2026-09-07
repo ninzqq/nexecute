@@ -128,6 +128,13 @@ and environment-only quality-runner credential path are implemented.
 
 ### Phase B: Gemini compatibility pilot
 
+**Status:** Implementation complete and ready for opt-in live acceptance. The
+trusted OpenAI-compatible endpoint, bearer authentication, Nexecute client
+header, wire behavior, cancellation, tools, structured workflows, diagnostics,
+redaction, and quality-runner provider selection have deterministic coverage.
+Model-specific tools and structured-output capability remain unconfirmed until
+a live versioned quality run passes.
+
 Use Gemini's official OpenAI-compatible endpoint with the existing Chat
 Completions adapter. Its documented REST shape already uses bearer
 authentication, streaming, `reasoning_effort`, and OpenAI-format function

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:nexecute/ai/domain/ai_connection_profile.dart';
 import 'package:nexecute/ai/domain/ai_protocol.dart';
+import 'package:nexecute/ai/domain/ai_provider.dart';
 import 'package:nexecute/ai/infrastructure/open_ai_compatible_assistant_repository.dart';
 import 'package:nexecute/ai/repositories/ai_credential_store.dart';
 
@@ -54,18 +55,21 @@ Future<void> main(List<String> arguments) async {
     return;
   }
 
-  if (options.baseUrl == null ||
+  if ((options.providerKind == AiProviderKind.custom &&
+          options.baseUrl == null) ||
       options.modelId == null ||
       options.modelVersion == null) {
     stderr.writeln(
-      '--base-url, --model, and --model-version are required for a live run.',
+      '--base-url is required for a custom provider; --model and '
+      '--model-version are required for every live run.',
     );
     stderr.write(_usage);
     exitCode = 1;
     return;
   }
 
-  final baseUrl = Uri.tryParse(options.baseUrl!);
+  final provider = AiProviderCatalog.descriptor(options.providerKind);
+  final baseUrl = Uri.tryParse(options.baseUrl ?? provider.trustedBaseUrl!);
   if (baseUrl == null ||
       !baseUrl.hasScheme ||
       (baseUrl.scheme != 'http' && baseUrl.scheme != 'https')) {
@@ -80,6 +84,13 @@ Future<void> main(List<String> arguments) async {
       credentialEnvironmentVariable == null
           ? null
           : Platform.environment[credentialEnvironmentVariable]?.trim();
+  if (provider.hosted && credentialEnvironmentVariable == null) {
+    stderr.writeln(
+      '--credential-env is required for the ${provider.label} provider.',
+    );
+    exitCode = 1;
+    return;
+  }
   if (credentialEnvironmentVariable != null &&
       (credential == null || credential.isEmpty)) {
     stderr.writeln(
@@ -95,6 +106,8 @@ Future<void> main(List<String> arguments) async {
     protocol: AiProtocol.openAiCompatibleChat,
     baseUrl: baseUrl,
     modelId: options.modelId!,
+    providerKind: provider.kind,
+    hostedInferenceEnabled: provider.hosted,
     contextWindowTokens: options.contextWindowTokens,
     allowMultipleSkills: options.allowMultipleSkills,
     reasoningEffort: AiReasoningEffort.none,
@@ -177,6 +190,7 @@ class _Options {
     this.outputPath,
     this.caseIds,
     this.credentialEnvironmentVariable,
+    this.providerKind = AiProviderKind.custom,
     this.contextWindowTokens = aiDefaultContextWindowTokens,
     this.allowMultipleSkills = false,
   });
@@ -194,6 +208,7 @@ class _Options {
     String? outputPath;
     Set<String>? caseIds;
     String? credentialEnvironmentVariable;
+    var providerKind = AiProviderKind.custom;
 
     for (var index = 0; index < arguments.length; index++) {
       final argument = arguments[index];
@@ -242,6 +257,15 @@ class _Options {
               '--credential-env must name an environment variable.',
             );
           }
+        case '--provider':
+          providerKind = switch (nextValue()) {
+            'custom' => AiProviderKind.custom,
+            'gemini' => AiProviderKind.googleGemini,
+            final value =>
+              throw FormatException(
+                'Unsupported quality-runner provider: $value.',
+              ),
+          };
         case '--dry-run':
           dryRun = true;
         case '--help' || '-h':
@@ -261,6 +285,7 @@ class _Options {
       outputPath: outputPath,
       caseIds: caseIds,
       credentialEnvironmentVariable: credentialEnvironmentVariable,
+      providerKind: providerKind,
       contextWindowTokens: contextWindowTokens,
       allowMultipleSkills: allowMultipleSkills,
     );
@@ -276,6 +301,7 @@ class _Options {
   final String? outputPath;
   final Set<String>? caseIds;
   final String? credentialEnvironmentVariable;
+  final AiProviderKind providerKind;
   final int contextWindowTokens;
   final bool allowMultipleSkills;
 }
@@ -292,9 +318,17 @@ Run against an OpenAI-compatible endpoint:
     --model model-id \\
     --model-version model-version
 
+Run against Gemini using its trusted endpoint:
+  dart run tool/run_ai_quality_evaluation.dart \\
+    --provider gemini \\
+    --credential-env GEMINI_API_KEY \\
+    --model gemini-model-id \\
+    --model-version exact-model-version
+
 Options:
   --suite <path>          Evaluation suite JSON (default: $_defaultSuitePath)
   --base-url <url>        OpenAI-compatible API base URL; never recorded
+  --provider <name>       Provider preset: custom or gemini (default: custom)
   --model <id>            Requested model identifier
   --model-version <text>  Exact model version, tag, or digest for comparison
   --output <path>         Report path (default: evaluation/results/...)

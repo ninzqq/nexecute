@@ -2,6 +2,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/ai/ai.dart';
 
 void main() {
+  test('only Gemini adds its app-owned client-identification header', () {
+    expect(AiProviderCatalog.custom.requestHeaders, isEmpty);
+    expect(AiProviderCatalog.openAI.requestHeaders, isEmpty);
+    expect(AiProviderCatalog.anthropic.requestHeaders, isEmpty);
+    expect(AiProviderCatalog.googleGemini.requestHeaders, {
+      'x-goog-api-client': nexecuteGeminiApiClient,
+    });
+  });
+
   test(
     'hosted provider presets pin protocol, authentication, and endpoint',
     () {

@@ -274,7 +274,10 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
           error: OpenAiCompatibleHttpException(response.statusCode, message),
           message: message,
           code: 'http_${response.statusCode}',
-          retryable: response.statusCode == 408 || response.statusCode >= 500,
+          retryable:
+              response.statusCode == 408 ||
+              response.statusCode == 429 ||
+              response.statusCode >= 500,
           diagnostic: _failureDiagnostics.httpFailure(
             response.statusCode,
             operation: AiFailureOperation.responseStart,
@@ -571,6 +574,7 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
     final headers = <String, String>{
       'accept': 'application/json, text/event-stream',
       'content-type': 'application/json',
+      ...profile.provider.requestHeaders,
     };
     if (profile.authenticationMode == AiAuthenticationMode.none) {
       return headers;
