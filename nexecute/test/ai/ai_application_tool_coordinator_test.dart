@@ -49,7 +49,9 @@ void main() {
             ]);
           }
           return Stream.fromIterable(const [
-            AiTextDelta('Flutter has a recent release.'),
+            AiTextDelta(
+              'Flutter has a recent release [[web-1]]. Bad [[web-999]].',
+            ),
             AiResponseCompleted(),
           ]);
         },
@@ -75,6 +77,9 @@ void main() {
       final events = await handle.events.toList();
 
       expect(events.whereType<AiTextDelta>().single.text, contains('recent'));
+      final citations = events.whereType<AiCitationsResolved>().single;
+      expect(citations.content, 'Flutter has a recent release [1]. Bad .');
+      expect(citations.citations.single.sourceId, 'web-1');
       expect(search.requests.single.query, 'Flutter current release');
       expect(search.requests.single.freshness, AiWebSearchFreshness.week);
       final result =
@@ -84,6 +89,7 @@ void main() {
       expect(result.isError, isFalse);
       expect(result.result['dataClassification'], 'publicWebSearchResults');
       expect(result.result['securityNotice'], contains('untrusted'));
+      expect(result.result['citationInstruction'], contains('[[web-N]]'));
       expect(result.result.toString(), contains('web-1'));
       expect(result.result.toString(), isNot(contains('provider-id')));
     },

@@ -61,6 +61,7 @@ void main() {
         AiQualityWorkflow.attachedContext,
         AiQualityWorkflow.noteToTasks,
         AiQualityWorkflow.noteToEvent,
+        AiQualityWorkflow.citationFixture,
       ]) {
         final languages =
             suite.cases
@@ -94,13 +95,30 @@ void main() {
           'localTime',
           'allDay',
           'overnightRange',
+          'hostileSnippets',
+          'unsafeUrls',
+          'unsupportedClaims',
+          'missingResults',
+          'staleDates',
+          'conflictingSources',
+          'bilingualAttribution',
         }),
       );
     });
 
-    test('keeps all source inputs synthetic and endpoint-free', () {
+    test('keeps all source inputs synthetic and free of live endpoints', () {
       for (final evaluationCase in suite.cases) {
         final source = jsonEncode(evaluationCase.input).toLowerCase();
+        if (evaluationCase.workflow == AiQualityWorkflow.citationFixture) {
+          expect(source, isNot(contains('@')));
+          expect(
+            !source.contains('https://') ||
+                source.contains('.example/') ||
+                source.contains('127.0.0.1'),
+            isTrue,
+          );
+          continue;
+        }
         expect(source, isNot(contains('http://')));
         expect(source, isNot(contains('https://')));
         expect(source, isNot(contains('@')));
@@ -346,6 +364,39 @@ void main() {
       final ids = {
         for (final evaluationCase in suite.cases)
           if (evaluationCase.workflow == AiQualityWorkflow.toolProtocolFixture)
+            evaluationCase.id,
+      };
+
+      final report = await AiQualityEvaluator(repository: repository).run(
+        suite: suite,
+        profile: _profile(),
+        metadata: const AiQualityRunMetadata(
+          modelId: 'model-a',
+          modelVersion: 'v1',
+          repetitions: 1,
+        ),
+        caseIds: ids,
+      );
+
+      expect(ids, hasLength(4));
+      expect(
+        report.results.map((result) => result.outcome),
+        everyElement(AiQualityOutcome.passed),
+      );
+      expect(repository.requestCount, 0);
+    },
+  );
+
+  test(
+    'committed citation fixtures exercise sanitization and attribution offline',
+    () async {
+      final suite = AiQualitySuite.fromJsonString(
+        File('evaluation/ai_quality_cases.v1.json').readAsStringSync(),
+      );
+      final repository = _QueuedRepository(const []);
+      final ids = {
+        for (final evaluationCase in suite.cases)
+          if (evaluationCase.workflow == AiQualityWorkflow.citationFixture)
             evaluationCase.id,
       };
 

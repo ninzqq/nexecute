@@ -403,6 +403,63 @@ void main() {
     expect(saved.messages.last.content, isNot(contains('Considering')));
   });
 
+  testWidgets('shows source cards and copies exact source links', (
+    tester,
+  ) async {
+    final profile = AiConnectionProfile(
+      id: 'home',
+      name: 'Home AI',
+      protocol: AiProtocol.openAiCompatibleChat,
+      baseUrl: Uri.parse('https://ai.example.test/v1'),
+      modelId: 'local-model',
+    );
+    final profileStore = FakeAiConnectionProfileStore(
+      profiles: [profile],
+      activeProfileId: profile.id,
+    );
+    final conversationStore = FakeAiConversationStore();
+    addTearDown(profileStore.dispose);
+    addTearDown(conversationStore.dispose);
+    final citation = AiCitation(
+      sourceId: 'web-1',
+      title: 'Exact public source',
+      url: Uri.parse('https://example.com/article'),
+      publishedAt: DateTime.utc(2026, 9, 6),
+    );
+
+    await tester.pumpWidget(
+      _app(
+        assistantRepository: FakeAiAssistantRepository(
+          responseEvents: [
+            const AiTextDelta('Current answer [1].'),
+            AiCitationsResolved(
+              content: 'Current answer [1].',
+              citations: [citation],
+            ),
+            const AiResponseCompleted(),
+          ],
+        ),
+        profileStore: profileStore,
+        conversationStore: conversationStore,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('assistant-composer')),
+      'Find current information',
+    );
+    await tester.tap(find.byKey(const Key('assistant-send')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sources'), findsOneWidget);
+    expect(find.text('Exact public source'), findsOneWidget);
+    expect(find.text('example.com · 2026-09-06'), findsOneWidget);
+    expect(
+      find.widgetWithText(TextButton, 'Copy with sources'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets(
     'previews exact task context, sends it once, and excludes it from history',
     (tester) async {

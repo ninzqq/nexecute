@@ -1474,7 +1474,7 @@ versioned quality run pass with the user's selected model.
 
 #### Step 15: authorized AI web search
 
-**Status:** In progress. Steps 15A and 15B are implemented. The provider
+**Status:** In progress. Steps 15A through 15C are implemented. The provider
 comparison, trust boundary, normalized search contract, citation model, and
 staged delivery plan are recorded in `docs/ai_web_search_integration.md`.
 
@@ -1499,11 +1499,11 @@ staged delivery plan are recorded in `docs/ai_web_search_integration.md`.
 
 ##### Step 15C: citations and source interface
 
-- [ ] Assign request-local source IDs, validate model citation markers, and show
+- [x] Assign request-local source IDs, validate model citation markers, and show
   source cards linked to the exact returned URLs.
-- [ ] Persist only bounded citations used by the final answer; exclude queries,
+- [x] Persist only bounded citations used by the final answer; exclude queries,
   snippets, provider payloads, secrets, and tool transcripts from Firestore.
-- [ ] Cover hostile snippets, unsafe URLs, unsupported claims, missing results,
+- [x] Cover hostile snippets, unsafe URLs, unsupported claims, missing results,
   stale dates, conflicting sources, and bilingual attribution in the quality
   suite.
 

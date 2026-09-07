@@ -2,11 +2,13 @@
 
 ## Status and objective
 
-Steps 15A and 15B are implemented. The provider-neutral profiles, repository
-contract, secure credential-reference lifecycle, schema 4 `searchWeb`
-declaration, bounded tool definition, one-request composer authorization, and
-native Brave Search executor are in place. The application exposes search only
-for a valid, enabled connection and an explicitly authorized assistant request.
+Steps 15A through 15C are implemented. The provider-neutral profiles,
+repository contract, secure credential-reference lifecycle, schema 4
+`searchWeb` declaration, bounded tool definition, one-request composer
+authorization, native Brave Search executor, validated citation markers,
+source cards, and bounded citation persistence are in place. The application
+exposes search only for a valid, enabled connection and an explicitly
+authorized assistant request.
 
 This document defines a provider-neutral way for Nexecute skills and ordinary
 assistant conversations to search the public web. The first implementation
@@ -133,10 +135,12 @@ parameters before displaying or persisting a URL, then deduplicate on the
 canonical form.
 
 Results receive request-local IDs such as `web-1`. The continuation prompt
-requires the model to cite those IDs when it uses a result. Nexecute validates
-that every cited ID exists, renders the corresponding title and URL as a source
-card, and opens it in the external browser. This validates source identity; it
-does not claim that the source proves the model's sentence.
+requires the model to cite those IDs with exact markers such as `[[web-1]]`
+when it uses a result. Nexecute validates that every cited ID exists, replaces
+valid markers with numbered references, removes fabricated markers, renders
+the corresponding title and URL as a source card, and opens it in the external
+browser. Copying the answer adds the numbered source URLs. This validates
+source identity; it does not claim that the source proves the model's sentence.
 
 Extend assistant messages with a bounded list of public citation metadata:
 

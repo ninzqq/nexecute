@@ -1,3 +1,4 @@
+import 'package:nexecute/ai/domain/ai_citation.dart';
 import 'package:nexecute/ai/domain/ai_diagnostic.dart';
 
 enum AiMessageRole { system, user, assistant, tool }
@@ -14,7 +15,8 @@ class AiChatMessage {
     this.errorMessage,
     this.diagnostic,
     this.toolCallId,
-  });
+    this.citations = const [],
+  }) : assert(citations.length <= aiMaxCitationsPerMessage);
 
   final String id;
   final AiMessageRole role;
@@ -24,6 +26,7 @@ class AiChatMessage {
   final String? errorMessage;
   final AiDiagnostic? diagnostic;
   final String? toolCallId;
+  final List<AiCitation> citations;
 
   AiChatMessage copyWith({
     String? id,
@@ -34,6 +37,7 @@ class AiChatMessage {
     String? errorMessage,
     AiDiagnostic? diagnostic,
     String? toolCallId,
+    List<AiCitation>? citations,
   }) {
     return AiChatMessage(
       id: id ?? this.id,
@@ -44,6 +48,7 @@ class AiChatMessage {
       errorMessage: errorMessage ?? this.errorMessage,
       diagnostic: diagnostic ?? this.diagnostic,
       toolCallId: toolCallId ?? this.toolCallId,
+      citations: citations ?? this.citations,
     );
   }
 }

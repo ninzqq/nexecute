@@ -610,6 +610,14 @@ class AiChatController extends ChangeNotifier {
         if (draft == null) return;
         _draftAssistant = draft.copyWith(content: '${draft.content}$text');
         _notify();
+      case AiCitationsResolved(:final content, :final citations):
+        final draft = _draftAssistant;
+        if (draft == null) return;
+        _draftAssistant = draft.copyWith(
+          content: content,
+          citations: citations,
+        );
+        _notify();
       case AiResponseCompleted():
         unawaited(
           _finalizeGeneration(generation, AiMessageStatus.complete, null),

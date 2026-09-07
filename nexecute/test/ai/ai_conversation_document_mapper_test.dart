@@ -112,4 +112,74 @@ void main() {
 
     expect(restored.diagnostic, isNull);
   });
+
+  test('persists only bounded public citation metadata', () {
+    final message = AiChatMessage(
+      id: 'assistant-cited',
+      role: AiMessageRole.assistant,
+      content: 'Current answer [1].',
+      createdAt: DateTime.utc(2026, 9, 7),
+      citations: [
+        AiCitation(
+          sourceId: 'web-1',
+          title: 'Public source',
+          url: Uri.parse('https://example.com/article'),
+          publishedAt: DateTime.utc(2026, 9, 6),
+        ),
+      ],
+    );
+
+    final data = AiConversationDocumentMapper.messageToMap(message);
+    final encoded = data.toString();
+    final restored = AiConversationDocumentMapper.messageFromMap(
+      message.id,
+      data,
+    );
+
+    expect(data['citations'], hasLength(1));
+    expect(encoded, isNot(contains('query')));
+    expect(encoded, isNot(contains('snippet')));
+    expect(encoded, isNot(contains('provider')));
+    expect(restored.citations.single.sourceId, 'web-1');
+    expect(
+      restored.citations.single.url,
+      Uri.parse('https://example.com/article'),
+    );
+  });
+
+  test(
+    'drops malformed, private, duplicate, and excessive stored citations',
+    () {
+      final entries = <Map<String, Object?>>[
+        {
+          'sourceId': 'web-1',
+          'title': 'Accepted',
+          'url': 'https://example.com/',
+        },
+        {
+          'sourceId': 'web-1',
+          'title': 'Duplicate',
+          'url': 'https://example.org/',
+        },
+        {'sourceId': 'web-2', 'title': 'Private', 'url': 'https://127.0.0.1/'},
+        for (var index = 3; index <= 20; index++)
+          {
+            'sourceId': 'web-$index',
+            'title': 'Source $index',
+            'url': 'https://source$index.example/',
+          },
+      ];
+
+      final restored = AiConversationDocumentMapper.messageFromMap('message', {
+        'citations': entries,
+      });
+
+      expect(restored.citations.first.sourceId, 'web-1');
+      expect(restored.citations, hasLength(13));
+      expect(
+        restored.citations.map((value) => value.sourceId),
+        isNot(contains('web-2')),
+      );
+    },
+  );
 }

@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nexecute/ai/domain/ai_chat_message.dart';
+import 'package:nexecute/ai/domain/ai_citation.dart';
 import 'package:nexecute/ai/domain/ai_conversation.dart';
 import 'package:nexecute/ai/domain/ai_diagnostic.dart';
 import 'package:nexecute/ai/domain/ai_skill_invocation.dart';
+import 'package:nexecute/ai/infrastructure/ai_web_search_result_sanitizer.dart';
 import 'package:nexecute/repositories/firestore/schema/app_data_schema.dart';
 
 abstract final class AiConversationDocumentMapper {
@@ -44,17 +46,27 @@ abstract final class AiConversationDocumentMapper {
     );
   }
 
-  static Map<String, dynamic> messageToMap(AiChatMessage message) =>
-      AppDataSchema.stamp({
-        'id': message.id,
-        'role': message.role.name,
-        'content': message.content,
-        'createdAt': message.createdAt,
-        'status': message.status.name,
-        'errorMessage': message.errorMessage,
-        'diagnostic': _diagnosticToMap(message.diagnostic),
-        'toolCallId': message.toolCallId,
-      });
+  static Map<String, dynamic> messageToMap(
+    AiChatMessage message,
+  ) => AppDataSchema.stamp({
+    'id': message.id,
+    'role': message.role.name,
+    'content': message.content,
+    'createdAt': message.createdAt,
+    'status': message.status.name,
+    'errorMessage': message.errorMessage,
+    'diagnostic': _diagnosticToMap(message.diagnostic),
+    'toolCallId': message.toolCallId,
+    'citations': [
+      for (final citation in message.citations.take(aiMaxCitationsPerMessage))
+        {
+          'sourceId': citation.sourceId,
+          'title': citation.title,
+          'url': citation.url.toString(),
+          if (citation.publishedAt != null) 'publishedAt': citation.publishedAt,
+        },
+    ],
+  });
 
   static AiChatMessage messageFromDocument(
     DocumentSnapshot<Map<String, dynamic>> document,
@@ -78,7 +90,51 @@ abstract final class AiConversationDocumentMapper {
       errorMessage: data['errorMessage']?.toString(),
       diagnostic: _diagnosticFromMap(data['diagnostic']),
       toolCallId: data['toolCallId']?.toString(),
+      citations: _citations(data['citations']),
     );
+  }
+
+  static List<AiCitation> _citations(Object? value) {
+    if (value is! Iterable) return const [];
+    final citations = <AiCitation>[];
+    final sourceIds = <String>{};
+    for (final item in value.take(aiMaxCitationsPerMessage)) {
+      if (item is! Map ||
+          item.keys.any(
+            (key) =>
+                key != 'sourceId' &&
+                key != 'title' &&
+                key != 'url' &&
+                key != 'publishedAt',
+          )) {
+        continue;
+      }
+      final sourceId = item['sourceId'];
+      final title = item['title'];
+      final canonicalUrl = AiWebSearchResultSanitizer.canonicalPublicHttpsUrl(
+        item['url'],
+      );
+      if (sourceId is! String ||
+          title is! String ||
+          canonicalUrl == null ||
+          canonicalUrl.toString() != item['url'] ||
+          !sourceIds.add(sourceId)) {
+        continue;
+      }
+      try {
+        citations.add(
+          AiCitation(
+            sourceId: sourceId,
+            title: title,
+            url: canonicalUrl,
+            publishedAt: _date(item['publishedAt']),
+          ),
+        );
+      } on ArgumentError {
+        // Ignore malformed synchronized citation metadata.
+      }
+    }
+    return List.unmodifiable(citations);
   }
 
   static T _enumByName<T extends Enum>(

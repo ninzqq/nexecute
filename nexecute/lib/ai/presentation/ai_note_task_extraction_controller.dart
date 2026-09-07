@@ -148,6 +148,8 @@ class AiNoteTaskExtractionController extends ChangeNotifier {
             case AiReasoningDelta(:final text):
               reasoning = '$reasoning$text';
               _notify();
+            case AiCitationsResolved():
+              break;
             case AiResponseCompleted():
               _complete(output.toString());
             case AiResponseFailed(

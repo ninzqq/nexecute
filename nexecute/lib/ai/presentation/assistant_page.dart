@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:nexecute/ai/ai.dart';
 import 'package:nexecute/domain/calendar/calendar_query_range.dart';
 import 'package:nexecute/shared/adaptive_navigation_shell.dart';
 import 'package:nexecute/shared/app_shortcuts.dart';
 import 'package:nexecute/shared/bottom_sheet_safe_area.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AssistantPage extends StatefulWidget {
   const AssistantPage({super.key, this.embedded = false, this.onOpenSettings});
@@ -1702,6 +1704,35 @@ class _MessageBubble extends StatelessWidget {
                 height: 18,
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
+            if (!isUser && message.citations.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _CitationCards(citations: message.citations),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  key: Key('assistant-copy-sources-${message.id}'),
+                  onPressed: () async {
+                    await Clipboard.setData(
+                      ClipboardData(
+                        text: AiCitationResolver.copyText(
+                          content: message.content,
+                          citations: message.citations,
+                        ),
+                      ),
+                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Answer and sources copied'),
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.copy_rounded, size: 18),
+                  label: const Text('Copy with sources'),
+                ),
+              ),
+            ],
             if (statusText != null) ...[
               const SizedBox(height: 7),
               Text(
@@ -1738,6 +1769,55 @@ class _MessageBubble extends StatelessWidget {
       ),
     );
   }
+}
+
+class _CitationCards extends StatelessWidget {
+  const _CitationCards({required this.citations});
+
+  final List<AiCitation> citations;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text('Sources', style: Theme.of(context).textTheme.labelLarge),
+      const SizedBox(height: 6),
+      for (var index = 0; index < citations.length; index++)
+        Card.outlined(
+          key: Key('assistant-source-${citations[index].sourceId}'),
+          margin: const EdgeInsets.only(bottom: 6),
+          child: ListTile(
+            dense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+            leading: CircleAvatar(
+              radius: 13,
+              child: Text('${index + 1}', style: const TextStyle(fontSize: 12)),
+            ),
+            title: Text(citations[index].title, maxLines: 2),
+            subtitle: Text(
+              _citationSubtitle(citations[index]),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            trailing: const Icon(Icons.open_in_new_rounded, size: 18),
+            onTap:
+                () => unawaited(
+                  launchUrl(
+                    citations[index].url,
+                    mode: LaunchMode.externalApplication,
+                  ),
+                ),
+          ),
+        ),
+    ],
+  );
+}
+
+String _citationSubtitle(AiCitation citation) {
+  final publishedAt = citation.publishedAt;
+  if (publishedAt == null) return citation.url.host;
+  final date = publishedAt.toUtc().toIso8601String().substring(0, 10);
+  return '${citation.url.host} · $date';
 }
 
 class _ReasoningPanel extends StatefulWidget {

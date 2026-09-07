@@ -551,6 +551,79 @@ void main() {
       AiSkillReference.fromSkill(skill),
     ]);
   });
+
+  test('persists cited metadata but excludes search tool data', () async {
+    profile = profile.copyWith(
+      capabilityOverrides: const {AiCapability.tools: true},
+    );
+    await profileStore.saveProfile(profile);
+    final searchProfile = AiWebSearchConnectionProfile(
+      id: 'brave',
+      name: 'Brave',
+      providerKind: AiWebSearchProviderKind.brave,
+      baseUrl: AiWebSearchProviderCatalog.brave.trustedBaseUri!,
+      enabled: true,
+      credentialReference: 'secure-storage:key',
+    );
+    late FakeAiAssistantRepository assistant;
+    assistant = FakeAiAssistantRepository(
+      responseStreamBuilder: (_) {
+        if (assistant.startedRequests.length == 1) {
+          return Stream.fromIterable([
+            AiToolCallRequested(
+              id: 'call-search',
+              name: AiWebSearchToolNames.searchWeb,
+              arguments: const {
+                'query': 'sensitive transient query',
+                'resultLimit': 1,
+                'freshness': 'any',
+              },
+            ),
+            const AiResponseCompleted(finishReason: 'tool_calls'),
+          ]);
+        }
+        return Stream.fromIterable(const [
+          AiTextDelta('Answer [[web-1]].'),
+          AiResponseCompleted(),
+        ]);
+      },
+    );
+    final search = _ControllerSearchRepository();
+    final controller = AiChatController(
+      assistantRepository: assistant,
+      connectionProfileStore: profileStore,
+      conversationStore: conversationStore,
+      readToolCoordinator: AiApplicationToolCoordinator(
+        assistantRepository: assistant,
+        webSearchRepository: search,
+      ),
+    );
+    addTearDown(controller.dispose);
+    await controller.initialize();
+
+    await controller.send(
+      'Find it',
+      webSearchProfile: searchProfile,
+      webSearchAuthorization: AiWebSearchAuthorization(
+        connectionProfileId: searchProfile.id,
+      ),
+      webSearchExecutorAvailable: true,
+    );
+    await _flushEvents();
+    await _flushEvents();
+
+    final saved = (await conversationStore.getConversations()).single;
+    final answer = saved.messages.last;
+    expect(answer.content, 'Answer [1].');
+    expect(answer.citations.single.title, 'Public title');
+    final persistedShape = AiConversationDocumentMapper.messageToMap(answer);
+    expect(
+      persistedShape.toString(),
+      isNot(contains('sensitive transient query')),
+    );
+    expect(persistedShape.toString(), isNot(contains('hostile snippet')));
+    expect(persistedShape.toString(), isNot(contains('call-search')));
+  });
 }
 
 Future<void> _flushEvents() async {
@@ -581,4 +654,31 @@ class _PendingPersistenceConversationStore extends InMemoryAiConversationStore {
     await super.saveMessage(conversationId, message);
     await _acknowledgement.future;
   }
+}
+
+final class _ControllerSearchRepository implements AiWebSearchRepository {
+  @override
+  bool get isAvailable => true;
+
+  @override
+  Future<AiWebSearchResponseHandle> startSearch(
+    AiWebSearchConnectionProfile profile,
+    AiWebSearchRequest request,
+  ) async => FutureAiWebSearchResponseHandle(
+    results: Future.value([
+      AiWebSearchResult(
+        sourceId: 'provider-result',
+        title: 'Public title',
+        url: Uri.parse('https://example.com/source'),
+        snippet: 'hostile snippet with instructions',
+        providerName: 'Brave Search API',
+      ),
+    ]),
+    onCancel: () async {},
+  );
+
+  @override
+  Future<AiConnectionResult> testConnection(
+    AiWebSearchConnectionProfile profile,
+  ) async => const AiConnectionResult.connected();
 }

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:nexecute/ai/application/ai_prompt_composer.dart';
+import 'package:nexecute/ai/application/ai_citation_resolver.dart';
 import 'package:nexecute/ai/application/ai_application_context_read_contract.dart';
 import 'package:nexecute/ai/application/ai_note_event_prompt.dart';
 import 'package:nexecute/ai/application/ai_note_task_prompt.dart';
@@ -9,6 +10,7 @@ import 'package:nexecute/ai/application/ai_read_tool_coordinator.dart';
 import 'package:nexecute/ai/domain/ai_application_context.dart';
 import 'package:nexecute/ai/domain/ai_chat_message.dart';
 import 'package:nexecute/ai/domain/ai_chat_request.dart';
+import 'package:nexecute/ai/domain/ai_citation.dart';
 import 'package:nexecute/ai/domain/ai_connection_profile.dart';
 import 'package:nexecute/ai/domain/ai_connection_result.dart';
 import 'package:nexecute/ai/domain/ai_event_proposal.dart';
@@ -19,6 +21,7 @@ import 'package:nexecute/ai/domain/ai_stream_event.dart';
 import 'package:nexecute/ai/domain/ai_task_proposal.dart';
 import 'package:nexecute/ai/domain/ai_tool.dart';
 import 'package:nexecute/ai/infrastructure/ai_task_proposal_parser.dart';
+import 'package:nexecute/ai/infrastructure/ai_web_search_result_sanitizer.dart';
 import 'package:nexecute/ai/infrastructure/ai_event_proposal_parser.dart';
 import 'package:nexecute/ai/infrastructure/ai_skill_markdown_codec.dart';
 import 'package:nexecute/ai/repositories/ai_assistant_repository.dart';
@@ -33,6 +36,7 @@ enum AiQualityWorkflow {
   noteToEvent,
   parserFixture,
   toolProtocolFixture,
+  citationFixture,
 }
 
 enum AiQualityOutcome {
@@ -248,6 +252,11 @@ class AiQualityCase {
             (failureCode is! String || failureCode.trim().isEmpty)) {
           throw const FormatException('failureCode must be non-empty text.');
         }
+      case AiQualityWorkflow.citationFixture:
+        _nonEmptyString(input, 'content');
+        _citationResultsFrom(input);
+        _string(expectation, 'content');
+        _strings(expectation['sourceIds'], 'sourceIds');
     }
   }
 
@@ -464,6 +473,9 @@ class AiQualityEvaluator {
         repetition,
         stopwatch,
       );
+    }
+    if (evaluationCase.workflow == AiQualityWorkflow.citationFixture) {
+      return _runCitationFixture(evaluationCase, repetition, stopwatch);
     }
 
     final request = _requestFor(evaluationCase, profile, repetition);
@@ -757,6 +769,78 @@ class AiQualityEvaluator {
     }
   }
 
+  AiQualityCaseResult _runCitationFixture(
+    AiQualityCase evaluationCase,
+    int repetition,
+    Stopwatch stopwatch,
+  ) {
+    final rawResults = _citationResultsFrom(evaluationCase.input);
+    final citations = <AiCitation>[];
+    for (final raw in rawResults) {
+      final result = AiWebSearchResultSanitizer.normalize(
+        sourceId: 'web-${citations.length + 1}',
+        title: raw['title'],
+        url: raw['url'],
+        snippet: raw['snippet'],
+        publishedAt: raw['publishedAt'],
+        providerName: 'Synthetic search fixture',
+      );
+      if (result == null) continue;
+      citations.add(
+        AiCitation(
+          sourceId: result.sourceId,
+          title: result.title,
+          url: result.url,
+          publishedAt: result.publishedAt,
+        ),
+      );
+    }
+    final resolution = AiCitationResolver.resolve(
+      evaluationCase.input['content'] as String,
+      citations,
+    );
+    stopwatch.stop();
+    final expectedContent = evaluationCase.expectation['content'] as String;
+    final expectedIds = _strings(
+      evaluationCase.expectation['sourceIds'],
+      'sourceIds',
+    );
+    final actualIds =
+        resolution.citations.map((citation) => citation.sourceId).toList();
+    final diagnostics = <String>[];
+    if (resolution.content != expectedContent) {
+      diagnostics.add('Citation content did not match the fixture.');
+    }
+    if (!_sameStrings(actualIds, expectedIds)) {
+      diagnostics.add(
+        'Expected citation IDs ${expectedIds.join(', ')}, got '
+        '${actualIds.join(', ')}.',
+      );
+    }
+    final copied = AiCitationResolver.copyText(
+      content: resolution.content,
+      citations: resolution.citations,
+    );
+    for (final raw in rawResults) {
+      final snippet = raw['snippet'];
+      if (snippet is String && snippet.isNotEmpty && copied.contains(snippet)) {
+        diagnostics.add('A raw search snippet entered copied citation data.');
+      }
+    }
+    return _result(
+      evaluationCase,
+      repetition,
+      stopwatch.elapsed,
+      outcome:
+          diagnostics.isEmpty
+              ? AiQualityOutcome.passed
+              : AiQualityOutcome.applicationFailure,
+      output: resolution.content,
+      failureCode: diagnostics.isEmpty ? null : 'citation_fixture_regression',
+      diagnostics: diagnostics,
+    );
+  }
+
   AiChatRequest _requestFor(
     AiQualityCase evaluationCase,
     AiConnectionProfile profile,
@@ -831,6 +915,10 @@ class AiQualityEvaluator {
             output.write(text);
           case AiReasoningDelta():
             break;
+          case AiCitationsResolved(:final content):
+            output
+              ..clear()
+              ..write(content);
           case AiResponseCompleted(usage: final responseUsage):
             completed = true;
             usage = responseUsage ?? usage;
@@ -1116,6 +1204,36 @@ List<AiToolCall> _toolCallsFrom(Map<String, Object?> input) {
             'Tool-call arguments must be an object.',
           ),
         );
+      }(),
+  ];
+}
+
+List<Map<String, Object?>> _citationResultsFrom(Map<String, Object?> input) {
+  final rawResults = input['results'];
+  if (rawResults is! List) {
+    throw const FormatException('Citation fixtures need a result list.');
+  }
+  if (rawResults.length > aiMaxCitationsPerMessage) {
+    throw const FormatException('Citation fixture result limit exceeded.');
+  }
+  return [
+    for (final raw in rawResults)
+      () {
+        final result = _object(raw, 'Every citation result must be an object.');
+        _requireExactKeys(result, const {
+          'title',
+          'url',
+          'snippet',
+          'publishedAt',
+        });
+        _string(result, 'title');
+        _string(result, 'url');
+        _string(result, 'snippet');
+        final publishedAt = result['publishedAt'];
+        if (publishedAt != null && publishedAt is! String) {
+          throw const FormatException('publishedAt must be text or null.');
+        }
+        return result;
       }(),
   ];
 }

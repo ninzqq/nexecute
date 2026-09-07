@@ -1,3 +1,4 @@
+import 'package:nexecute/ai/domain/ai_citation.dart';
 import 'package:nexecute/ai/domain/ai_diagnostic.dart';
 import 'package:nexecute/ai/domain/ai_tool.dart';
 
@@ -15,6 +16,16 @@ final class AiReasoningDelta extends AiStreamEvent {
   const AiReasoningDelta(this.text);
 
   final String text;
+}
+
+final class AiCitationsResolved extends AiStreamEvent {
+  AiCitationsResolved({
+    required this.content,
+    required List<AiCitation> citations,
+  }) : citations = List.unmodifiable(citations);
+
+  final String content;
+  final List<AiCitation> citations;
 }
 
 final class AiToolCallRequested extends AiStreamEvent {
