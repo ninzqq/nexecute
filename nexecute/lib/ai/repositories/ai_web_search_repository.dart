@@ -13,3 +13,9 @@ abstract interface class AiWebSearchRepository {
     AiWebSearchRequest request,
   );
 }
+
+final class AiWebSearchCancelledException implements Exception {
+  const AiWebSearchCancelledException([this.cause]);
+
+  final Object? cause;
+}

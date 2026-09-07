@@ -53,9 +53,10 @@ class _AssistantPageState extends State<AssistantPage> {
       conversationStore: context.read<AiConversationStore>(),
       skillStore: _skillStore,
       skillPreferencesStore: context.read<AiSkillPreferencesStore?>(),
-      readToolCoordinator: AiReadToolCoordinator(
+      readToolCoordinator: AiApplicationToolCoordinator(
         assistantRepository: assistantRepository,
         readService: _contextReadService,
+        webSearchRepository: _webSearchRepository,
       ),
     )..addListener(_onControllerChanged);
     final skillStore = _skillStore;

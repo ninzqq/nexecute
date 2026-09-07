@@ -37,6 +37,8 @@ export 'infrastructure/firestore_ai_conversation_store.dart';
 export 'infrastructure/flutter_secure_ai_credential_store.dart';
 export 'infrastructure/local_ai_skill_store_factory.dart';
 export 'infrastructure/ai_failure_diagnostics.dart';
+export 'infrastructure/ai_web_search_result_sanitizer.dart';
+export 'infrastructure/brave_ai_web_search_repository.dart';
 export 'infrastructure/open_ai_compatible_assistant_repository.dart';
 export 'infrastructure/routing_ai_assistant_repository.dart';
 export 'infrastructure/shared_preferences_ai_connection_profile_store.dart';

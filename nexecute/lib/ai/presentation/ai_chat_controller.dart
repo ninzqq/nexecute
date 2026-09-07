@@ -34,7 +34,7 @@ class AiChatController extends ChangeNotifier {
     AiSkillStore? skillStore,
     AiSkillPreferencesStore? skillPreferencesStore,
     AiPromptComposer promptComposer = const AiPromptComposer(),
-    AiReadToolCoordinator? readToolCoordinator,
+    AiApplicationToolCoordinator? readToolCoordinator,
     String Function()? idFactory,
     DateTime Function()? clock,
   }) : _assistantRepository = assistantRepository,
@@ -56,7 +56,7 @@ class AiChatController extends ChangeNotifier {
   final bool _skillStoreAvailable;
   final AiSkillPreferencesStore? _skillPreferencesStore;
   final AiPromptComposer _promptComposer;
-  final AiReadToolCoordinator? _readToolCoordinator;
+  final AiApplicationToolCoordinator? _readToolCoordinator;
   final String Function() _idFactory;
   final DateTime Function() _clock;
 
@@ -488,7 +488,7 @@ class AiChatController extends ChangeNotifier {
         isWeb: isWeb,
       );
       final handle =
-          _readToolCoordinator != null && readToolExecutionScope != null
+          _readToolCoordinator != null
               ? await _readToolCoordinator.startResponse(
                 request,
                 scope: readToolExecutionScope,

@@ -1474,9 +1474,9 @@ versioned quality run pass with the user's selected model.
 
 #### Step 15: authorized AI web search
 
-**Status:** In progress. Step 15A is implemented. The provider comparison,
-trust boundary, normalized search contract, citation model, and staged delivery
-plan are recorded in `docs/ai_web_search_integration.md`.
+**Status:** In progress. Steps 15A and 15B are implemented. The provider
+comparison, trust boundary, normalized search contract, citation model, and
+staged delivery plan are recorded in `docs/ai_web_search_integration.md`.
 
 ##### Step 15A: portable app-owned search boundary
 
@@ -1489,12 +1489,12 @@ plan are recorded in `docs/ai_web_search_integration.md`.
 
 ##### Step 15B: Brave Search pilot
 
-- [ ] Implement a fixed-endpoint Brave Search adapter with redacted diagnostics,
+- [x] Implement a fixed-endpoint Brave Search adapter with redacted diagnostics,
   SafeSearch, localization, freshness, cancellation, and rate-limit handling.
-- [ ] Generalize the read-tool coordinator to execute the normalized search tool
+- [x] Generalize the read-tool coordinator to execute the normalized search tool
   without weakening existing application-data authorization.
-- [ ] Treat titles and snippets as untrusted data and do not fetch result pages.
-- [ ] Accept only canonical public HTTPS result URLs; reject embedded
+- [x] Treat titles and snippets as untrusted data and do not fetch result pages.
+- [x] Accept only canonical public HTTPS result URLs; reject embedded
   credentials, private targets, unsafe schemes, and unresolved redirects.
 
 ##### Step 15C: citations and source interface

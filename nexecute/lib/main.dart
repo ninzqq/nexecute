@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -188,8 +189,19 @@ class NexecuteState extends State<Nexecute> {
           create: (_) => SharedPreferencesAiWebSearchConnectionProfileStore(),
           dispose: (_, store) => store.dispose(),
         ),
-        Provider<AiWebSearchRepository>.value(
-          value: const UnavailableAiWebSearchRepository(),
+        Provider<AiWebSearchRepository>(
+          create:
+              (context) =>
+                  kIsWeb
+                      ? const UnavailableAiWebSearchRepository()
+                      : BraveAiWebSearchRepository(
+                        credentialStore: context.read<AiCredentialStore>(),
+                      ),
+          dispose: (_, repository) {
+            if (repository is BraveAiWebSearchRepository) {
+              repository.dispose();
+            }
+          },
         ),
         Provider<AiSkillStore>(
           create: (_) => createLocalAiSkillStore(),

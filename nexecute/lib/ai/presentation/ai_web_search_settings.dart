@@ -233,6 +233,11 @@ final class _SearchProfileCard extends StatelessWidget {
               ),
             ],
           ),
+          if (canTest)
+            Text(
+              'Testing uses one Brave Search API request.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           if (result != null) Text(result!),
         ],
       ),
