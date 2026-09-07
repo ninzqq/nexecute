@@ -308,7 +308,10 @@ class _AiReadToolSession {
               call.name.length >
                   AiReadToolExecutionLimits.maxToolNameCharacters ||
               jsonEncode(call.arguments).length >
-                  AiReadToolExecutionLimits.maxArgumentCharacters,
+                  AiReadToolExecutionLimits.maxArgumentCharacters ||
+              (call.providerContext != null &&
+                  jsonEncode(call.providerContext).length >
+                      aiMaxToolProviderContextCharacters),
         )) {
       return _failure(
         'The endpoint returned invalid or excessive tool call data.',

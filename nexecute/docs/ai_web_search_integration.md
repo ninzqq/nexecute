@@ -184,6 +184,13 @@ list.
 4. Add transient query/tool status and final source cards with the citation UI
    in Phase C.
 
+For Gemini's OpenAI-compatible endpoint, preserve function-call
+`extra_content.google.thought_signature` unchanged in the transient assistant
+tool-call continuation. Gemini 3 requires this opaque signature when function
+calling continues. Do not expose it to tool executors or persist it with the
+conversation. Omit OpenAI strict-function extensions from Gemini requests and
+keep exact argument validation in Nexecute's application layer.
+
 ### Phase C: citations and persistence
 
 1. Add validated citation markers and `AiCitation` to normalized response and

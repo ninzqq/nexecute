@@ -12,6 +12,7 @@ import 'package:nexecute/ai/domain/ai_connection_profile.dart';
 import 'package:nexecute/ai/domain/ai_conversation.dart';
 import 'package:nexecute/ai/domain/ai_diagnostic.dart';
 import 'package:nexecute/ai/domain/ai_stream_event.dart';
+import 'package:nexecute/ai/domain/ai_tool.dart';
 import 'package:nexecute/ai/domain/ai_skill_invocation.dart';
 import 'package:nexecute/ai/domain/ai_web_search.dart';
 import 'package:nexecute/ai/repositories/ai_assistant_repository.dart';
@@ -427,6 +428,15 @@ class AiChatController extends ChangeNotifier {
         systemInstruction: _promptComposer.compose(
           profilePreferences: profile.systemPrompt,
           resolvedSkills: skills,
+          referenceLocalDateTime: _clock(),
+          webSearchAuthorized: _canUseWebSearch(
+            profile,
+            skills,
+            webSearchProfile: webSearchProfile,
+            webSearchAuthorization: webSearchAuthorization,
+            webSearchExecutorAvailable: webSearchExecutorAvailable,
+            isWeb: isWeb,
+          ),
         ),
         resolvedSkills: skills,
         applicationContext: applicationContext,
@@ -474,6 +484,15 @@ class AiChatController extends ChangeNotifier {
         systemInstruction: _promptComposer.compose(
           profilePreferences: profile.systemPrompt,
           resolvedSkills: resolvedSkills,
+          referenceLocalDateTime: _clock(),
+          webSearchAuthorized: _canUseWebSearch(
+            profile,
+            resolvedSkills,
+            webSearchProfile: webSearchProfile,
+            webSearchAuthorization: webSearchAuthorization,
+            webSearchExecutorAvailable: webSearchExecutorAvailable,
+            isWeb: isWeb,
+          ),
         ),
         resolvedSkills: resolvedSkills,
         messages: AiRequestBudget.history(requestMessages),
@@ -542,6 +561,30 @@ class AiChatController extends ChangeNotifier {
       );
       return false;
     }
+  }
+
+  bool _canUseWebSearch(
+    AiConnectionProfile profile,
+    List<AiResolvedSkillInvocation> skills, {
+    required AiWebSearchConnectionProfile? webSearchProfile,
+    required AiWebSearchAuthorization? webSearchAuthorization,
+    required bool webSearchExecutorAvailable,
+    required bool isWeb,
+  }) {
+    final skillAllowList =
+        skills.isEmpty
+            ? null
+            : {for (final skill in skills) ...skill.capabilities};
+    return AiWebSearchToolCatalog.definitionsFor(
+      modelProfile: profile,
+      executorAvailable:
+          webSearchExecutorAvailable &&
+          _readToolCoordinator?.webSearchAvailable == true,
+      searchProfile: webSearchProfile,
+      authorization: webSearchAuthorization,
+      skillAllowList: skillAllowList,
+      isWeb: isWeb,
+    ).isNotEmpty;
   }
 
   Future<List<AiResolvedSkillInvocation>> _resolveSkills(

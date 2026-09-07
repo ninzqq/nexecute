@@ -24,6 +24,8 @@ final class AiPromptComposer {
     required String profilePreferences,
     Iterable<AiResolvedSkillInvocation> resolvedSkills = const [],
     String? trustedWorkflowConstraints,
+    DateTime? referenceLocalDateTime,
+    bool webSearchAuthorized = false,
   }) {
     final skills =
         resolvedSkills.toList()
@@ -36,6 +38,21 @@ final class AiPromptComposer {
       sections.add(
         '[CONNECTION PROFILE PREFERENCES — USER AUTHORED]\n'
         'preferencesJson: ${jsonEncode(preferences)}',
+      );
+    }
+    if (referenceLocalDateTime != null) {
+      final local = referenceLocalDateTime.toLocal();
+      final offset = local.timeZoneOffset;
+      final sign = offset.isNegative ? '-' : '+';
+      final absoluteMinutes = offset.inMinutes.abs();
+      final hours = (absoluteMinutes ~/ 60).toString().padLeft(2, '0');
+      final minutes = (absoluteMinutes % 60).toString().padLeft(2, '0');
+      sections.add(
+        '[TRUSTED RUNTIME CONTEXT]\n'
+                'currentLocalDate: ${_date(local)}\n'
+                'utcOffset: $sign$hours:$minutes\n'
+                '${webSearchAuthorized ? _webSearchGuidance : ''}'
+            .trimRight(),
       );
     }
     for (final skill in skills) {
@@ -53,4 +70,16 @@ final class AiPromptComposer {
     }
     return sections.join('\n\n');
   }
+
+  static String _date(DateTime value) =>
+      '${value.year.toString().padLeft(4, '0')}-'
+      '${value.month.toString().padLeft(2, '0')}-'
+      '${value.day.toString().padLeft(2, '0')}';
+
+  static const _webSearchGuidance =
+      'webSearchAuthorized: true\n'
+      'Use searchWeb when the user asks to search, or when an answer depends '
+      'on current, recent, latest, or time-sensitive information. Base date '
+      'ranges on currentLocalDate. Do not substitute model memory for an '
+      'authorized search. If search returns no usable results, say so.';
 }

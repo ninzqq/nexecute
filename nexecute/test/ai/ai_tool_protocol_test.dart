@@ -104,10 +104,14 @@ void main() {
 
   test('tool calls and continuation messages expose immutable snapshots', () {
     final sourceArguments = <String, Object?>{'limit': 5};
+    final sourceProviderContext = <String, Object?>{
+      'google': <String, Object?>{'thought_signature': 'opaque'},
+    };
     final call = AiToolCall(
       id: 'call-1',
       name: AiReadToolNames.listTasks,
       arguments: sourceArguments,
+      providerContext: sourceProviderContext,
     );
     final sourceCalls = <AiToolCall>[call];
     final assistant = AiAssistantToolCallMessage(calls: sourceCalls);
@@ -119,13 +123,21 @@ void main() {
     );
 
     sourceArguments['limit'] = 10;
+    (sourceProviderContext['google']! as Map<String, Object?>).clear();
     sourceCalls.clear();
     sourceResult['unexpected'] = true;
 
     expect(call.arguments, {'limit': 5});
+    expect(call.providerContext, {
+      'google': {'thought_signature': 'opaque'},
+    });
     expect(assistant.calls, [same(call)]);
     expect(result.result, {'items': <Object?>[]});
     expect(() => call.arguments.clear(), throwsUnsupportedError);
+    expect(
+      () => (call.providerContext!['google']! as Map).clear(),
+      throwsUnsupportedError,
+    );
     expect(() => assistant.calls.clear(), throwsUnsupportedError);
     expect(() => result.result.clear(), throwsUnsupportedError);
     expect(

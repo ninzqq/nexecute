@@ -1,8 +1,8 @@
-import 'package:nexecute/ai/application/ai_request_budget.dart';
 import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:nexecute/ai/application/ai_request_budget.dart';
 import 'package:nexecute/ai/domain/ai_chat_message.dart';
 import 'package:nexecute/ai/domain/ai_chat_request.dart';
 import 'package:nexecute/ai/domain/ai_connection_profile.dart';
@@ -10,6 +10,7 @@ import 'package:nexecute/ai/domain/ai_connection_result.dart';
 import 'package:nexecute/ai/domain/ai_diagnostic.dart';
 import 'package:nexecute/ai/domain/ai_model_info.dart';
 import 'package:nexecute/ai/domain/ai_protocol.dart';
+import 'package:nexecute/ai/domain/ai_provider.dart';
 import 'package:nexecute/ai/domain/ai_stream_event.dart';
 import 'package:nexecute/ai/domain/ai_tool.dart';
 import 'package:nexecute/ai/infrastructure/ai_failure_diagnostics.dart';
@@ -250,7 +251,8 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
       ],
       if (toolDefinitions.isNotEmpty) ...{
         'tools': [
-          for (final tool in toolDefinitions) _toolDefinitionJson(tool),
+          for (final tool in toolDefinitions)
+            _toolDefinitionJson(tool, profile.providerKind),
         ],
         'tool_choice': 'auto',
       },
@@ -497,15 +499,29 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
     return result;
   }
 
-  static Map<String, Object?> _toolDefinitionJson(AiToolDefinition tool) => {
+  static Map<String, Object?> _toolDefinitionJson(
+    AiToolDefinition tool,
+    AiProviderKind providerKind,
+  ) => {
     'type': 'function',
     'function': {
       'name': tool.name,
       'description': tool.description,
-      'parameters': tool.parameters.toJson(),
-      'strict': true,
+      'parameters': _toolParametersJson(tool, providerKind),
+      if (providerKind != AiProviderKind.googleGemini) 'strict': true,
     },
   };
+
+  static Map<String, Object?> _toolParametersJson(
+    AiToolDefinition tool,
+    AiProviderKind providerKind,
+  ) {
+    final parameters = Map<String, Object?>.of(tool.parameters.toJson());
+    if (providerKind == AiProviderKind.googleGemini) {
+      parameters.remove('additionalProperties');
+    }
+    return parameters;
+  }
 
   static Map<String, Object?> _continuationMessageJson(
     AiToolContinuationMessage message,
@@ -518,6 +534,8 @@ class OpenAiCompatibleAssistantRepository implements AiAssistantRepository {
           {
             'id': call.id,
             'type': 'function',
+            if (call.providerContext != null)
+              'extra_content': call.providerContext,
             'function': {
               'name': call.name,
               'arguments': jsonEncode(call.arguments),
@@ -675,6 +693,7 @@ void _collectToolCallFragments(
       throw const FormatException('unsupported tool call type');
     }
     accumulator.appendId(fragment['id']);
+    accumulator.appendProviderContext(fragment['extra_content']);
     final function = fragment['function'];
     if (function != null) {
       if (function is! Map) {
@@ -700,6 +719,7 @@ class _OpenAiToolCallAccumulator {
   String _id = '';
   String _name = '';
   final StringBuffer _arguments = StringBuffer();
+  Map<String, Object?>? _providerContext;
 
   void appendId(Object? value) {
     if (value == null) return;
@@ -729,6 +749,27 @@ class _OpenAiToolCallAccumulator {
     _arguments.write(value);
   }
 
+  void appendProviderContext(Object? value) {
+    if (value == null) return;
+    if (value is! Map) {
+      throw const FormatException('invalid provider tool context');
+    }
+    final encoded = jsonEncode(value);
+    if (encoded.length > aiMaxToolProviderContextCharacters) {
+      throw const FormatException('provider tool context is too large');
+    }
+    final decoded = jsonDecode(encoded);
+    if (decoded is! Map<String, dynamic>) {
+      throw const FormatException('invalid provider tool context');
+    }
+    final context = Map<String, Object?>.from(decoded);
+    if (_providerContext == null) {
+      _providerContext = context;
+    } else if (jsonEncode(_providerContext) != encoded) {
+      throw const FormatException('conflicting provider tool context');
+    }
+  }
+
   AiToolCall complete() {
     if (_id.trim().isEmpty || _name.trim().isEmpty) {
       throw const FormatException('incomplete tool call');
@@ -747,7 +788,12 @@ class _OpenAiToolCallAccumulator {
       }
       arguments[entry.key as String] = entry.value;
     }
-    return AiToolCall(id: _id, name: _name, arguments: arguments);
+    return AiToolCall(
+      id: _id,
+      name: _name,
+      arguments: arguments,
+      providerContext: _providerContext,
+    );
   }
 }
 

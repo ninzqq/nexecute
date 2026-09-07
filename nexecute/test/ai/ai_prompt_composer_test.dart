@@ -63,6 +63,20 @@ void main() {
     expect(composed, startsWith('[IMMUTABLE NEXECUTE POLICY]'));
     expect(composed, isNot(contains('CONNECTION PROFILE PREFERENCES')));
   });
+
+  test('supplies the current date and directs authorized current searches', () {
+    final composed = const AiPromptComposer().compose(
+      profilePreferences: '',
+      referenceLocalDateTime: DateTime(2026, 9, 7, 12),
+      webSearchAuthorized: true,
+    );
+
+    expect(composed, contains('[TRUSTED RUNTIME CONTEXT]'));
+    expect(composed, contains('currentLocalDate: 2026-09-07'));
+    expect(composed, contains('webSearchAuthorized: true'));
+    expect(composed, contains('Use searchWeb'));
+    expect(composed, contains('Do not substitute model memory'));
+  });
 }
 
 AiSkill _skill(String id, String name, String instructions) => AiSkill(

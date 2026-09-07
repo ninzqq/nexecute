@@ -55,95 +55,104 @@ void main() {
     },
   );
 
-  test(
-    'normalizes Gemini tool calls and serializes their continuation',
-    () async {
-      final bodies = <Map<String, dynamic>>[];
-      var requestIndex = 0;
-      final repository = OpenAiCompatibleAssistantRepository(
-        credentialStore: const _CredentialStore(),
-        client: MockClient((request) async {
-          bodies.add(jsonDecode(request.body) as Map<String, dynamic>);
-          if (requestIndex++ == 0) {
-            return http.Response(
-              [
-                'data: ${jsonEncode({
-                  'choices': [
-                    {
-                      'delta': {
-                        'tool_calls': [
-                          {
-                            'index': 0,
-                            'id': 'gemini-call-1',
-                            'type': 'function',
-                            'function': {'name': AiReadToolNames.listTasks, 'arguments': '{"limit":5}'},
+  test('normalizes Gemini tool calls and serializes their continuation', () async {
+    final bodies = <Map<String, dynamic>>[];
+    var requestIndex = 0;
+    final repository = OpenAiCompatibleAssistantRepository(
+      credentialStore: const _CredentialStore(),
+      client: MockClient((request) async {
+        bodies.add(jsonDecode(request.body) as Map<String, dynamic>);
+        if (requestIndex++ == 0) {
+          return http.Response(
+            [
+              'data: ${jsonEncode({
+                'choices': [
+                  {
+                    'delta': {
+                      'tool_calls': [
+                        {
+                          'index': 0,
+                          'id': 'gemini-call-1',
+                          'type': 'function',
+                          'extra_content': {
+                            'google': {'thought_signature': 'opaque-signature'},
                           },
-                        ],
-                      },
-                      'finish_reason': 'tool_calls',
+                          'function': {'name': AiReadToolNames.listTasks, 'arguments': '{"limit":5}'},
+                        },
+                      ],
                     },
-                  ],
-                })}',
-                '',
-                'data: [DONE]',
-                '',
-              ].join('\n'),
-              200,
-              headers: {'content-type': 'text/event-stream'},
-            );
-          }
-          return _streamResponse('Sinulla ei ole avoimia tehtäviä.');
-        }),
-      );
-      addTearDown(repository.dispose);
-      final toolProfile = _profile().copyWith(
-        capabilityOverrides: const {AiCapability.tools: true},
-      );
-      final authorization = AiReadToolAuthorization(allowActiveTasks: true);
-      final firstHandle = await repository.startResponse(
-        _request(profile: toolProfile, authorization: authorization),
-      );
-      final firstEvents = await firstHandle.events.toList();
-      final call = firstEvents.whereType<AiToolCallRequested>().single.call;
+                    'finish_reason': 'tool_calls',
+                  },
+                ],
+              })}',
+              '',
+              'data: [DONE]',
+              '',
+            ].join('\n'),
+            200,
+            headers: {'content-type': 'text/event-stream'},
+          );
+        }
+        return _streamResponse('Sinulla ei ole avoimia tehtäviä.');
+      }),
+    );
+    addTearDown(repository.dispose);
+    final toolProfile = _profile().copyWith(
+      capabilityOverrides: const {AiCapability.tools: true},
+    );
+    final authorization = AiReadToolAuthorization(allowActiveTasks: true);
+    final firstHandle = await repository.startResponse(
+      _request(profile: toolProfile, authorization: authorization),
+    );
+    final firstEvents = await firstHandle.events.toList();
+    final call = firstEvents.whereType<AiToolCallRequested>().single.call;
 
-      final secondHandle = await repository.startResponse(
-        _request(
-          profile: toolProfile,
-          authorization: authorization,
-          continuationMessages: [
-            AiAssistantToolCallMessage(calls: [call]),
-            AiToolResultMessage(
-              toolCallId: call.id,
-              toolName: call.name,
-              result: const {'items': <Object?>[]},
-            ),
-          ],
-        ),
-      );
-      final secondEvents = await secondHandle.events.toList();
+    final secondHandle = await repository.startResponse(
+      _request(
+        profile: toolProfile,
+        authorization: authorization,
+        continuationMessages: [
+          AiAssistantToolCallMessage(calls: [call]),
+          AiToolResultMessage(
+            toolCallId: call.id,
+            toolName: call.name,
+            result: const {'items': <Object?>[]},
+          ),
+        ],
+      ),
+    );
+    final secondEvents = await secondHandle.events.toList();
 
-      expect(call.name, AiReadToolNames.listTasks);
-      expect(call.arguments, {'limit': 5});
-      expect(bodies.first['tools'], isNotEmpty);
-      final messages = bodies.last['messages'] as List<dynamic>;
-      expect(messages[messages.length - 2]['role'], 'assistant');
-      expect(messages.last['role'], 'tool');
-      expect(messages.last['tool_call_id'], call.id);
-      final secondFailure =
-          secondEvents.whereType<AiResponseFailed>().firstOrNull;
-      expect(
-        secondFailure,
-        isNull,
-        reason:
-            '${secondFailure?.code}: ${secondFailure?.message}; '
-            '${secondFailure?.error}',
-      );
-      expect(
-        secondEvents.whereType<AiTextDelta>().single.text,
-        'Sinulla ei ole avoimia tehtäviä.',
-      );
-    },
-  );
+    expect(call.name, AiReadToolNames.listTasks);
+    expect(call.arguments, {'limit': 5});
+    expect(bodies.first['tools'], isNotEmpty);
+    final function = bodies.first['tools'].single['function'] as Map;
+    expect(function, isNot(contains('strict')));
+    expect(function['parameters'], isNot(contains('additionalProperties')));
+    final messages = bodies.last['messages'] as List<dynamic>;
+    expect(messages[messages.length - 2]['role'], 'assistant');
+    expect(
+      messages[messages.length - 2]['tool_calls'].single['extra_content'],
+      {
+        'google': {'thought_signature': 'opaque-signature'},
+      },
+    );
+    expect(messages.last['role'], 'tool');
+    expect(messages.last['tool_call_id'], call.id);
+    final secondFailure =
+        secondEvents.whereType<AiResponseFailed>().firstOrNull;
+    expect(
+      secondFailure,
+      isNull,
+      reason:
+          '${secondFailure?.code}: ${secondFailure?.message}; '
+          '${secondFailure?.error}',
+    );
+    expect(
+      secondEvents.whereType<AiTextDelta>().single.text,
+      'Sinulla ei ole avoimia tehtäviä.',
+    );
+  });
 
   test('cancels an in-flight Gemini request', () async {
     final requestStarted = Completer<void>();

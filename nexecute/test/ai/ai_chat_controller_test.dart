@@ -597,6 +597,7 @@ void main() {
         assistantRepository: assistant,
         webSearchRepository: search,
       ),
+      clock: () => DateTime(2026, 9, 7, 12),
     );
     addTearDown(controller.dispose);
     await controller.initialize();
@@ -616,6 +617,14 @@ void main() {
     final answer = saved.messages.last;
     expect(answer.content, 'Answer [1].');
     expect(answer.citations.single.title, 'Public title');
+    expect(
+      assistant.startedRequests.first.systemInstruction,
+      contains('currentLocalDate: 2026-09-07'),
+    );
+    expect(
+      assistant.startedRequests.first.systemInstruction,
+      contains('Use searchWeb'),
+    );
     final persistedShape = AiConversationDocumentMapper.messageToMap(answer);
     expect(
       persistedShape.toString(),
