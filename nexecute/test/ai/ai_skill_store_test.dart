@@ -65,7 +65,7 @@ void main() {
           (await reopened.getSkills()).single.contentHash,
           legacy.contentHash,
         );
-        expect(jsonDecode(await index.readAsString())['schemaVersion'], 3);
+        expect(jsonDecode(await index.readAsString())['schemaVersion'], 4);
         expect((await reopened.getSkill('legacy'))!.instructions, 'Original');
         expect(
           (await reopened.getSkill('legacy'))!.contentHash,
@@ -75,7 +75,7 @@ void main() {
     );
 
     test(
-      'migrates category-aware v2 and persists v3 capability hashes',
+      'migrates category-aware v2 and persists capability hashes',
       () async {
         final previous = AiSkill(
           schemaVersion: 2,
@@ -118,6 +118,35 @@ void main() {
         );
       },
     );
+
+    test('migrates a v3 index without changing pinned skill hashes', () async {
+      final skill = AiSkill(
+        schemaVersion: 3,
+        id: 'read-only',
+        name: 'Read only',
+        description: 'Uses a schema 3 capability.',
+        instructions: 'List authorized tasks.',
+        capabilities: const {'listTasks'},
+        createdAt: DateTime.utc(2026),
+        updatedAt: DateTime.utc(2026),
+      );
+      final first = createStore();
+      await first.saveSkill(skill);
+      first.dispose();
+      final index = File(path.join(directory.path, 'index.v1.json'));
+      final decoded =
+          jsonDecode(await index.readAsString()) as Map<String, dynamic>;
+      decoded['schemaVersion'] = 3;
+      await index.writeAsString(jsonEncode(decoded));
+
+      final reopened = createStore();
+      addTearDown(reopened.dispose);
+      final restored = await reopened.getSkill(skill.id);
+
+      expect(restored?.schemaVersion, 3);
+      expect(restored?.contentHash, skill.contentHash);
+      expect(jsonDecode(await index.readAsString())['schemaVersion'], 4);
+    });
 
     test(
       'persists searchable metadata separately from immutable bodies',

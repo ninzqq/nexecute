@@ -13,6 +13,7 @@ import 'package:nexecute/ai/domain/ai_conversation.dart';
 import 'package:nexecute/ai/domain/ai_diagnostic.dart';
 import 'package:nexecute/ai/domain/ai_stream_event.dart';
 import 'package:nexecute/ai/domain/ai_skill_invocation.dart';
+import 'package:nexecute/ai/domain/ai_web_search.dart';
 import 'package:nexecute/ai/repositories/ai_assistant_repository.dart';
 import 'package:nexecute/ai/repositories/ai_connection_profile_store.dart';
 import 'package:nexecute/ai/repositories/ai_conversation_store.dart';
@@ -221,6 +222,10 @@ class AiChatController extends ChangeNotifier {
     String rawText, {
     AiApplicationContextEnvelope? applicationContext,
     AiReadToolExecutionScope? readToolExecutionScope,
+    AiWebSearchConnectionProfile? webSearchProfile,
+    AiWebSearchAuthorization? webSearchAuthorization,
+    bool webSearchExecutorAvailable = false,
+    bool isWeb = false,
     AiSkillMismatchAction skillMismatchAction = AiSkillMismatchAction.block,
   }) async {
     final text = rawText.trim();
@@ -252,6 +257,10 @@ class AiChatController extends ChangeNotifier {
         resolvedSkills,
         applicationContext: applicationContext,
         readToolExecutionScope: readToolExecutionScope,
+        webSearchProfile: webSearchProfile,
+        webSearchAuthorization: webSearchAuthorization,
+        webSearchExecutorAvailable: webSearchExecutorAvailable,
+        isWeb: isWeb,
       );
       _nextRequestSkills = null;
       var current = conversation;
@@ -314,6 +323,10 @@ class AiChatController extends ChangeNotifier {
         requestMessages,
         applicationContext: applicationContext,
         readToolExecutionScope: readToolExecutionScope,
+        webSearchProfile: webSearchProfile,
+        webSearchAuthorization: webSearchAuthorization,
+        webSearchExecutorAvailable: webSearchExecutorAvailable,
+        isWeb: isWeb,
         resolvedSkills: resolvedSkills,
       );
     } on AiSkillResolutionException catch (error) {
@@ -401,6 +414,10 @@ class AiChatController extends ChangeNotifier {
     List<AiResolvedSkillInvocation> skills, {
     AiApplicationContextEnvelope? applicationContext,
     AiReadToolExecutionScope? readToolExecutionScope,
+    AiWebSearchConnectionProfile? webSearchProfile,
+    AiWebSearchAuthorization? webSearchAuthorization,
+    bool webSearchExecutorAvailable = false,
+    bool isWeb = false,
   }) {
     AiRequestBudget.validate(
       AiChatRequest(
@@ -417,6 +434,10 @@ class AiChatController extends ChangeNotifier {
             _readToolCoordinator == null
                 ? null
                 : readToolExecutionScope?.authorization,
+        webSearchProfile: webSearchProfile,
+        webSearchAuthorization: webSearchAuthorization,
+        webSearchExecutorAvailable: webSearchExecutorAvailable,
+        isWeb: isWeb,
       ),
     );
   }
@@ -426,6 +447,10 @@ class AiChatController extends ChangeNotifier {
     List<AiChatMessage> requestMessages, {
     AiApplicationContextEnvelope? applicationContext,
     AiReadToolExecutionScope? readToolExecutionScope,
+    AiWebSearchConnectionProfile? webSearchProfile,
+    AiWebSearchAuthorization? webSearchAuthorization,
+    bool webSearchExecutorAvailable = false,
+    bool isWeb = false,
     List<AiResolvedSkillInvocation> resolvedSkills = const [],
   }) async {
     final current = conversation;
@@ -457,6 +482,10 @@ class AiChatController extends ChangeNotifier {
             _readToolCoordinator == null
                 ? null
                 : readToolExecutionScope?.authorization,
+        webSearchProfile: webSearchProfile,
+        webSearchAuthorization: webSearchAuthorization,
+        webSearchExecutorAvailable: webSearchExecutorAvailable,
+        isWeb: isWeb,
       );
       final handle =
           _readToolCoordinator != null && readToolExecutionScope != null

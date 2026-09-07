@@ -2,6 +2,13 @@
 
 ## Status and objective
 
+Step 15A is implemented. The provider-neutral profiles, repository contract,
+secure credential-reference lifecycle, schema 4 `searchWeb` declaration,
+bounded tool definition, and one-request composer authorization are in place.
+The application currently installs an unavailable search repository, so no
+search tool is exposed and no network request can occur until the Step 15B
+Brave executor is installed.
+
 This document defines a provider-neutral way for Nexecute skills and ordinary
 assistant conversations to search the public web. The first implementation
 should work with both local models and hosted models without allowing an

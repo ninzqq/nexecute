@@ -772,6 +772,69 @@ void main() {
       expect(find.textContaining(current.instructions), findsNothing);
     },
   );
+
+  testWidgets('web-search permission applies to one request only', (
+    tester,
+  ) async {
+    final profile = AiConnectionProfile(
+      id: 'model',
+      name: 'Tool model',
+      protocol: AiProtocol.openAiCompatibleChat,
+      baseUrl: Uri.parse('https://ai.example.test/v1'),
+      modelId: 'tool-model',
+      capabilityOverrides: const {AiCapability.tools: true},
+    );
+    final searchProfile = AiWebSearchConnectionProfile(
+      id: 'brave',
+      name: 'Brave Search',
+      providerKind: AiWebSearchProviderKind.brave,
+      baseUrl: AiWebSearchProviderCatalog.brave.trustedBaseUri!,
+      enabled: true,
+      credentialReference: 'secure-storage:brave',
+    );
+    final profileStore = FakeAiConnectionProfileStore(
+      profiles: [profile],
+      activeProfileId: profile.id,
+    );
+    final searchProfiles = InMemoryAiWebSearchConnectionProfileStore(
+      profiles: [searchProfile],
+      activeProfileId: searchProfile.id,
+    );
+    final conversations = FakeAiConversationStore();
+    final repository = FakeAiAssistantRepository();
+    addTearDown(profileStore.dispose);
+    addTearDown(searchProfiles.dispose);
+    addTearDown(conversations.dispose);
+
+    await tester.pumpWidget(
+      _app(
+        assistantRepository: repository,
+        profileStore: profileStore,
+        conversationStore: conversations,
+        webSearchProfileStore: searchProfiles,
+        webSearchRepository: const _AvailableWebSearchRepository(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final toggle = find.byKey(const Key('assistant-allow-web-search'));
+    expect(toggle, findsOneWidget);
+    await tester.tap(toggle);
+    await tester.enterText(
+      find.byKey(const Key('assistant-composer')),
+      'What happened today?',
+    );
+    await tester.tap(find.byKey(const Key('assistant-send')));
+    await tester.pumpAndSettle();
+
+    final request = repository.startedRequests.single;
+    expect(request.webSearchAuthorization?.connectionProfileId, 'brave');
+    expect(
+      request.toolDefinitions.map((definition) => definition.name),
+      contains(AiWebSearchToolNames.searchWeb),
+    );
+    expect(tester.widget<Switch>(toggle).value, isFalse);
+  });
 }
 
 Widget _app({
@@ -781,6 +844,8 @@ Widget _app({
   AiApplicationContextReadService? contextReadService,
   AiSkillStore? skillStore,
   AiSkillPreferencesStore? skillPreferencesStore,
+  AiWebSearchConnectionProfileStore? webSearchProfileStore,
+  AiWebSearchRepository? webSearchRepository,
   ThemeData? theme,
 }) {
   return MultiProvider(
@@ -791,6 +856,12 @@ Widget _app({
       if (skillStore != null) Provider<AiSkillStore>.value(value: skillStore),
       if (skillPreferencesStore != null)
         Provider<AiSkillPreferencesStore>.value(value: skillPreferencesStore),
+      if (webSearchProfileStore != null)
+        Provider<AiWebSearchConnectionProfileStore>.value(
+          value: webSearchProfileStore,
+        ),
+      if (webSearchRepository != null)
+        Provider<AiWebSearchRepository>.value(value: webSearchRepository),
       Provider<AiApplicationContextReadService>(
         create:
             (_) => contextReadService ?? FakeAiApplicationContextReadService(),
@@ -802,6 +873,24 @@ Widget _app({
       home: const AssistantPage(),
     ),
   );
+}
+
+final class _AvailableWebSearchRepository implements AiWebSearchRepository {
+  const _AvailableWebSearchRepository();
+
+  @override
+  bool get isAvailable => true;
+
+  @override
+  Future<AiWebSearchResponseHandle> startSearch(
+    AiWebSearchConnectionProfile profile,
+    AiWebSearchRequest request,
+  ) => throw UnimplementedError();
+
+  @override
+  Future<AiConnectionResult> testConnection(
+    AiWebSearchConnectionProfile profile,
+  ) async => const AiConnectionResult.connected();
 }
 
 AiSkill _skill(String id, String instructions) => AiSkill(

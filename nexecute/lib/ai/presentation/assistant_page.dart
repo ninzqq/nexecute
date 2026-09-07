@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:nexecute/ai/ai.dart';
 import 'package:nexecute/domain/calendar/calendar_query_range.dart';
@@ -27,6 +28,11 @@ class _AssistantPageState extends State<AssistantPage> {
   final Map<String, AiApplicationContextEnvelope> _noteContexts = {};
   AiSkillStore? _skillStore;
   StreamSubscription<List<AiSkillMetadata>>? _skillSubscription;
+  StreamSubscription<AiWebSearchConnectionProfile?>?
+  _webSearchProfileSubscription;
+  AiWebSearchRepository? _webSearchRepository;
+  AiWebSearchConnectionProfile? _webSearchProfile;
+  bool _allowWebSearchForNextRequest = false;
   List<AiSkillMetadata> _skillCatalog = const [];
   Object? _skillCatalogError;
   AiApplicationContextEnvelope? _taskContext;
@@ -40,6 +46,7 @@ class _AssistantPageState extends State<AssistantPage> {
     _contextReadService = context.read<AiApplicationContextReadService>();
     final assistantRepository = context.read<AiAssistantRepository>();
     _skillStore = context.read<AiSkillStore?>();
+    _webSearchRepository = context.read<AiWebSearchRepository?>();
     _controller = AiChatController(
       assistantRepository: assistantRepository,
       connectionProfileStore: context.read<AiConnectionProfileStore>(),
@@ -67,6 +74,30 @@ class _AssistantPageState extends State<AssistantPage> {
         },
       );
     }
+    final webSearchProfileStore =
+        context.read<AiWebSearchConnectionProfileStore?>();
+    if (webSearchProfileStore != null) {
+      _webSearchProfileSubscription = webSearchProfileStore
+          .watchActiveProfile()
+          .listen(
+            (profile) {
+              if (!mounted) return;
+              setState(() {
+                _webSearchProfile = profile;
+                if (!_canAuthorizeWebSearch) {
+                  _allowWebSearchForNextRequest = false;
+                }
+              });
+            },
+            onError: (_) {
+              if (!mounted) return;
+              setState(() {
+                _webSearchProfile = null;
+                _allowWebSearchForNextRequest = false;
+              });
+            },
+          );
+    }
     unawaited(_controller.initialize());
   }
 
@@ -75,6 +106,7 @@ class _AssistantPageState extends State<AssistantPage> {
     _controller.removeListener(_onControllerChanged);
     _controller.dispose();
     unawaited(_skillSubscription?.cancel());
+    unawaited(_webSearchProfileSubscription?.cancel());
     _composerController.dispose();
     _composerFocusNode.dispose();
     _scrollController.dispose();
@@ -138,6 +170,16 @@ class _AssistantPageState extends State<AssistantPage> {
                 onClear: _clearSkills,
                 onPreview: _showInstructionPreview,
               ),
+              if (_webSearchProfile case final searchProfile?)
+                _WebSearchAuthorizationBar(
+                  profile: searchProfile,
+                  selected: _allowWebSearchForNextRequest,
+                  enabled: _canAuthorizeWebSearch,
+                  unavailableReason: _webSearchUnavailableReason,
+                  onChanged:
+                      (value) =>
+                          setState(() => _allowWebSearchForNextRequest = value),
+                ),
               _Composer(
                 controller: _composerController,
                 focusNode: _composerFocusNode,
@@ -327,11 +369,21 @@ class _AssistantPageState extends State<AssistantPage> {
 
   Future<void> _send(String text) async {
     if (text.trim().isEmpty) return;
+    final webSearchProfile = _webSearchProfile;
+    final webSearchAuthorization =
+        _allowWebSearchForNextRequest && webSearchProfile != null
+            ? AiWebSearchAuthorization(connectionProfileId: webSearchProfile.id)
+            : null;
     _composerController.clear();
+    setState(() => _allowWebSearchForNextRequest = false);
     final sent = await _controller.send(
       text,
       applicationContext: _applicationContext,
       readToolExecutionScope: _readToolExecutionScope,
+      webSearchProfile: webSearchProfile,
+      webSearchAuthorization: webSearchAuthorization,
+      webSearchExecutorAvailable: _webSearchRepository?.isAvailable == true,
+      isWeb: kIsWeb,
     );
     if (!mounted) return;
     if (sent) {
@@ -343,11 +395,19 @@ class _AssistantPageState extends State<AssistantPage> {
     }
     if (_controller.skillResolutionError != null) {
       _composerController.text = text;
-      await _showSkillRecovery(text);
+      await _showSkillRecovery(
+        text,
+        webSearchProfile: webSearchProfile,
+        webSearchAuthorization: webSearchAuthorization,
+      );
     }
   }
 
-  Future<void> _showSkillRecovery(String text) async {
+  Future<void> _showSkillRecovery(
+    String text, {
+    AiWebSearchConnectionProfile? webSearchProfile,
+    AiWebSearchAuthorization? webSearchAuthorization,
+  }) async {
     final failure = _controller.skillResolutionError;
     if (failure == null || !mounted) return;
     final action = await showDialog<_SkillRecoveryAction>(
@@ -401,6 +461,10 @@ class _AssistantPageState extends State<AssistantPage> {
           text,
           applicationContext: _applicationContext,
           readToolExecutionScope: _readToolExecutionScope,
+          webSearchProfile: webSearchProfile,
+          webSearchAuthorization: webSearchAuthorization,
+          webSearchExecutorAvailable: _webSearchRepository?.isAvailable == true,
+          isWeb: kIsWeb,
           skillMismatchAction: AiSkillMismatchAction.continueWithoutSkills,
         );
         if (!mounted) return;
@@ -412,6 +476,46 @@ class _AssistantPageState extends State<AssistantPage> {
       case null:
         return;
     }
+  }
+
+  bool get _activeSkillsAllowWebSearch {
+    final references = _controller.effectiveSkills;
+    if (references.isEmpty) return true;
+    final byId = {for (final skill in _skillCatalog) skill.id: skill};
+    return references.any(
+      (reference) =>
+          byId[reference.id]?.capabilities.contains('searchWeb') == true,
+    );
+  }
+
+  bool get _canAuthorizeWebSearch {
+    final modelProfile = _controller.activeProfile;
+    final searchProfile = _webSearchProfile;
+    return _webSearchRepository?.isAvailable == true &&
+        modelProfile?.capabilityState(AiCapability.tools) ==
+            AiCapabilityState.confirmedSupported &&
+        searchProfile != null &&
+        searchProfile.canSendRequests(isWeb: kIsWeb) &&
+        _activeSkillsAllowWebSearch;
+  }
+
+  String? get _webSearchUnavailableReason {
+    if (_webSearchRepository?.isAvailable != true) {
+      return 'Search execution is not installed yet.';
+    }
+    if (_controller.activeProfile?.capabilityState(AiCapability.tools) !=
+        AiCapabilityState.confirmedSupported) {
+      return 'Confirm function-tool support for the active AI model first.';
+    }
+    if (_webSearchProfile?.canSendRequests(isWeb: kIsWeb) != true) {
+      return kIsWeb
+          ? 'Web search with reusable credentials is unavailable in the web app.'
+          : 'Enable and complete the selected search connection first.';
+    }
+    if (!_activeSkillsAllowWebSearch) {
+      return 'The active skill does not declare web-search access.';
+    }
+    return null;
   }
 
   Future<void> _showSkillPicker() async {
@@ -856,6 +960,50 @@ class _Composer extends StatelessWidget {
       ),
     );
   }
+}
+
+final class _WebSearchAuthorizationBar extends StatelessWidget {
+  const _WebSearchAuthorizationBar({
+    required this.profile,
+    required this.selected,
+    required this.enabled,
+    required this.unavailableReason,
+    required this.onChanged,
+  });
+
+  final AiWebSearchConnectionProfile profile;
+  final bool selected;
+  final bool enabled;
+  final String? unavailableReason;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Theme.of(context).colorScheme.surfaceContainerLow,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Tooltip(
+              message:
+                  unavailableReason ??
+                  'The query will be sent to ${profile.provider.label}.',
+              child: Text(
+                'Allow web search for this request · ${profile.provider.label}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          ),
+          Switch.adaptive(
+            key: const Key('assistant-allow-web-search'),
+            value: selected,
+            onChanged: enabled ? onChanged : null,
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 enum _SkillRecoveryAction { review, continueWithoutSkills }

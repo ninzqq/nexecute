@@ -56,10 +56,10 @@ void main() {
       );
       expect(request(profile, {}, authorization).toolDefinitions, isEmpty);
       expect(() => skill({'deleteNote'}), throwsFormatException);
-      expect(
-        AiReadCapabilityRegistry.registrations.keys.toSet(),
-        aiSkillCapabilityIds,
-      );
+      expect({
+        ...AiReadCapabilityRegistry.registrations.keys,
+        AiWebSearchToolNames.searchWeb,
+      }, aiSkillCapabilityIds);
     },
   );
 

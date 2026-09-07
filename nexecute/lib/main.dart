@@ -184,6 +184,13 @@ class NexecuteState extends State<Nexecute> {
           create: (_) => SharedPreferencesAiConnectionProfileStore(),
           dispose: (_, store) => store.dispose(),
         ),
+        Provider<AiWebSearchConnectionProfileStore>(
+          create: (_) => SharedPreferencesAiWebSearchConnectionProfileStore(),
+          dispose: (_, store) => store.dispose(),
+        ),
+        Provider<AiWebSearchRepository>.value(
+          value: const UnavailableAiWebSearchRepository(),
+        ),
         Provider<AiSkillStore>(
           create: (_) => createLocalAiSkillStore(),
           dispose: (_, store) => store.dispose(),

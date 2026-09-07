@@ -458,6 +458,10 @@ class _AiReadToolSession {
     systemInstruction: request.systemInstruction,
     applicationContext: request.applicationContext,
     readToolAuthorization: _currentAuthorization(),
+    webSearchProfile: request.webSearchProfile,
+    webSearchAuthorization: request.webSearchAuthorization,
+    webSearchExecutorAvailable: request.webSearchExecutorAvailable,
+    isWeb: request.isWeb,
     resolvedSkills: request.resolvedSkills,
     continuationMessages: continuationMessages,
   );
@@ -520,6 +524,10 @@ AiChatRequest _withoutTools(AiChatRequest request) => AiChatRequest(
   messages: request.messages,
   systemInstruction: request.systemInstruction,
   applicationContext: request.applicationContext,
+  webSearchProfile: request.webSearchProfile,
+  webSearchAuthorization: request.webSearchAuthorization,
+  webSearchExecutorAvailable: request.webSearchExecutorAvailable,
+  isWeb: request.isWeb,
   resolvedSkills: request.resolvedSkills,
   continuationMessages: request.continuationMessages,
 );

@@ -3,12 +3,17 @@ import 'dart:convert';
 import 'package:nexecute/ai/domain/ai_application_context.dart';
 import 'package:nexecute/ai/domain/ai_connection_profile.dart';
 import 'package:nexecute/ai/domain/ai_protocol.dart';
+import 'package:nexecute/ai/domain/ai_web_search.dart';
 
 abstract final class AiReadToolNames {
   static const listTasks = 'listTasks';
   static const eventsForDateRange = 'eventsForDateRange';
   static const searchNotes = 'searchNotes';
   static const getNote = 'getNote';
+}
+
+abstract final class AiWebSearchToolNames {
+  static const searchWeb = 'searchWeb';
 }
 
 sealed class AiToolParameterSchema {
@@ -323,6 +328,54 @@ abstract final class AiReadCapabilityRegistry {
         ),
       },
       requiredProperties: const {'noteReference'},
+    ),
+  );
+}
+
+abstract final class AiWebSearchToolCatalog {
+  static List<AiToolDefinition> definitionsFor({
+    required AiConnectionProfile modelProfile,
+    required bool executorAvailable,
+    AiWebSearchConnectionProfile? searchProfile,
+    AiWebSearchAuthorization? authorization,
+    Set<String>? skillAllowList,
+    required bool isWeb,
+  }) {
+    if (!executorAvailable ||
+        modelProfile.capabilityState(AiCapability.tools) !=
+            AiCapabilityState.confirmedSupported ||
+        searchProfile == null ||
+        !searchProfile.canSendRequests(isWeb: isWeb) ||
+        authorization == null ||
+        !authorization.authorizes(searchProfile) ||
+        (skillAllowList != null &&
+            !skillAllowList.contains(AiWebSearchToolNames.searchWeb))) {
+      return const [];
+    }
+    return [_searchWeb];
+  }
+
+  static final AiToolDefinition _searchWeb = AiToolDefinition(
+    name: AiWebSearchToolNames.searchWeb,
+    description:
+        'Search the public web for current information authorized by the user.',
+    parameters: AiToolObjectSchema(
+      properties: {
+        'query': AiToolStringSchema(
+          minLength: 1,
+          maxLength: aiWebSearchMaxQueryCharacters,
+        ),
+        'resultLimit': const AiToolIntegerSchema(
+          minimum: 1,
+          maximum: aiWebSearchMaxResults,
+        ),
+        'freshness': AiToolStringSchema(
+          allowedValues: AiWebSearchFreshness.values
+              .map((value) => value.name)
+              .toList(growable: false),
+        ),
+      },
+      requiredProperties: const {'query', 'resultLimit', 'freshness'},
     ),
   );
 }

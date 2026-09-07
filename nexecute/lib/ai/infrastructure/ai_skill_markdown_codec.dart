@@ -287,11 +287,17 @@ Set<String> _capabilities(Object? value, int version) {
   if (value == null) return const {};
   if (version < 3 ||
       value is! List ||
-      value.any((id) => id is! String || !aiSkillCapabilityIds.contains(id)) ||
+      value.any(
+        (id) =>
+            id is! String ||
+            !aiSkillCapabilityIds.contains(id) ||
+            (id == 'searchWeb' && version < 4),
+      ) ||
       value.toSet().length != value.length) {
     throw const AiSkillDocumentException(
       AiSkillDocumentErrorCode.invalidMetadata,
-      'Capabilities must be unique app-owned read identifiers in schema version 3.',
+      'Capabilities must be unique app-owned identifiers available in the '
+      'declared schema version.',
     );
   }
   return value.cast<String>().toSet();

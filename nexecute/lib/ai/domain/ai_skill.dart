@@ -2,10 +2,18 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 
-const aiSkillSchemaVersion = 3;
+const aiSkillSchemaVersion = 4;
 
-/// Stable app-owned read capabilities. There are deliberately no write IDs.
+/// Stable app-owned capabilities. There are deliberately no write IDs.
 const aiSkillCapabilityIds = {
+  'listTasks',
+  'eventsForDateRange',
+  'searchNotes',
+  'getNote',
+  'searchWeb',
+};
+
+const _aiSkillSchema3CapabilityIds = {
   'listTasks',
   'eventsForDateRange',
   'searchNotes',
@@ -52,8 +60,9 @@ abstract final class AiSkillDocumentContract {
   };
 }
 
-/// Skill output stays text-only. Version 3 may name registered read capabilities;
-/// schemas, validation, authorization and executors remain app-owned.
+/// Skill output stays text-only. Versions 3 and 4 may name registered
+/// capabilities; schemas, validation, authorization and executors remain
+/// app-owned.
 enum AiSkillOutputMode { text }
 
 enum AiSkillValidationErrorCode {
@@ -417,10 +426,13 @@ String _normalizeLineEndings(String value) =>
     value.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
 
 void _validateCapabilities(int version, Set<String> capabilities) {
+  final allowed =
+      version >= 4 ? aiSkillCapabilityIds : _aiSkillSchema3CapabilityIds;
   if ((version < 3 && capabilities.isNotEmpty) ||
-      !aiSkillCapabilityIds.containsAll(capabilities)) {
+      !allowed.containsAll(capabilities)) {
     throw const FormatException(
-      'Skills may declare only registered read capabilities in schema version 3.',
+      'Skills may declare only registered app-owned capabilities available in '
+      'their schema version.',
     );
   }
 }

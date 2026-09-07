@@ -12,6 +12,7 @@ import 'package:nexecute/ai/presentation/ai_diagnostic_panel.dart';
 import 'package:nexecute/ai/presentation/ai_endpoint_validation.dart';
 import 'package:nexecute/ai/presentation/ai_settings_controller.dart';
 import 'package:nexecute/ai/presentation/ai_skills_settings.dart';
+import 'package:nexecute/ai/presentation/ai_web_search_settings.dart';
 import 'package:nexecute/ai/repositories/ai_assistant_repository.dart';
 import 'package:nexecute/ai/repositories/ai_connection_profile_store.dart';
 import 'package:nexecute/ai/repositories/ai_credential_store.dart';
@@ -119,6 +120,8 @@ class _AiSettingsSectionState extends State<AiSettingsSection> {
             ),
           ),
         ],
+        const SizedBox(height: 32),
+        const AiWebSearchSettings(),
         const SizedBox(height: 32),
         const Divider(),
         const SizedBox(height: 24),

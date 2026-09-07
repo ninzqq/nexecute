@@ -1474,17 +1474,17 @@ versioned quality run pass with the user's selected model.
 
 #### Step 15: authorized AI web search
 
-**Status:** Planned. The provider comparison, trust boundary, normalized search
-contract, citation model, and staged delivery plan are recorded in
-`docs/ai_web_search_integration.md`.
+**Status:** In progress. Step 15A is implemented. The provider comparison,
+trust boundary, normalized search contract, citation model, and staged delivery
+plan are recorded in `docs/ai_web_search_integration.md`.
 
 ##### Step 15A: portable app-owned search boundary
 
-- [ ] Add a web-search connection and repository independently from language-
+- [x] Add a web-search connection and repository independently from language-
   model profiles, with native secure credentials and hosted-Web rejection.
-- [ ] Add the stable `searchWeb` capability to skill schema 4 while keeping the
+- [x] Add the stable `searchWeb` capability to skill schema 4 while keeping the
   definition, validation, authorization, and executor in application code.
-- [ ] Require one-turn user authorization and confirmed model tool support;
+- [x] Require one-turn user authorization and confirmed model tool support;
   bound queries, results, calls, continuations, timeouts, and total context.
 
 ##### Step 15B: Brave Search pilot

@@ -14,7 +14,7 @@ class FileSystemAiSkillStore implements AiSkillStore {
   FileSystemAiSkillStore({required AiSkillDirectoryProvider directoryProvider})
     : _directoryProvider = directoryProvider;
 
-  static const _indexSchemaVersion = 3;
+  static const _indexSchemaVersion = 4;
   static const _indexFileName = 'index.v1.json';
   static const _bodiesDirectoryName = 'bodies';
   static const _maxIndexBytes = 8 * 1024 * 1024;
@@ -498,6 +498,7 @@ List<AiSkillMetadata> _decodeIndex(Object? value) {
       }).isNotEmpty ||
       (value['schemaVersion'] != 1 &&
           value['schemaVersion'] != 2 &&
+          value['schemaVersion'] != 3 &&
           value['schemaVersion'] !=
               FileSystemAiSkillStore._indexSchemaVersion) ||
       value['skills'] is! List) {
