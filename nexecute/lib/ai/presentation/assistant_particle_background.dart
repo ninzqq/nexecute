@@ -56,16 +56,16 @@ final class AssistantParticleField {
 
   static const int defaultSeed = 0x4E455845;
   static const int minimumCount = 25;
-  static const int maximumCount = 60;
+  static const int maximumCount = 100;
 
   final List<AssistantParticle> particles;
 
   static AssistantParticle _createParticle(math.Random random, int colorCount) {
     final direction = random.nextDouble() * math.pi * 2;
-    final speed = 2 + random.nextDouble() * 4;
+    final speed = 3 + random.nextDouble() * 4;
     return AssistantParticle(
       normalizedPosition: Offset(random.nextDouble(), random.nextDouble()),
-      radius: 0.5 + random.nextDouble() * 0.55,
+      radius: 0.5 + random.nextDouble() * 0.85,
       opacity: 0.1 + random.nextDouble() * 0.18,
       colorIndex: random.nextInt(colorCount),
       velocity: Offset(
