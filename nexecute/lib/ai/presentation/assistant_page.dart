@@ -136,17 +136,26 @@ class _AssistantPageState extends State<AssistantPage> {
     ];
     final assistantBody = SafeArea(
       child: FocusTraversalGroup(
-        child: AdaptiveContentFrame(
-          contentKey: const Key('assistant-content-frame'),
-          child: Column(
-            children: [
-              if (_controller.errorMessage case final error?)
-                _ErrorBanner(message: error, onDismiss: _controller.clearError),
-              Expanded(
-                child: AssistantParticleBackground(child: _buildConversation()),
+        child: Column(
+          children: [
+            if (_controller.errorMessage case final error?)
+              AdaptiveContentFrame(
+                child: _ErrorBanner(
+                  message: error,
+                  onDismiss: _controller.clearError,
+                ),
               ),
-              if (_applicationContext case final applicationContext?)
-                _ApplicationContextBar(
+            Expanded(
+              child: AssistantParticleBackground(
+                child: AdaptiveContentFrame(
+                  contentKey: const Key('assistant-content-frame'),
+                  child: _buildConversation(),
+                ),
+              ),
+            ),
+            if (_applicationContext case final applicationContext?)
+              AdaptiveContentFrame(
+                child: _ApplicationContextBar(
                   contextEnvelope: applicationContext,
                   noteTitles: [
                     for (final envelope in _noteContexts.values)
@@ -163,7 +172,9 @@ class _AssistantPageState extends State<AssistantPage> {
                   onRemoveEvents: _removeEvents,
                   onPreview: () => _showContextPreview(applicationContext),
                 ),
-              _Composer(
+              ),
+            AdaptiveContentFrame(
+              child: _Composer(
                 controller: _composerController,
                 focusNode: _composerFocusNode,
                 enabled: !_controller.isLoading && profile != null,
@@ -197,8 +208,8 @@ class _AssistantPageState extends State<AssistantPage> {
                               ),
                         ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

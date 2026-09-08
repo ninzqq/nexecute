@@ -206,23 +206,24 @@ class _AssistantParticleBackgroundState
           seed: widget.seed,
         );
         return Stack(
-          fit: StackFit.expand,
           children: [
-            IgnorePointer(
-              key: const Key('assistant-particle-layer'),
-              child: ExcludeSemantics(
-                child: RepaintBoundary(
-                  child: CustomPaint(
-                    key: const Key('assistant-particle-paint'),
-                    painter: AssistantParticlePainter(
-                      field: field,
-                      backgroundColor: theme.scaffoldBackgroundColor,
-                      particleColors: [
-                        theme.colorScheme.primary,
-                        theme.colorScheme.secondary,
-                      ],
-                      animation: _controller,
-                      motionEnabled: _motionEnabled ?? false,
+            Positioned.fill(
+              child: IgnorePointer(
+                key: const Key('assistant-particle-layer'),
+                child: ExcludeSemantics(
+                  child: RepaintBoundary(
+                    child: CustomPaint(
+                      key: const Key('assistant-particle-paint'),
+                      painter: AssistantParticlePainter(
+                        field: field,
+                        backgroundColor: theme.scaffoldBackgroundColor,
+                        particleColors: [
+                          theme.colorScheme.primary,
+                          theme.colorScheme.secondary,
+                        ],
+                        animation: _controller,
+                        motionEnabled: _motionEnabled ?? false,
+                      ),
                     ),
                   ),
                 ),

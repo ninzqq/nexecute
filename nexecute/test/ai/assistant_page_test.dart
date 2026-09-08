@@ -262,6 +262,12 @@ void main() {
     );
     expect(contentRect.width, 840);
     expect(contentRect.center.dx, 700);
+    final particleRect = tester.getRect(
+      find.byKey(const Key('assistant-particle-paint')),
+    );
+    expect(particleRect.width, 1400);
+    expect(particleRect.center.dx, 700);
+    expect(particleRect.width, greaterThan(contentRect.width));
     expect(tester.takeException(), isNull);
   });
 
