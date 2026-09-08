@@ -58,7 +58,9 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        await tester.tap(find.byKey(const Key('assistant-pick-skills')));
+        await tester.tap(find.byKey(const Key('assistant-composer-options')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('assistant-menu-skills')));
         await tester.pumpAndSettle();
         await tester.tap(find.byKey(const Key('assistant-skill-option-a')));
         await tester.pumpAndSettle();
@@ -986,6 +988,10 @@ void main() {
   testWidgets('keeps inactive skills and web search in the composer row', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(390, 720);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     final profile = AiConnectionProfile(
       id: 'model',
       name: 'Tool model',
@@ -1032,18 +1038,26 @@ void main() {
     final composerCenter = tester.getCenter(
       find.byKey(const Key('assistant-composer')),
     );
-    final skillsCenter = tester.getCenter(
-      find.byKey(const Key('assistant-pick-skills')),
+    final optionsCenter = tester.getCenter(
+      find.byKey(const Key('assistant-composer-options')),
     );
-    final searchCenter = tester.getCenter(
-      find.byKey(const Key('assistant-allow-web-search')),
-    );
-    expect(skillsCenter.dy, closeTo(composerCenter.dy, 12));
-    expect(searchCenter.dy, closeTo(composerCenter.dy, 12));
+    expect(optionsCenter.dy, closeTo(composerCenter.dy, 12));
     expect(
-      find.textContaining('Allow web search for this request'),
-      findsNothing,
+      tester.getSize(find.byKey(const Key('assistant-composer'))).width,
+      greaterThan(200),
     );
+    expect(find.byKey(const Key('assistant-attach-context')), findsNothing);
+    expect(find.byKey(const Key('assistant-pick-skills')), findsNothing);
+    expect(find.byKey(const Key('assistant-allow-web-search')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('assistant-composer-options')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('assistant-menu-attach-context')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('assistant-menu-skills')), findsOneWidget);
+    expect(find.byKey(const Key('assistant-menu-web-search')), findsOneWidget);
   });
 }
 

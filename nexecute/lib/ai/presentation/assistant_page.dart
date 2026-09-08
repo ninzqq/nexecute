@@ -903,6 +903,7 @@ class _Composer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final usesCompactOptions = MediaQuery.sizeOf(context).width < 520;
     final textField = TextField(
       key: const Key('assistant-composer'),
       controller: controller,
@@ -941,20 +942,30 @@ class _Composer extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                IconButton(
-                  key: const Key('assistant-attach-context'),
-                  tooltip: 'Attach application context',
-                  onPressed: enabled && !isGenerating ? onAttach : null,
-                  icon:
-                      isLoadingContext
-                          ? const SizedBox.square(
-                            dimension: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                          : const Icon(Icons.attach_file_rounded),
-                ),
-                if (!skillControls.hasActiveSkills) skillControls,
-                if (webSearchControl case final control?) control,
+                if (usesCompactOptions)
+                  _ComposerOptionsMenu(
+                    attachEnabled: enabled && !isGenerating,
+                    onAttach: onAttach,
+                    isLoadingContext: isLoadingContext,
+                    skillControls: skillControls,
+                    webSearchControl: webSearchControl,
+                  )
+                else ...[
+                  IconButton(
+                    key: const Key('assistant-attach-context'),
+                    tooltip: 'Attach application context',
+                    onPressed: enabled && !isGenerating ? onAttach : null,
+                    icon:
+                        isLoadingContext
+                            ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : const Icon(Icons.attach_file_rounded),
+                  ),
+                  if (!skillControls.hasActiveSkills) skillControls,
+                  if (webSearchControl case final control?) control,
+                ],
                 const SizedBox(width: 4),
                 Expanded(
                   child: Tooltip(
@@ -1000,6 +1011,100 @@ class _Composer extends StatelessWidget {
       defaultTargetPlatform == TargetPlatform.macOS ||
       defaultTargetPlatform == TargetPlatform.windows ||
       defaultTargetPlatform == TargetPlatform.linux;
+}
+
+enum _ComposerOption { attach, skills, webSearch }
+
+final class _ComposerOptionsMenu extends StatelessWidget {
+  const _ComposerOptionsMenu({
+    required this.attachEnabled,
+    required this.onAttach,
+    required this.isLoadingContext,
+    required this.skillControls,
+    required this.webSearchControl,
+  });
+
+  final bool attachEnabled;
+  final VoidCallback? onAttach;
+  final bool isLoadingContext;
+  final _SkillComposerControls skillControls;
+  final Widget? webSearchControl;
+
+  @override
+  Widget build(BuildContext context) {
+    final searchControl = webSearchControl;
+    return PopupMenuButton<_ComposerOption>(
+      key: const Key('assistant-composer-options'),
+      tooltip: 'Attachments, skills, and web search',
+      onSelected: (option) {
+        switch (option) {
+          case _ComposerOption.attach:
+            onAttach?.call();
+          case _ComposerOption.skills:
+            skillControls.onPick();
+          case _ComposerOption.webSearch:
+            if (searchControl case final _WebSearchAuthorizationButton search) {
+              search.onChanged(!search.selected);
+            }
+        }
+      },
+      itemBuilder:
+          (context) => [
+            PopupMenuItem(
+              key: const Key('assistant-menu-attach-context'),
+              value: _ComposerOption.attach,
+              enabled: attachEnabled && onAttach != null,
+              child: const _ComposerOptionLabel(
+                icon: Icons.attach_file_rounded,
+                label: 'Attach context',
+              ),
+            ),
+            PopupMenuItem(
+              key: const Key('assistant-menu-skills'),
+              value: _ComposerOption.skills,
+              enabled: skillControls.storageAvailable,
+              child: _ComposerOptionLabel(
+                icon:
+                    skillControls.hasActiveSkills
+                        ? Icons.psychology_alt_rounded
+                        : Icons.psychology_alt_outlined,
+                label:
+                    skillControls.hasActiveSkills
+                        ? 'Skills · ${skillControls.references.length} active'
+                        : 'Skills',
+              ),
+            ),
+            if (searchControl case final _WebSearchAuthorizationButton search)
+              CheckedPopupMenuItem(
+                key: const Key('assistant-menu-web-search'),
+                value: _ComposerOption.webSearch,
+                enabled: search.enabled,
+                checked: search.selected,
+                child: Text('Web search · ${search.profile.provider.label}'),
+              ),
+          ],
+      icon:
+          isLoadingContext
+              ? const SizedBox.square(
+                dimension: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+              : const Icon(Icons.add_circle_outline_rounded),
+    );
+  }
+}
+
+final class _ComposerOptionLabel extends StatelessWidget {
+  const _ComposerOptionLabel({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [Icon(icon, size: 20), const SizedBox(width: 12), Text(label)],
+  );
 }
 
 final class _WebSearchAuthorizationButton extends StatelessWidget {
