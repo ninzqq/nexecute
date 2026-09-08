@@ -245,53 +245,96 @@ viewport. Navigation, the composer, dialogs, and message surfaces remain stable
 above it. Do not make the whole application transparent or couple unrelated
 screens to the animation in this slice.
 
-#### Visual direction
+Implement this in the following independently verifiable phases. Each phase
+must leave the Assistant usable and may be completed and reviewed before the
+next phase begins.
 
-- [ ] Scale a sparse field of roughly 25–60 particles to the viewport area and
-  keep most dots between one and two logical pixels.
-- [ ] Give particles slow independent movement, subtle opacity variation, and
-  seamless edge wrapping without abrupt respawning or visible jumps.
-- [ ] Derive low-contrast particle colors from each application theme:
-  subdued cyan/magenta for Cyberpunk, cool blue/violet for Midnight, muted
-  green/amber for Forest, and soft gray for Neutral.
-- [ ] Preserve the selected theme's existing background color beneath the
-  particles and keep text and controls comfortably readable.
-- [ ] Keep the particle layout deterministic across ordinary widget rebuilds;
-  resize and rotation should reposition it smoothly rather than regenerate it.
+#### Phase 1: static particle-field foundation
 
-#### Implementation plan
+Establish the rendering and layering architecture without introducing motion.
+This provides a low-risk visual checkpoint before animation or lifecycle work.
 
-- [ ] Define a small theme-aware particle configuration for colors, density,
-  size, opacity, speed, and twinkle strength.
-- [ ] Build a reusable `AnimatedParticleBackground` with one
-  `AnimationController` and a `CustomPainter`, drawing every particle in one
-  paint pass rather than rebuilding widgets per frame.
-- [ ] Store particle positions in normalized viewport coordinates so the field
-  adapts cleanly to phone rotation and freely resizable desktop windows.
-- [ ] Layer the painter behind `_buildConversation()` in the Assistant while
-  leaving the composer, navigation, message bubbles, and dialogs unchanged.
-- [ ] Isolate repaints with `RepaintBoundary`, bound the particle count on large
-  displays, and stop ticking through `TickerMode` whenever the Assistant is not
-  visible.
+- [ ] Define a reusable particle model with deterministic, normalized viewport
+  positions, size, opacity, and color index.
+- [ ] Create a `CustomPainter` that draws a sparse field of roughly 25–60 dots
+  in one paint pass, with most dots between one and two logical pixels.
+- [ ] Use the selected theme's existing background as the canvas and an initial
+  low-contrast color derived from that theme.
+- [ ] Layer the static painter behind `_buildConversation()` only. Keep
+  navigation, the composer, dialogs, message bubbles, and unrelated screens
+  unchanged.
+- [ ] Ensure the decorative layer ignores pointer input and cannot interfere
+  with typing, message scrolling, links, or empty-state actions.
+- [ ] Add deterministic model/painter tests and Assistant widget tests for the
+  layer boundary and input passthrough.
+
+**Phase 1 gate:** A stable static dot field appears only in the Assistant
+conversation viewport on phone and desktop layouts, with no interaction or
+overflow regressions.
+
+#### Phase 2: safe drifting motion
+
+Animate the proven static field and add lifecycle and accessibility behavior in
+the same slice. Do not ship motion without reduced-motion support.
+
+- [ ] Drive every particle from one `AnimationController`; repaint the
+  `CustomPainter` directly instead of rebuilding particle widgets each frame.
+- [ ] Give particles very slow independent velocities and seamless edge
+  wrapping without abrupt respawning.
+- [ ] Preserve deterministic positions across ordinary widget rebuilds so the
+  field never jumps when messages stream or composer state changes.
+- [ ] Isolate animation repaints with `RepaintBoundary` and stop ticking through
+  `TickerMode` whenever the Assistant is not visible.
 - [ ] Respect the platform reduced-motion preference by rendering the same
-  particle field without movement or twinkling.
-- [ ] Initially ship the subtle effect without a dedicated preference. Add an
-  enable/disable setting later only if real-world use shows that reduced-motion
-  support is insufficient.
+  field statically, without drift or twinkling.
+- [ ] Add tests for movement, wrapping, inactive-view suspension, stable
+  rebuilds, and reduced-motion behavior.
 
-#### Verification and acceptance criteria
+**Phase 2 gate:** Dots drift continuously while the Assistant is visible,
+remain static under reduced motion, and consume no animation ticks while the
+view is inactive.
 
-- [ ] Add deterministic painter or model tests for stable positions, movement,
-  edge wrapping, and viewport resizing.
-- [ ] Add widget tests proving the background does not intercept taps, typing,
-  or conversation scrolling and that inactive views stop animating.
-- [ ] Verify reduced-motion behavior and live theme changes.
-- [ ] Check empty and populated conversations on mobile portrait, tablet,
-  laptop, and wide desktop layouts under every theme preset.
-- [ ] Profile on representative mobile hardware and confirm that typing,
-  scrolling, keyboard transitions, and response streaming remain smooth.
-- [ ] Confirm the final effect is noticeable but never competes with message
-  text, focus indicators, status banners, or composer controls.
+#### Phase 3: theme-aware visual polish
+
+Tune the effect only after its rendering and lifecycle behavior are reliable.
+
+- [ ] Add a small theme-aware configuration for color palette, density, size,
+  opacity, speed, and twinkle strength.
+- [ ] Use subdued cyan/magenta for Cyberpunk, cool blue/violet for Midnight,
+  muted green/amber for Forest, and soft gray for Neutral.
+- [ ] Add gentle, non-synchronized opacity variation. Avoid obvious flashing,
+  large bright particles, or movement that competes with conversation content.
+- [ ] Adapt particle density to viewport area while keeping a firm upper bound
+  on large desktop displays.
+- [ ] Handle phone rotation, window resizing, and live theme changes smoothly
+  without replacing the field with a visibly unrelated random layout.
+- [ ] Add theme, resizing, rotation, and twinkle tests; visually check empty and
+  populated conversations under every preset.
+
+**Phase 3 gate:** Every theme has a distinct but restrained ambient treatment,
+and changing size or theme produces no jump, flash, overflow, or readability
+regression.
+
+#### Phase 4: performance and release validation
+
+Treat this as the release gate rather than expanding the feature's scope.
+
+- [ ] Profile representative Android and macOS hardware while typing,
+  scrolling, opening the keyboard, resizing the window, and streaming a long
+  response.
+- [ ] Tune particle bounds or repaint frequency if frame timing, CPU use, or
+  battery behavior regresses.
+- [ ] Verify that message text, status banners, focus indicators, controls, and
+  accessibility contrast remain clear in every theme and layout class.
+- [ ] Run the complete relevant widget and integration suites and document any
+  intentional golden or screenshot changes.
+- [ ] Initially ship without a dedicated animation preference. Add an
+  enable/disable setting later only if real-world use shows that the platform
+  reduced-motion preference is insufficient.
+
+**Phase 4 gate:** The effect is noticeable but subordinate, introduces no
+measurable interaction jank, and leaves the full Assistant workflow accessible
+and reliable.
 
 ### Cross-platform laptop access
 
