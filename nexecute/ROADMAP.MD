@@ -233,7 +233,7 @@ network connection.
 
 ### Animated Assistant background
 
-**Status:** 🚧 In progress — Phase 3 complete
+**Status:** 🚧 In progress — Phase 4 implemented; Android device validation pending
 
 Replace the static Assistant conversation-viewport background with a subtle,
 theme-aware field of small drifting dots. Treat the effect as ambient depth,
@@ -322,13 +322,13 @@ Treat this as the release gate rather than expanding the feature's scope.
 - [ ] Profile representative Android and macOS hardware while typing,
   scrolling, opening the keyboard, resizing the window, and streaming a long
   response.
-- [ ] Tune particle bounds or repaint frequency if frame timing, CPU use, or
+- [x] Tune particle bounds or repaint frequency if frame timing, CPU use, or
   battery behavior regresses.
-- [ ] Verify that message text, status banners, focus indicators, controls, and
+- [x] Verify that message text, status banners, focus indicators, controls, and
   accessibility contrast remain clear in every theme and layout class.
-- [ ] Run the complete relevant widget and integration suites and document any
+- [x] Run the complete relevant widget and integration suites and document any
   intentional golden or screenshot changes.
-- [ ] Initially ship without a dedicated animation preference. Add an
+- [x] Initially ship without a dedicated animation preference. Add an
   enable/disable setting later only if real-world use shows that the platform
   reduced-motion preference is insufficient.
 

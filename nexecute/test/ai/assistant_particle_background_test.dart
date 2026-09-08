@@ -247,6 +247,46 @@ void main() {
       const Size(600, 800),
     );
   });
+
+  for (final preset in AppThemePreset.values) {
+    for (final viewport in const [Size(320, 720), Size(1440, 900)]) {
+      testWidgets('keeps foreground content accessible in ${preset.name} at '
+          '${viewport.width.toInt()}x${viewport.height.toInt()}', (
+        tester,
+      ) async {
+        tester.view.physicalSize = viewport;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final semantics = tester.ensureSemantics();
+
+        await tester.pumpWidget(_accessibilityApp(preset));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Assistant status'), findsOneWidget);
+        expect(find.text('Readable message content'), findsOneWidget);
+        expect(find.bySemanticsLabel('Message the assistant'), findsOneWidget);
+        expect(find.bySemanticsLabel('Send message'), findsOneWidget);
+        expect(
+          find.byKey(const Key('assistant-particle-layer')),
+          findsOneWidget,
+        );
+        expect(find.bySemanticsLabel('Assistant particles'), findsNothing);
+
+        await tester.tap(find.byKey(const Key('release-composer')));
+        await tester.pump();
+        expect(
+          tester
+              .widget<EditableText>(find.byType(EditableText))
+              .focusNode
+              .hasFocus,
+          isTrue,
+        );
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
+        semantics.dispose();
+      });
+    }
+  }
 }
 
 Widget _presetApp(AppThemePreset preset) => MaterialApp(
@@ -273,6 +313,57 @@ Widget _motionApp({
   home: TickerMode(
     enabled: tickerEnabled,
     child: const AssistantParticleBackground(child: SizedBox.expand()),
+  ),
+);
+
+Widget _accessibilityApp(AppThemePreset preset) => MaterialApp(
+  theme: AppThemes.forPreset(preset),
+  builder:
+      (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(disableAnimations: true),
+        child: child!,
+      ),
+  home: Scaffold(
+    body: AssistantParticleBackground(
+      child: SafeArea(
+        child: Column(
+          children: [
+            const MaterialBanner(
+              content: Text('Assistant status'),
+              actions: [SizedBox.shrink()],
+            ),
+            const Expanded(
+              child: Center(child: Text('Readable message content')),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: TextField(
+                      key: Key('release-composer'),
+                      decoration: InputDecoration(
+                        labelText: 'Message the assistant',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Semantics(
+                    label: 'Send message',
+                    button: true,
+                    child: IconButton.filled(
+                      onPressed: () {},
+                      icon: const Icon(Icons.send_rounded),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
   ),
 );
 
