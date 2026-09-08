@@ -58,6 +58,24 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('assistant-particle-layer')),
+          findsOneWidget,
+        );
+        expect(
+          find.ancestor(
+            of: find.text('Start a conversation'),
+            matching: find.byType(AssistantParticleBackground),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.ancestor(
+            of: find.byKey(const Key('assistant-composer')),
+            matching: find.byType(AssistantParticleBackground),
+          ),
+          findsNothing,
+        );
         await tester.tap(find.byKey(const Key('assistant-composer-options')));
         await tester.pumpAndSettle();
         await tester.tap(find.byKey(const Key('assistant-menu-skills')));

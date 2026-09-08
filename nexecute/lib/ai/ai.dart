@@ -60,6 +60,7 @@ export 'presentation/ai_note_task_extraction_controller.dart';
 export 'presentation/ai_note_task_extraction_sheet.dart';
 export 'presentation/ai_task_proposal_creation_controller.dart';
 export 'presentation/assistant_page.dart';
+export 'presentation/assistant_particle_background.dart';
 export 'presentation/ai_settings_controller.dart';
 export 'presentation/ai_settings_section.dart';
 export 'presentation/ai_web_search_settings.dart';

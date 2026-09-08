@@ -142,7 +142,9 @@ class _AssistantPageState extends State<AssistantPage> {
             children: [
               if (_controller.errorMessage case final error?)
                 _ErrorBanner(message: error, onDismiss: _controller.clearError),
-              Expanded(child: _buildConversation()),
+              Expanded(
+                child: AssistantParticleBackground(child: _buildConversation()),
+              ),
               if (_applicationContext case final applicationContext?)
                 _ApplicationContextBar(
                   contextEnvelope: applicationContext,

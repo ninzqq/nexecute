@@ -233,7 +233,7 @@ network connection.
 
 ### Animated Assistant background
 
-**Status:** 📋 Planned
+**Status:** 🚧 In progress — Phase 1 complete
 
 Replace the static Assistant conversation-viewport background with a subtle,
 theme-aware field of small drifting dots. Treat the effect as ambient depth,
@@ -254,18 +254,18 @@ next phase begins.
 Establish the rendering and layering architecture without introducing motion.
 This provides a low-risk visual checkpoint before animation or lifecycle work.
 
-- [ ] Define a reusable particle model with deterministic, normalized viewport
+- [x] Define a reusable particle model with deterministic, normalized viewport
   positions, size, opacity, and color index.
-- [ ] Create a `CustomPainter` that draws a sparse field of roughly 25–60 dots
+- [x] Create a `CustomPainter` that draws a sparse field of roughly 25–60 dots
   in one paint pass, with most dots between one and two logical pixels.
-- [ ] Use the selected theme's existing background as the canvas and an initial
+- [x] Use the selected theme's existing background as the canvas and an initial
   low-contrast color derived from that theme.
-- [ ] Layer the static painter behind `_buildConversation()` only. Keep
+- [x] Layer the static painter behind `_buildConversation()` only. Keep
   navigation, the composer, dialogs, message bubbles, and unrelated screens
   unchanged.
-- [ ] Ensure the decorative layer ignores pointer input and cannot interfere
+- [x] Ensure the decorative layer ignores pointer input and cannot interfere
   with typing, message scrolling, links, or empty-state actions.
-- [ ] Add deterministic model/painter tests and Assistant widget tests for the
+- [x] Add deterministic model/painter tests and Assistant widget tests for the
   layer boundary and input passthrough.
 
 **Phase 1 gate:** A stable static dot field appears only in the Assistant
