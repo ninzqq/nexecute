@@ -899,6 +899,27 @@ class _Composer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textField = TextField(
+      key: const Key('assistant-composer'),
+      controller: controller,
+      focusNode: focusNode,
+      enabled: enabled && !isGenerating,
+      minLines: 1,
+      maxLines: 6,
+      textCapitalization: TextCapitalization.sentences,
+      textInputAction: TextInputAction.newline,
+      decoration: const InputDecoration(hintText: 'Message the assistant'),
+    );
+    final composer =
+        _usesDesktopKeyboard
+            ? CallbackShortcuts(
+              bindings: {
+                const SingleActivator(LogicalKeyboardKey.enter): _send,
+                const SingleActivator(LogicalKeyboardKey.numpadEnter): _send,
+              },
+              child: textField,
+            )
+            : textField;
     return Material(
       color: Theme.of(context).colorScheme.surface,
       child: Padding(
@@ -927,20 +948,12 @@ class _Composer extends StatelessWidget {
             Expanded(
               child: Tooltip(
                 message:
-                    'Focus composer: ${AppShortcutLabels.assistantComposer}',
-                child: TextField(
-                  key: const Key('assistant-composer'),
-                  controller: controller,
-                  focusNode: focusNode,
-                  enabled: enabled && !isGenerating,
-                  minLines: 1,
-                  maxLines: 6,
-                  textCapitalization: TextCapitalization.sentences,
-                  textInputAction: TextInputAction.newline,
-                  decoration: const InputDecoration(
-                    hintText: 'Message the assistant',
-                  ),
-                ),
+                    _usesDesktopKeyboard
+                        ? 'Enter to send · Shift+Enter for a new line · '
+                            'Focus: ${AppShortcutLabels.assistantComposer}'
+                        : 'Focus composer: '
+                            '${AppShortcutLabels.assistantComposer}',
+                child: composer,
               ),
             ),
             const SizedBox(width: 10),
@@ -963,6 +976,17 @@ class _Composer extends StatelessWidget {
       ),
     );
   }
+
+  void _send() {
+    if (enabled && !isGenerating && controller.text.trim().isNotEmpty) {
+      onSend(controller.text);
+    }
+  }
+
+  static bool get _usesDesktopKeyboard =>
+      defaultTargetPlatform == TargetPlatform.macOS ||
+      defaultTargetPlatform == TargetPlatform.windows ||
+      defaultTargetPlatform == TargetPlatform.linux;
 }
 
 final class _WebSearchAuthorizationBar extends StatelessWidget {

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -293,6 +294,92 @@ void main() {
       'Send from the keyboard',
     );
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('plain Enter sends from the desktop composer', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    final profile = AiConnectionProfile(
+      id: 'home',
+      name: 'Home AI',
+      protocol: AiProtocol.openAiCompatibleChat,
+      baseUrl: Uri.parse('https://ai.example.test/v1'),
+      modelId: 'local-model',
+    );
+    final profileStore = FakeAiConnectionProfileStore(
+      profiles: [profile],
+      activeProfileId: profile.id,
+    );
+    final conversationStore = FakeAiConversationStore();
+    final assistantRepository = FakeAiAssistantRepository();
+    addTearDown(profileStore.dispose);
+    addTearDown(conversationStore.dispose);
+
+    await tester.pumpWidget(
+      _app(
+        assistantRepository: assistantRepository,
+        profileStore: profileStore,
+        conversationStore: conversationStore,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final composer = find.byKey(const Key('assistant-composer'));
+    await tester.tap(composer);
+    await tester.enterText(composer, 'Send with Enter');
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    debugDefaultTargetPlatformOverride = null;
+
+    expect(assistantRepository.startedRequests, hasLength(1));
+    expect(
+      assistantRepository.startedRequests.single.messages.last.content,
+      'Send with Enter',
+    );
+    expect(tester.widget<TextField>(composer).controller!.text, isEmpty);
+  });
+
+  testWidgets('Shift+Enter does not send from the desktop composer', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    final profile = AiConnectionProfile(
+      id: 'home',
+      name: 'Home AI',
+      protocol: AiProtocol.openAiCompatibleChat,
+      baseUrl: Uri.parse('https://ai.example.test/v1'),
+      modelId: 'local-model',
+    );
+    final profileStore = FakeAiConnectionProfileStore(
+      profiles: [profile],
+      activeProfileId: profile.id,
+    );
+    final conversationStore = FakeAiConversationStore();
+    final assistantRepository = FakeAiAssistantRepository();
+    addTearDown(profileStore.dispose);
+    addTearDown(conversationStore.dispose);
+
+    await tester.pumpWidget(
+      _app(
+        assistantRepository: assistantRepository,
+        profileStore: profileStore,
+        conversationStore: conversationStore,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final composer = find.byKey(const Key('assistant-composer'));
+    await tester.tap(composer);
+    await tester.enterText(composer, 'Keep editing');
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pump();
+    debugDefaultTargetPlatformOverride = null;
+
+    expect(assistantRepository.startedRequests, isEmpty);
+    expect(tester.widget<TextField>(composer).controller!.text, 'Keep editing');
   });
 
   testWidgets('sends a message and displays streamed assistant text', (
