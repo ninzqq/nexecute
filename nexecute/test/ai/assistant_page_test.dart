@@ -1111,6 +1111,11 @@ Widget _app({
     ],
     child: MaterialApp(
       theme: theme,
+      builder:
+          (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(disableAnimations: true),
+            child: child!,
+          ),
       routes: {'/settings': (_) => const Scaffold(body: Text('Settings page'))},
       home: const AssistantPage(),
     ),

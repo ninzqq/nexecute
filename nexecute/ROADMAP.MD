@@ -233,7 +233,7 @@ network connection.
 
 ### Animated Assistant background
 
-**Status:** 🚧 In progress — Phase 1 complete
+**Status:** 🚧 In progress — Phase 2 complete
 
 Replace the static Assistant conversation-viewport background with a subtle,
 theme-aware field of small drifting dots. Treat the effect as ambient depth,
@@ -277,17 +277,17 @@ overflow regressions.
 Animate the proven static field and add lifecycle and accessibility behavior in
 the same slice. Do not ship motion without reduced-motion support.
 
-- [ ] Drive every particle from one `AnimationController`; repaint the
+- [x] Drive every particle from one `AnimationController`; repaint the
   `CustomPainter` directly instead of rebuilding particle widgets each frame.
-- [ ] Give particles very slow independent velocities and seamless edge
+- [x] Give particles very slow independent velocities and seamless edge
   wrapping without abrupt respawning.
-- [ ] Preserve deterministic positions across ordinary widget rebuilds so the
+- [x] Preserve deterministic positions across ordinary widget rebuilds so the
   field never jumps when messages stream or composer state changes.
-- [ ] Isolate animation repaints with `RepaintBoundary` and stop ticking through
+- [x] Isolate animation repaints with `RepaintBoundary` and stop ticking through
   `TickerMode` whenever the Assistant is not visible.
-- [ ] Respect the platform reduced-motion preference by rendering the same
+- [x] Respect the platform reduced-motion preference by rendering the same
   field statically, without drift or twinkling.
-- [ ] Add tests for movement, wrapping, inactive-view suspension, stable
+- [x] Add tests for movement, wrapping, inactive-view suspension, stable
   rebuilds, and reduced-motion behavior.
 
 **Phase 2 gate:** Dots drift continuously while the Assistant is visible,

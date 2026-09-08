@@ -338,9 +338,31 @@ void main() {
     expect(find.byKey(const Key('persistent-main-menu')), findsOneWidget);
     expect(find.byKey(const Key('desktop-create-command')), findsNothing);
     expect(navigator.canPop(), isFalse);
+    expect(
+      tester
+          .widget<TickerMode>(
+            find.byKey(
+              const Key('desktop-assistant-ticker-mode'),
+              skipOffstage: false,
+            ),
+          )
+          .enabled,
+      isTrue,
+    );
 
     await tester.tap(find.byKey(const ValueKey('desktop-destination-4')));
     await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<TickerMode>(
+            find.byKey(
+              const Key('desktop-assistant-ticker-mode'),
+              skipOffstage: false,
+            ),
+          )
+          .enabled,
+      isFalse,
+    );
     expect(
       find.byKey(const Key('desktop-tags-tab')).hitTestable(),
       findsOneWidget,
@@ -527,6 +549,11 @@ Future<void> _pumpHome(
       ],
       child: MaterialApp(
         theme: AppThemes.forPreset(themePreset),
+        builder:
+            (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(disableAnimations: true),
+              child: child!,
+            ),
         routes: {
           '/search':
               (_) => const Scaffold(

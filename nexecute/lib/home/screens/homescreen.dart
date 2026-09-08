@@ -285,9 +285,13 @@ class _HomeScreenState extends State<HomeScreen> {
       const TasksPage(),
       const Quicxecs(),
       _visitedDesktopTabs.contains(3)
-          ? AssistantPage(
-            embedded: true,
-            onOpenSettings: () => _selectDesktopTab(tab, 7),
+          ? TickerMode(
+            key: const Key('desktop-assistant-ticker-mode'),
+            enabled: selectedIndex == 3,
+            child: AssistantPage(
+              embedded: true,
+              onOpenSettings: () => _selectDesktopTab(tab, 7),
+            ),
           )
           : const SizedBox.shrink(),
       _visitedDesktopTabs.contains(4)
