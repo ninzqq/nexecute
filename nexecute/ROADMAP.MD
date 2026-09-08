@@ -233,7 +233,7 @@ network connection.
 
 ### Animated Assistant background
 
-**Status:** 🚧 In progress — Phase 2 complete
+**Status:** 🚧 In progress — Phase 3 complete
 
 Replace the static Assistant conversation-viewport background with a subtle,
 theme-aware field of small drifting dots. Treat the effect as ambient depth,
@@ -298,17 +298,17 @@ view is inactive.
 
 Tune the effect only after its rendering and lifecycle behavior are reliable.
 
-- [ ] Add a small theme-aware configuration for color palette, density, size,
+- [x] Add a small theme-aware configuration for color palette, density, size,
   opacity, speed, and twinkle strength.
-- [ ] Use subdued cyan/magenta for Cyberpunk, cool blue/violet for Midnight,
+- [x] Use subdued cyan/magenta for Cyberpunk, cool blue/violet for Midnight,
   muted green/amber for Forest, and soft gray for Neutral.
-- [ ] Add gentle, non-synchronized opacity variation. Avoid obvious flashing,
+- [x] Add gentle, non-synchronized opacity variation. Avoid obvious flashing,
   large bright particles, or movement that competes with conversation content.
-- [ ] Adapt particle density to viewport area while keeping a firm upper bound
+- [x] Adapt particle density to viewport area while keeping a firm upper bound
   on large desktop displays.
-- [ ] Handle phone rotation, window resizing, and live theme changes smoothly
+- [x] Handle phone rotation, window resizing, and live theme changes smoothly
   without replacing the field with a visibly unrelated random layout.
-- [ ] Add theme, resizing, rotation, and twinkle tests; visually check empty and
+- [x] Add theme, resizing, rotation, and twinkle tests; visually check empty and
   populated conversations under every preset.
 
 **Phase 3 gate:** Every theme has a distinct but restrained ambient treatment,

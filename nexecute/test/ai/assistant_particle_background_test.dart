@@ -1,6 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/ai/ai.dart';
+import 'package:nexecute/themes.dart';
 
 void main() {
   test('generates a stable bounded particle field from a seed', () {
@@ -14,10 +17,12 @@ void main() {
     for (final particle in first.particles) {
       expect(particle.normalizedPosition.dx, inInclusiveRange(0, 1));
       expect(particle.normalizedPosition.dy, inInclusiveRange(0, 1));
-      expect(particle.radius * 2, inInclusiveRange(1, 2.1));
+      expect(particle.radius * 2, inInclusiveRange(1, 2.7));
       expect(particle.opacity, inInclusiveRange(0.1, 0.28));
       expect(particle.colorIndex, inInclusiveRange(0, 1));
-      expect(particle.velocity.distance, inInclusiveRange(2, 6));
+      expect(particle.velocity.distance, inInclusiveRange(3, 7));
+      expect(particle.twinklePhase, inInclusiveRange(0, math.pi * 2));
+      expect(particle.twinkleAngularVelocity, greaterThan(0));
     }
   });
 
@@ -103,12 +108,57 @@ void main() {
       opacity: 0.2,
       colorIndex: 0,
       velocity: Offset(5, -5),
+      twinklePhase: 0,
+      twinkleAngularVelocity: math.pi / 2,
     );
 
     expect(
       AssistantParticlePainter.positionFor(particle, const Size(100, 100), 1),
       const Offset(4, 96),
     );
+  });
+
+  test('twinkles gently according to each particle phase', () {
+    const particle = AssistantParticle(
+      normalizedPosition: Offset.zero,
+      radius: 1,
+      opacity: 0.2,
+      colorIndex: 0,
+      velocity: Offset.zero,
+      twinklePhase: 0,
+      twinkleAngularVelocity: math.pi / 2,
+    );
+
+    expect(
+      AssistantParticlePainter.opacityFor(particle, 0, 0.2),
+      closeTo(0.2, 0.0001),
+    );
+    expect(
+      AssistantParticlePainter.opacityFor(particle, 1, 0.2),
+      closeTo(0.24, 0.0001),
+    );
+    expect(
+      AssistantParticlePainter.opacityFor(particle, 3, 0.2),
+      closeTo(0.16, 0.0001),
+    );
+  });
+
+  test('defines a distinct restrained style for every app theme', () {
+    final styles = [
+      for (final preset in AppThemePreset.values)
+        AppThemes.forPreset(preset).extension<AssistantParticleTheme>()!,
+    ];
+
+    expect(
+      styles.map((style) => style.colors.first).toSet(),
+      hasLength(styles.length),
+    );
+    for (final style in styles) {
+      expect(style.colors, hasLength(2));
+      expect(style.maximumCount, lessThanOrEqualTo(100));
+      expect(style.maximumOpacity, lessThanOrEqualTo(0.3));
+      expect(style.twinkleStrength, lessThanOrEqualTo(0.22));
+    }
   });
 
   testWidgets('ticks only while its TickerMode is enabled', (tester) async {
@@ -163,7 +213,51 @@ void main() {
     expect(after.animation, same(animation));
     expect(after.animation.value, animationValue);
   });
+
+  testWidgets('preserves particle identity through resize and theme changes', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(_presetApp(AppThemePreset.cyberpunk));
+    await tester.pumpAndSettle();
+    final before = _particlePainter(tester);
+    final beforePositions = [
+      for (final particle in before.field.particles)
+        particle.normalizedPosition,
+    ];
+
+    tester.view.physicalSize = const Size(600, 800);
+    await tester.pumpWidget(_presetApp(AppThemePreset.neutral));
+    await tester.pumpAndSettle();
+    final after = _particlePainter(tester);
+    final sharedCount = math.min(
+      beforePositions.length,
+      after.field.particles.length,
+    );
+    expect([
+      for (var index = 0; index < sharedCount; index++)
+        after.field.particles[index].normalizedPosition,
+    ], beforePositions.take(sharedCount));
+    expect(after.particleColors, const [Color(0xFFAEB7C4), Color(0xFF737B86)]);
+    expect(
+      tester.getSize(find.byKey(const Key('assistant-particle-paint'))),
+      const Size(600, 800),
+    );
+  });
 }
+
+Widget _presetApp(AppThemePreset preset) => MaterialApp(
+  theme: AppThemes.forPreset(preset),
+  builder:
+      (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(disableAnimations: true),
+        child: child!,
+      ),
+  home: const AssistantParticleBackground(child: SizedBox.expand()),
+);
 
 Widget _motionApp({
   required bool tickerEnabled,

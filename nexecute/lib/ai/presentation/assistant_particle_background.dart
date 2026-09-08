@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:nexecute/themes.dart';
 
 @immutable
 final class AssistantParticle {
@@ -11,6 +12,8 @@ final class AssistantParticle {
     required this.opacity,
     required this.colorIndex,
     required this.velocity,
+    required this.twinklePhase,
+    required this.twinkleAngularVelocity,
   });
 
   final Offset normalizedPosition;
@@ -18,6 +21,8 @@ final class AssistantParticle {
   final double opacity;
   final int colorIndex;
   final Offset velocity;
+  final double twinklePhase;
+  final double twinkleAngularVelocity;
 
   @override
   bool operator ==(Object other) =>
@@ -27,11 +32,20 @@ final class AssistantParticle {
           radius == other.radius &&
           opacity == other.opacity &&
           colorIndex == other.colorIndex &&
-          velocity == other.velocity;
+          velocity == other.velocity &&
+          twinklePhase == other.twinklePhase &&
+          twinkleAngularVelocity == other.twinkleAngularVelocity;
 
   @override
-  int get hashCode =>
-      Object.hash(normalizedPosition, radius, opacity, colorIndex, velocity);
+  int get hashCode => Object.hash(
+    normalizedPosition,
+    radius,
+    opacity,
+    colorIndex,
+    velocity,
+    twinklePhase,
+    twinkleAngularVelocity,
+  );
 }
 
 @immutable
@@ -42,14 +56,38 @@ final class AssistantParticleField {
     required int count,
     int seed = defaultSeed,
     int colorCount = 2,
+    double minimumRadius = 0.5,
+    double maximumRadius = 1.35,
+    double minimumOpacity = 0.1,
+    double maximumOpacity = 0.28,
+    double minimumSpeed = 3,
+    double maximumSpeed = 7,
+    double minimumTwinklePeriod = 6,
+    double maximumTwinklePeriod = 12,
   }) {
     assert(count >= 0);
     assert(colorCount > 0);
+    assert(minimumRadius <= maximumRadius);
+    assert(minimumOpacity <= maximumOpacity);
+    assert(minimumSpeed <= maximumSpeed);
+    assert(minimumTwinklePeriod > 0);
+    assert(minimumTwinklePeriod <= maximumTwinklePeriod);
     final random = math.Random(seed);
     return AssistantParticleField(
       List.unmodifiable([
         for (var index = 0; index < count; index++)
-          _createParticle(random, colorCount),
+          _createParticle(
+            random,
+            colorCount,
+            minimumRadius: minimumRadius,
+            maximumRadius: maximumRadius,
+            minimumOpacity: minimumOpacity,
+            maximumOpacity: maximumOpacity,
+            minimumSpeed: minimumSpeed,
+            maximumSpeed: maximumSpeed,
+            minimumTwinklePeriod: minimumTwinklePeriod,
+            maximumTwinklePeriod: maximumTwinklePeriod,
+          ),
       ]),
     );
   }
@@ -60,26 +98,51 @@ final class AssistantParticleField {
 
   final List<AssistantParticle> particles;
 
-  static AssistantParticle _createParticle(math.Random random, int colorCount) {
+  static AssistantParticle _createParticle(
+    math.Random random,
+    int colorCount, {
+    required double minimumRadius,
+    required double maximumRadius,
+    required double minimumOpacity,
+    required double maximumOpacity,
+    required double minimumSpeed,
+    required double maximumSpeed,
+    required double minimumTwinklePeriod,
+    required double maximumTwinklePeriod,
+  }) {
     final direction = random.nextDouble() * math.pi * 2;
-    final speed = 3 + random.nextDouble() * 4;
+    final speed = _between(random, minimumSpeed, maximumSpeed);
+    final twinklePeriod = _between(
+      random,
+      minimumTwinklePeriod,
+      maximumTwinklePeriod,
+    );
     return AssistantParticle(
       normalizedPosition: Offset(random.nextDouble(), random.nextDouble()),
-      radius: 0.5 + random.nextDouble() * 0.85,
-      opacity: 0.1 + random.nextDouble() * 0.18,
+      radius: _between(random, minimumRadius, maximumRadius),
+      opacity: _between(random, minimumOpacity, maximumOpacity),
       colorIndex: random.nextInt(colorCount),
       velocity: Offset(
         math.cos(direction) * speed,
         math.sin(direction) * speed,
       ),
+      twinklePhase: random.nextDouble() * math.pi * 2,
+      twinkleAngularVelocity: math.pi * 2 / twinklePeriod,
     );
   }
 
-  static int countFor(Size viewport) =>
-      (viewport.width * viewport.height / 10000).round().clamp(
-        minimumCount,
-        maximumCount,
-      );
+  static double _between(math.Random random, double minimum, double maximum) =>
+      minimum + random.nextDouble() * (maximum - minimum);
+
+  static int countFor(
+    Size viewport, {
+    double areaPerParticle = 10000,
+    int minimum = minimumCount,
+    int maximum = maximumCount,
+  }) => (viewport.width * viewport.height / areaPerParticle).round().clamp(
+    minimum,
+    maximum,
+  );
 }
 
 final class AssistantParticlePainter extends CustomPainter {
@@ -89,6 +152,7 @@ final class AssistantParticlePainter extends CustomPainter {
     required this.particleColors,
     required this.animation,
     required this.motionEnabled,
+    required this.twinkleStrength,
   }) : assert(particleColors.isNotEmpty),
        super(repaint: animation);
 
@@ -97,6 +161,7 @@ final class AssistantParticlePainter extends CustomPainter {
   final List<Color> particleColors;
   final Animation<double> animation;
   final bool motionEnabled;
+  final double twinkleStrength;
 
   double get elapsedSeconds => animation.value;
 
@@ -106,7 +171,9 @@ final class AssistantParticlePainter extends CustomPainter {
     final paint = Paint();
     for (final particle in field.particles) {
       paint.color = particleColors[particle.colorIndex % particleColors.length]
-          .withValues(alpha: particle.opacity);
+          .withValues(
+            alpha: opacityFor(particle, elapsedSeconds, twinkleStrength),
+          );
       canvas.drawCircle(
         positionFor(particle, size, elapsedSeconds),
         particle.radius,
@@ -135,6 +202,19 @@ final class AssistantParticlePainter extends CustomPainter {
   static double _wrap(double value, double extent) =>
       extent <= 0 ? 0 : value % extent;
 
+  static double opacityFor(
+    AssistantParticle particle,
+    double elapsedSeconds,
+    double twinkleStrength,
+  ) => (particle.opacity *
+          (1 +
+              math.sin(
+                    particle.twinklePhase +
+                        particle.twinkleAngularVelocity * elapsedSeconds,
+                  ) *
+                  twinkleStrength))
+      .clamp(0, 1);
+
   @override
   bool? hitTest(Offset position) => false;
 
@@ -144,7 +224,8 @@ final class AssistantParticlePainter extends CustomPainter {
       !listEquals(oldDelegate.field.particles, field.particles) ||
       oldDelegate.backgroundColor != backgroundColor ||
       !listEquals(oldDelegate.particleColors, particleColors) ||
-      oldDelegate.animation != animation;
+      oldDelegate.animation != animation ||
+      oldDelegate.twinkleStrength != twinkleStrength;
 }
 
 class AssistantParticleBackground extends StatefulWidget {
@@ -198,12 +279,29 @@ class _AssistantParticleBackgroundState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final particleTheme =
+        theme.extension<AssistantParticleTheme>() ??
+        AssistantParticleTheme.fallback(theme.colorScheme);
     return LayoutBuilder(
       builder: (context, constraints) {
         final viewport = constraints.biggest;
         final field = AssistantParticleField.deterministic(
-          count: AssistantParticleField.countFor(viewport),
+          count: AssistantParticleField.countFor(
+            viewport,
+            areaPerParticle: particleTheme.areaPerParticle,
+            minimum: particleTheme.minimumCount,
+            maximum: particleTheme.maximumCount,
+          ),
           seed: widget.seed,
+          colorCount: particleTheme.colors.length,
+          minimumRadius: particleTheme.minimumRadius,
+          maximumRadius: particleTheme.maximumRadius,
+          minimumOpacity: particleTheme.minimumOpacity,
+          maximumOpacity: particleTheme.maximumOpacity,
+          minimumSpeed: particleTheme.minimumSpeed,
+          maximumSpeed: particleTheme.maximumSpeed,
+          minimumTwinklePeriod: particleTheme.minimumTwinklePeriod,
+          maximumTwinklePeriod: particleTheme.maximumTwinklePeriod,
         );
         return Stack(
           children: [
@@ -217,12 +315,10 @@ class _AssistantParticleBackgroundState
                       painter: AssistantParticlePainter(
                         field: field,
                         backgroundColor: theme.scaffoldBackgroundColor,
-                        particleColors: [
-                          theme.colorScheme.primary,
-                          theme.colorScheme.secondary,
-                        ],
+                        particleColors: particleTheme.colors,
                         animation: _controller,
                         motionEnabled: _motionEnabled ?? false,
+                        twinkleStrength: particleTheme.twinkleStrength,
                       ),
                     ),
                   ),

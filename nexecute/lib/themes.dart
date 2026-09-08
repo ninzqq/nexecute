@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -264,9 +266,88 @@ abstract final class AppThemes {
                 ? const Duration(milliseconds: 450)
                 : const Duration(milliseconds: 1500),
       ),
-      extensions: [palette],
+      extensions: [palette, _assistantParticlesFor(preset)],
     );
   }
+
+  static AssistantParticleTheme _assistantParticlesFor(AppThemePreset preset) =>
+      switch (preset) {
+        AppThemePreset.cyberpunk => const AssistantParticleTheme(
+          colors: [Color(0xFF00DDE8), Color(0xFFE53CC8)],
+          areaPerParticle: 9000,
+          minimumCount: 28,
+          maximumCount: 100,
+          minimumRadius: 0.5,
+          maximumRadius: 1.35,
+          minimumOpacity: 0.1,
+          maximumOpacity: 0.28,
+          minimumSpeed: 3,
+          maximumSpeed: 7,
+          twinkleStrength: 0.2,
+          minimumTwinklePeriod: 5,
+          maximumTwinklePeriod: 10,
+        ),
+        AppThemePreset.cyberpunkMega => const AssistantParticleTheme(
+          colors: [Color(0xFF00D7E5), Color(0xFFD83ADB)],
+          areaPerParticle: 8500,
+          minimumCount: 30,
+          maximumCount: 100,
+          minimumRadius: 0.5,
+          maximumRadius: 1.35,
+          minimumOpacity: 0.11,
+          maximumOpacity: 0.3,
+          minimumSpeed: 3,
+          maximumSpeed: 7,
+          twinkleStrength: 0.22,
+          minimumTwinklePeriod: 4.5,
+          maximumTwinklePeriod: 9,
+        ),
+        AppThemePreset.midnight => const AssistantParticleTheme(
+          colors: [Color(0xFF78A9FF), Color(0xFFB8A7FF)],
+          areaPerParticle: 10000,
+          minimumCount: 25,
+          maximumCount: 100,
+          minimumRadius: 0.5,
+          maximumRadius: 1.25,
+          minimumOpacity: 0.09,
+          maximumOpacity: 0.25,
+          minimumSpeed: 3,
+          maximumSpeed: 6.5,
+          twinkleStrength: 0.18,
+          minimumTwinklePeriod: 6,
+          maximumTwinklePeriod: 12,
+        ),
+        AppThemePreset.forest => const AssistantParticleTheme(
+          colors: [Color(0xFF72D6A0), Color(0xFFE1B866)],
+          areaPerParticle: 10500,
+          minimumCount: 25,
+          maximumCount: 100,
+          minimumRadius: 0.55,
+          maximumRadius: 1.3,
+          minimumOpacity: 0.09,
+          maximumOpacity: 0.24,
+          minimumSpeed: 3,
+          maximumSpeed: 6,
+          twinkleStrength: 0.2,
+          minimumTwinklePeriod: 5.5,
+          maximumTwinklePeriod: 11,
+        ),
+        AppThemePreset.neutral => const AssistantParticleTheme(
+          colors: [Color(0xFFAEB7C4), Color(0xFF737B86)],
+          areaPerParticle: 12000,
+          minimumCount: 25,
+          maximumCount: 90,
+          minimumRadius: 0.5,
+          maximumRadius: 1.15,
+          minimumOpacity: 0.07,
+          maximumOpacity: 0.18,
+          minimumSpeed: 3,
+          maximumSpeed: 5.5,
+          twinkleStrength: 0.14,
+          minimumTwinklePeriod: 7,
+          maximumTwinklePeriod: 13,
+        ),
+      };
 
   static AppPalette _paletteFor(AppThemePreset preset) => switch (preset) {
     AppThemePreset.cyberpunk => const AppPalette(
@@ -335,6 +416,128 @@ abstract final class AppThemes {
       success: Color(0xFF8FB89B),
     ),
   };
+}
+
+@immutable
+class AssistantParticleTheme extends ThemeExtension<AssistantParticleTheme> {
+  const AssistantParticleTheme({
+    required this.colors,
+    required this.areaPerParticle,
+    required this.minimumCount,
+    required this.maximumCount,
+    required this.minimumRadius,
+    required this.maximumRadius,
+    required this.minimumOpacity,
+    required this.maximumOpacity,
+    required this.minimumSpeed,
+    required this.maximumSpeed,
+    required this.twinkleStrength,
+    required this.minimumTwinklePeriod,
+    required this.maximumTwinklePeriod,
+  });
+
+  factory AssistantParticleTheme.fallback(ColorScheme colors) =>
+      AssistantParticleTheme(
+        colors: [colors.primary, colors.secondary],
+        areaPerParticle: 10000,
+        minimumCount: 25,
+        maximumCount: 100,
+        minimumRadius: 0.5,
+        maximumRadius: 1.35,
+        minimumOpacity: 0.1,
+        maximumOpacity: 0.28,
+        minimumSpeed: 3,
+        maximumSpeed: 7,
+        twinkleStrength: 0.18,
+        minimumTwinklePeriod: 6,
+        maximumTwinklePeriod: 12,
+      );
+
+  final List<Color> colors;
+  final double areaPerParticle;
+  final int minimumCount;
+  final int maximumCount;
+  final double minimumRadius;
+  final double maximumRadius;
+  final double minimumOpacity;
+  final double maximumOpacity;
+  final double minimumSpeed;
+  final double maximumSpeed;
+  final double twinkleStrength;
+  final double minimumTwinklePeriod;
+  final double maximumTwinklePeriod;
+
+  @override
+  AssistantParticleTheme copyWith({
+    List<Color>? colors,
+    double? areaPerParticle,
+    int? minimumCount,
+    int? maximumCount,
+    double? minimumRadius,
+    double? maximumRadius,
+    double? minimumOpacity,
+    double? maximumOpacity,
+    double? minimumSpeed,
+    double? maximumSpeed,
+    double? twinkleStrength,
+    double? minimumTwinklePeriod,
+    double? maximumTwinklePeriod,
+  }) => AssistantParticleTheme(
+    colors: colors ?? this.colors,
+    areaPerParticle: areaPerParticle ?? this.areaPerParticle,
+    minimumCount: minimumCount ?? this.minimumCount,
+    maximumCount: maximumCount ?? this.maximumCount,
+    minimumRadius: minimumRadius ?? this.minimumRadius,
+    maximumRadius: maximumRadius ?? this.maximumRadius,
+    minimumOpacity: minimumOpacity ?? this.minimumOpacity,
+    maximumOpacity: maximumOpacity ?? this.maximumOpacity,
+    minimumSpeed: minimumSpeed ?? this.minimumSpeed,
+    maximumSpeed: maximumSpeed ?? this.maximumSpeed,
+    twinkleStrength: twinkleStrength ?? this.twinkleStrength,
+    minimumTwinklePeriod: minimumTwinklePeriod ?? this.minimumTwinklePeriod,
+    maximumTwinklePeriod: maximumTwinklePeriod ?? this.maximumTwinklePeriod,
+  );
+
+  @override
+  AssistantParticleTheme lerp(
+    covariant AssistantParticleTheme? other,
+    double t,
+  ) {
+    if (other == null) return this;
+    return AssistantParticleTheme(
+      colors: [
+        for (
+          var index = 0;
+          index < math.min(colors.length, other.colors.length);
+          index++
+        )
+          Color.lerp(colors[index], other.colors[index], t)!,
+      ],
+      areaPerParticle: _lerp(areaPerParticle, other.areaPerParticle, t),
+      minimumCount: _lerp(minimumCount, other.minimumCount, t).round(),
+      maximumCount: _lerp(maximumCount, other.maximumCount, t).round(),
+      minimumRadius: _lerp(minimumRadius, other.minimumRadius, t),
+      maximumRadius: _lerp(maximumRadius, other.maximumRadius, t),
+      minimumOpacity: _lerp(minimumOpacity, other.minimumOpacity, t),
+      maximumOpacity: _lerp(maximumOpacity, other.maximumOpacity, t),
+      minimumSpeed: _lerp(minimumSpeed, other.minimumSpeed, t),
+      maximumSpeed: _lerp(maximumSpeed, other.maximumSpeed, t),
+      twinkleStrength: _lerp(twinkleStrength, other.twinkleStrength, t),
+      minimumTwinklePeriod: _lerp(
+        minimumTwinklePeriod,
+        other.minimumTwinklePeriod,
+        t,
+      ),
+      maximumTwinklePeriod: _lerp(
+        maximumTwinklePeriod,
+        other.maximumTwinklePeriod,
+        t,
+      ),
+    );
+  }
+
+  static double _lerp(num start, num end, double t) =>
+      start + (end - start) * t;
 }
 
 @immutable
