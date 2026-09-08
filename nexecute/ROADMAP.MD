@@ -231,6 +231,68 @@ tool built around Calendar, Tasks, and Notes. New functionality should connect
 these areas without making the core workflows dependent on AI or a permanent
 network connection.
 
+### Animated Assistant background
+
+**Status:** 📋 Planned
+
+Replace the static Assistant conversation-viewport background with a subtle,
+theme-aware field of small drifting dots. Treat the effect as ambient depth,
+not as a prominent screensaver: particles should move slowly, twinkle gently,
+and remain visually subordinate to messages, controls, and empty states.
+
+The first version is intentionally limited to the Assistant conversation
+viewport. Navigation, the composer, dialogs, and message surfaces remain stable
+above it. Do not make the whole application transparent or couple unrelated
+screens to the animation in this slice.
+
+#### Visual direction
+
+- [ ] Scale a sparse field of roughly 25–60 particles to the viewport area and
+  keep most dots between one and two logical pixels.
+- [ ] Give particles slow independent movement, subtle opacity variation, and
+  seamless edge wrapping without abrupt respawning or visible jumps.
+- [ ] Derive low-contrast particle colors from each application theme:
+  subdued cyan/magenta for Cyberpunk, cool blue/violet for Midnight, muted
+  green/amber for Forest, and soft gray for Neutral.
+- [ ] Preserve the selected theme's existing background color beneath the
+  particles and keep text and controls comfortably readable.
+- [ ] Keep the particle layout deterministic across ordinary widget rebuilds;
+  resize and rotation should reposition it smoothly rather than regenerate it.
+
+#### Implementation plan
+
+- [ ] Define a small theme-aware particle configuration for colors, density,
+  size, opacity, speed, and twinkle strength.
+- [ ] Build a reusable `AnimatedParticleBackground` with one
+  `AnimationController` and a `CustomPainter`, drawing every particle in one
+  paint pass rather than rebuilding widgets per frame.
+- [ ] Store particle positions in normalized viewport coordinates so the field
+  adapts cleanly to phone rotation and freely resizable desktop windows.
+- [ ] Layer the painter behind `_buildConversation()` in the Assistant while
+  leaving the composer, navigation, message bubbles, and dialogs unchanged.
+- [ ] Isolate repaints with `RepaintBoundary`, bound the particle count on large
+  displays, and stop ticking through `TickerMode` whenever the Assistant is not
+  visible.
+- [ ] Respect the platform reduced-motion preference by rendering the same
+  particle field without movement or twinkling.
+- [ ] Initially ship the subtle effect without a dedicated preference. Add an
+  enable/disable setting later only if real-world use shows that reduced-motion
+  support is insufficient.
+
+#### Verification and acceptance criteria
+
+- [ ] Add deterministic painter or model tests for stable positions, movement,
+  edge wrapping, and viewport resizing.
+- [ ] Add widget tests proving the background does not intercept taps, typing,
+  or conversation scrolling and that inactive views stop animating.
+- [ ] Verify reduced-motion behavior and live theme changes.
+- [ ] Check empty and populated conversations on mobile portrait, tablet,
+  laptop, and wide desktop layouts under every theme preset.
+- [ ] Profile on representative mobile hardware and confirm that typing,
+  scrolling, keyboard transitions, and response streaming remain smooth.
+- [ ] Confirm the final effect is noticeable but never competes with message
+  text, focus indicators, status banners, or composer controls.
+
 ### Cross-platform laptop access
 
 **Status:** 📋 Planned — adaptive desktop foundation first, native macOS second
