@@ -110,7 +110,13 @@ void main() {
     expect(saved.title, 'Plan tomorrow');
     expect(saved.messages, hasLength(2));
     expect(saved.messages.first.role, AiMessageRole.user);
+    expect(saved.messages.first.sequence, 0);
     expect(saved.messages.last.content, 'Hello');
+    expect(saved.messages.last.sequence, 1);
+    expect(
+      saved.messages.last.createdAt.isAfter(saved.messages.first.createdAt),
+      isTrue,
+    );
     expect(saved.messages.last.status, AiMessageStatus.complete);
     expect(
       saved.messages.any(

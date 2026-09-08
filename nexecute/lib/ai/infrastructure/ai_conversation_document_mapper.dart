@@ -53,6 +53,7 @@ abstract final class AiConversationDocumentMapper {
     'role': message.role.name,
     'content': message.content,
     'createdAt': message.createdAt,
+    if (message.sequence != null) 'sequence': message.sequence,
     'status': message.status.name,
     'errorMessage': message.errorMessage,
     'diagnostic': _diagnosticToMap(message.diagnostic),
@@ -82,6 +83,7 @@ abstract final class AiConversationDocumentMapper {
       ),
       content: data['content']?.toString() ?? '',
       createdAt: _date(data['createdAt']) ?? DateTime.now(),
+      sequence: _sequence(data['sequence']),
       status: _enumByName(
         AiMessageStatus.values,
         data['status']?.toString(),
@@ -153,6 +155,12 @@ abstract final class AiConversationDocumentMapper {
     DateTime date => date,
     _ => null,
   };
+
+  static int? _sequence(Object? value) {
+    if (value is! num || !value.isFinite || value != value.toInt()) return null;
+    final sequence = value.toInt();
+    return sequence < 0 ? null : sequence;
+  }
 
   static List<AiSkillReference> _skillReferences(Object? value) {
     if (value is! Iterable) return const [];

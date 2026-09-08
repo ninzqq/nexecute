@@ -81,6 +81,7 @@ void main() {
       role: AiMessageRole.assistant,
       content: 'Partial answer',
       createdAt: DateTime.utc(2026, 8, 29, 12),
+      sequence: 3,
       status: AiMessageStatus.failed,
       errorMessage: 'Connection lost',
       diagnostic: diagnostic,
@@ -94,11 +95,22 @@ void main() {
 
     expect(restored.role, AiMessageRole.assistant);
     expect(restored.content, 'Partial answer');
+    expect(data['sequence'], 3);
+    expect(restored.sequence, 3);
     expect(restored.status, AiMessageStatus.failed);
     expect(restored.errorMessage, 'Connection lost');
     expect(restored.diagnostic?.kind, AiDiagnosticKind.dns);
     expect(restored.diagnostic?.title, 'Host not found');
     expect(restored.diagnostic?.suggestions, ['Check the endpoint address.']);
+  });
+
+  test('ignores malformed stored message sequences', () {
+    for (final value in [-1, 1.5, double.infinity, '2']) {
+      final restored = AiConversationDocumentMapper.messageFromMap('message', {
+        'sequence': value,
+      });
+      expect(restored.sequence, isNull);
+    }
   });
 
   test('ignores malformed or unknown stored diagnostics', () {

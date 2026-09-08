@@ -11,7 +11,7 @@ class AiConversation {
     required this.updatedAt,
     List<AiChatMessage> messages = const [],
     Iterable<AiSkillReference> activeSkills = const [],
-  }) : messages = List.unmodifiable(messages),
+  }) : messages = List.unmodifiable(_orderedMessages(messages)),
        activeSkills = normalizeAiSkillReferences(activeSkills);
 
   final String id;
@@ -44,4 +44,20 @@ class AiConversation {
       activeSkills: activeSkills ?? this.activeSkills,
     );
   }
+}
+
+List<AiChatMessage> _orderedMessages(List<AiChatMessage> messages) {
+  final indexed = messages.indexed.toList();
+  indexed.sort((left, right) {
+    final leftSequence = left.$2.sequence;
+    final rightSequence = right.$2.sequence;
+    if (leftSequence != null &&
+        rightSequence != null &&
+        leftSequence != rightSequence) {
+      return leftSequence.compareTo(rightSequence);
+    }
+    final timestamp = left.$2.createdAt.compareTo(right.$2.createdAt);
+    return timestamp != 0 ? timestamp : left.$1.compareTo(right.$1);
+  });
+  return [for (final entry in indexed) entry.$2];
 }

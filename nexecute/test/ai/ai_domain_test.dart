@@ -105,6 +105,38 @@ void main() {
     expect(() => request.messages.clear(), throwsUnsupportedError);
   });
 
+  test('conversation uses message sequence when timestamps are misleading', () {
+    final assistant = AiChatMessage(
+      id: 'assistant',
+      role: AiMessageRole.assistant,
+      content: 'Answer',
+      createdAt: DateTime.utc(2026, 9, 8, 12),
+      sequence: 1,
+    );
+    final user = AiChatMessage(
+      id: 'user',
+      role: AiMessageRole.user,
+      content: 'Question',
+      createdAt: DateTime.utc(2026, 9, 8, 12, 0, 1),
+      sequence: 0,
+    );
+
+    final conversation = AiConversation(
+      id: 'conversation',
+      title: 'Ordered chat',
+      connectionProfileId: 'profile',
+      modelId: 'model',
+      createdAt: assistant.createdAt,
+      updatedAt: user.createdAt,
+      messages: [assistant, user],
+    );
+
+    expect(conversation.messages.map((message) => message.id), [
+      'user',
+      'assistant',
+    ]);
+  });
+
   test('conversation references and resolved request skills are immutable', () {
     final skill = AiSkill(
       id: 'suomen-kieli',

@@ -11,17 +11,20 @@ class AiChatMessage {
     required this.role,
     required this.content,
     required this.createdAt,
+    this.sequence,
     this.status = AiMessageStatus.complete,
     this.errorMessage,
     this.diagnostic,
     this.toolCallId,
     this.citations = const [],
-  }) : assert(citations.length <= aiMaxCitationsPerMessage);
+  }) : assert(sequence == null || sequence >= 0),
+       assert(citations.length <= aiMaxCitationsPerMessage);
 
   final String id;
   final AiMessageRole role;
   final String content;
   final DateTime createdAt;
+  final int? sequence;
   final AiMessageStatus status;
   final String? errorMessage;
   final AiDiagnostic? diagnostic;
@@ -33,6 +36,7 @@ class AiChatMessage {
     AiMessageRole? role,
     String? content,
     DateTime? createdAt,
+    int? sequence,
     AiMessageStatus? status,
     String? errorMessage,
     AiDiagnostic? diagnostic,
@@ -44,6 +48,7 @@ class AiChatMessage {
       role: role ?? this.role,
       content: content ?? this.content,
       createdAt: createdAt ?? this.createdAt,
+      sequence: sequence ?? this.sequence,
       status: status ?? this.status,
       errorMessage: errorMessage ?? this.errorMessage,
       diagnostic: diagnostic ?? this.diagnostic,

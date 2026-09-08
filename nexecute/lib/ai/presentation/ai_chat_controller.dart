@@ -307,6 +307,7 @@ class AiChatController extends ChangeNotifier {
         role: AiMessageRole.user,
         content: text,
         createdAt: now,
+        sequence: _nextMessageSequence(current.messages),
       );
       final requestMessages = [...current.messages, userMessage];
       conversation = current.copyWith(
@@ -471,7 +472,8 @@ class AiChatController extends ChangeNotifier {
       id: _idFactory(),
       role: AiMessageRole.assistant,
       content: '',
-      createdAt: _nextMessageTime(),
+      createdAt: _nextMessageTime(after: requestMessages),
+      sequence: _nextMessageSequence(requestMessages),
       status: AiMessageStatus.streaming,
     );
     isGenerating = true;
@@ -759,12 +761,26 @@ class AiChatController extends ChangeNotifier {
     }());
   }
 
-  DateTime _nextMessageTime() {
+  DateTime _nextMessageTime({Iterable<AiChatMessage>? after}) {
     final value = _clock();
-    final last = messages.isEmpty ? null : messages.last.createdAt;
-    return last != null && !value.isAfter(last)
-        ? last.add(const Duration(microseconds: 1))
+    DateTime? latest;
+    for (final message in after ?? messages) {
+      if (latest == null || message.createdAt.isAfter(latest)) {
+        latest = message.createdAt;
+      }
+    }
+    return latest != null && !value.isAfter(latest)
+        ? latest.add(const Duration(microseconds: 1))
         : value;
+  }
+
+  static int _nextMessageSequence(Iterable<AiChatMessage> messages) {
+    var next = 0;
+    for (final message in messages) {
+      final sequence = message.sequence;
+      if (sequence != null && sequence >= next) next = sequence + 1;
+    }
+    return next;
   }
 
   static String _titleFor(String text) {
