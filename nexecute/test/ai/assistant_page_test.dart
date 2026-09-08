@@ -804,7 +804,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Skills · none active'), findsOneWidget);
+    expect(find.byTooltip('Skills · none active'), findsOneWidget);
     await tester.tap(find.byKey(const Key('assistant-pick-skills')));
     await tester.pumpAndSettle();
     expect(find.textContaining('Inactive · Finnish writing'), findsOneWidget);
@@ -819,7 +819,10 @@ void main() {
       find.byKey(const Key('assistant-skill-suomen-kieli')),
       findsOneWidget,
     );
-    expect(find.text('Active skills for this conversation'), findsOneWidget);
+    expect(
+      find.byTooltip('Active skills for this conversation'),
+      findsOneWidget,
+    );
     await tester.tap(find.byKey(const Key('assistant-preview-instructions')));
     await tester.pumpAndSettle();
     expect(find.textContaining('Active skill · Suomen kieli'), findsOneWidget);
@@ -977,7 +980,70 @@ void main() {
       request.toolDefinitions.map((definition) => definition.name),
       contains(AiWebSearchToolNames.searchWeb),
     );
-    expect(tester.widget<Switch>(toggle).value, isFalse);
+    expect(tester.widget<IconButton>(toggle).isSelected, isFalse);
+  });
+
+  testWidgets('keeps inactive skills and web search in the composer row', (
+    tester,
+  ) async {
+    final profile = AiConnectionProfile(
+      id: 'model',
+      name: 'Tool model',
+      protocol: AiProtocol.openAiCompatibleChat,
+      baseUrl: Uri.parse('https://ai.example.test/v1'),
+      modelId: 'tool-model',
+      capabilityOverrides: const {AiCapability.tools: true},
+    );
+    final searchProfile = AiWebSearchConnectionProfile(
+      id: 'brave',
+      name: 'Brave Search',
+      providerKind: AiWebSearchProviderKind.brave,
+      baseUrl: AiWebSearchProviderCatalog.brave.trustedBaseUri!,
+      enabled: true,
+      credentialReference: 'secure-storage:brave',
+    );
+    final profileStore = FakeAiConnectionProfileStore(
+      profiles: [profile],
+      activeProfileId: profile.id,
+    );
+    final searchProfiles = InMemoryAiWebSearchConnectionProfileStore(
+      profiles: [searchProfile],
+      activeProfileId: searchProfile.id,
+    );
+    final conversations = FakeAiConversationStore();
+    final skills = InMemoryAiSkillStore();
+    addTearDown(profileStore.dispose);
+    addTearDown(searchProfiles.dispose);
+    addTearDown(conversations.dispose);
+    addTearDown(skills.dispose);
+
+    await tester.pumpWidget(
+      _app(
+        assistantRepository: FakeAiAssistantRepository(),
+        profileStore: profileStore,
+        conversationStore: conversations,
+        skillStore: skills,
+        webSearchProfileStore: searchProfiles,
+        webSearchRepository: const _AvailableWebSearchRepository(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final composerCenter = tester.getCenter(
+      find.byKey(const Key('assistant-composer')),
+    );
+    final skillsCenter = tester.getCenter(
+      find.byKey(const Key('assistant-pick-skills')),
+    );
+    final searchCenter = tester.getCenter(
+      find.byKey(const Key('assistant-allow-web-search')),
+    );
+    expect(skillsCenter.dy, closeTo(composerCenter.dy, 12));
+    expect(searchCenter.dy, closeTo(composerCenter.dy, 12));
+    expect(
+      find.textContaining('Allow web search for this request'),
+      findsNothing,
+    );
   });
 }
 

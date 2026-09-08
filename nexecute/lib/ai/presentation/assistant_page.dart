@@ -161,28 +161,6 @@ class _AssistantPageState extends State<AssistantPage> {
                   onRemoveEvents: _removeEvents,
                   onPreview: () => _showContextPreview(applicationContext),
                 ),
-              _SkillActivationBar(
-                references: _controller.effectiveSkills,
-                metadata: _skillCatalog,
-                appliesToNextRequest: _controller.nextRequestSkills != null,
-                storageAvailable:
-                    _skillStore?.isAvailable == true &&
-                    _skillCatalogError == null,
-                onPick: _showSkillPicker,
-                onRemove: _removeSkill,
-                onClear: _clearSkills,
-                onPreview: _showInstructionPreview,
-              ),
-              if (_webSearchProfile case final searchProfile?)
-                _WebSearchAuthorizationBar(
-                  profile: searchProfile,
-                  selected: _allowWebSearchForNextRequest,
-                  enabled: _canAuthorizeWebSearch,
-                  unavailableReason: _webSearchUnavailableReason,
-                  onChanged:
-                      (value) =>
-                          setState(() => _allowWebSearchForNextRequest = value),
-                ),
               _Composer(
                 controller: _composerController,
                 focusNode: _composerFocusNode,
@@ -192,6 +170,30 @@ class _AssistantPageState extends State<AssistantPage> {
                 onStop: () => unawaited(_controller.stopResponse()),
                 onAttach: _isLoadingContext ? null : _showAttachmentMenu,
                 isLoadingContext: _isLoadingContext,
+                skillControls: _SkillComposerControls(
+                  references: _controller.effectiveSkills,
+                  metadata: _skillCatalog,
+                  appliesToNextRequest: _controller.nextRequestSkills != null,
+                  storageAvailable:
+                      _skillStore?.isAvailable == true &&
+                      _skillCatalogError == null,
+                  onPick: _showSkillPicker,
+                  onRemove: _removeSkill,
+                  onPreview: _showInstructionPreview,
+                ),
+                webSearchControl:
+                    _webSearchProfile == null
+                        ? null
+                        : _WebSearchAuthorizationButton(
+                          profile: _webSearchProfile!,
+                          selected: _allowWebSearchForNextRequest,
+                          enabled: _canAuthorizeWebSearch,
+                          unavailableReason: _webSearchUnavailableReason,
+                          onChanged:
+                              (value) => setState(
+                                () => _allowWebSearchForNextRequest = value,
+                              ),
+                        ),
               ),
             ],
           ),
@@ -558,8 +560,6 @@ class _AssistantPageState extends State<AssistantPage> {
     _controller.effectiveSkills.where((skill) => skill.id != skillId),
   );
 
-  Future<void> _clearSkills() => _setEffectiveSkills(const []);
-
   Future<void> _setEffectiveSkills(Iterable<AiSkillReference> references) =>
       _controller.setActiveSkills(
         references,
@@ -886,6 +886,8 @@ class _Composer extends StatelessWidget {
     required this.onStop,
     required this.onAttach,
     required this.isLoadingContext,
+    required this.skillControls,
+    required this.webSearchControl,
   });
 
   final TextEditingController controller;
@@ -896,6 +898,8 @@ class _Composer extends StatelessWidget {
   final VoidCallback onStop;
   final VoidCallback? onAttach;
   final bool isLoadingContext;
+  final _SkillComposerControls skillControls;
+  final Widget? webSearchControl;
 
   @override
   Widget build(BuildContext context) {
@@ -925,52 +929,61 @@ class _Composer extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           12,
-          10,
+          6,
           12,
           10 + MediaQuery.viewInsetsOf(context).bottom,
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            IconButton(
-              key: const Key('assistant-attach-context'),
-              tooltip: 'Attach application context',
-              onPressed: enabled && !isGenerating ? onAttach : null,
-              icon:
-                  isLoadingContext
-                      ? const SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                      : const Icon(Icons.attach_file_rounded),
+            if (skillControls.hasActiveSkills) skillControls,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                IconButton(
+                  key: const Key('assistant-attach-context'),
+                  tooltip: 'Attach application context',
+                  onPressed: enabled && !isGenerating ? onAttach : null,
+                  icon:
+                      isLoadingContext
+                          ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                          : const Icon(Icons.attach_file_rounded),
+                ),
+                if (!skillControls.hasActiveSkills) skillControls,
+                if (webSearchControl case final control?) control,
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Tooltip(
+                    message:
+                        _usesDesktopKeyboard
+                            ? 'Enter to send · Shift+Enter for a new line · '
+                                'Focus: ${AppShortcutLabels.assistantComposer}'
+                            : 'Focus composer: '
+                                '${AppShortcutLabels.assistantComposer}',
+                    child: composer,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                if (isGenerating)
+                  IconButton.filled(
+                    key: const Key('assistant-stop'),
+                    tooltip: 'Stop response',
+                    onPressed: onStop,
+                    icon: const Icon(Icons.stop_rounded),
+                  )
+                else
+                  IconButton.filled(
+                    key: const Key('assistant-send'),
+                    tooltip: 'Send',
+                    onPressed: enabled ? () => onSend(controller.text) : null,
+                    icon: const Icon(Icons.arrow_upward_rounded),
+                  ),
+              ],
             ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Tooltip(
-                message:
-                    _usesDesktopKeyboard
-                        ? 'Enter to send · Shift+Enter for a new line · '
-                            'Focus: ${AppShortcutLabels.assistantComposer}'
-                        : 'Focus composer: '
-                            '${AppShortcutLabels.assistantComposer}',
-                child: composer,
-              ),
-            ),
-            const SizedBox(width: 10),
-            if (isGenerating)
-              IconButton.filled(
-                key: const Key('assistant-stop'),
-                tooltip: 'Stop response',
-                onPressed: onStop,
-                icon: const Icon(Icons.stop_rounded),
-              )
-            else
-              IconButton.filled(
-                key: const Key('assistant-send'),
-                tooltip: 'Send',
-                onPressed: enabled ? () => onSend(controller.text) : null,
-                icon: const Icon(Icons.arrow_upward_rounded),
-              ),
           ],
         ),
       ),
@@ -989,8 +1002,8 @@ class _Composer extends StatelessWidget {
       defaultTargetPlatform == TargetPlatform.linux;
 }
 
-final class _WebSearchAuthorizationBar extends StatelessWidget {
-  const _WebSearchAuthorizationBar({
+final class _WebSearchAuthorizationButton extends StatelessWidget {
+  const _WebSearchAuthorizationButton({
     required this.profile,
     required this.selected,
     required this.enabled,
@@ -1005,31 +1018,23 @@ final class _WebSearchAuthorizationBar extends StatelessWidget {
   final ValueChanged<bool> onChanged;
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: Theme.of(context).colorScheme.surfaceContainerLow,
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Row(
-        children: [
-          Expanded(
-            child: Tooltip(
-              message:
-                  unavailableReason ??
-                  'The query will be sent to ${profile.provider.label}.',
-              child: Text(
-                'Allow web search for this request · ${profile.provider.label}',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ),
-          ),
-          Switch.adaptive(
-            key: const Key('assistant-allow-web-search'),
-            value: selected,
-            onChanged: enabled ? onChanged : null,
-          ),
-        ],
-      ),
-    ),
+  Widget build(BuildContext context) => IconButton(
+    key: const Key('assistant-allow-web-search'),
+    tooltip:
+        unavailableReason ??
+        '${selected ? 'Disable' : 'Allow'} web search for this request · '
+            '${profile.provider.label}',
+    isSelected: selected,
+    onPressed: enabled ? () => onChanged(!selected) : null,
+    icon: const Icon(Icons.travel_explore_outlined),
+    selectedIcon: const Icon(Icons.travel_explore_rounded),
+    style:
+        selected
+            ? IconButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+            )
+            : null,
   );
 }
 
@@ -1044,15 +1049,14 @@ String _issueLabel(AiSkillResolutionIssueKind kind) => switch (kind) {
     'enable multiple skills for this connection in AI Settings',
 };
 
-class _SkillActivationBar extends StatelessWidget {
-  const _SkillActivationBar({
+class _SkillComposerControls extends StatelessWidget {
+  const _SkillComposerControls({
     required this.references,
     required this.metadata,
     required this.appliesToNextRequest,
     required this.storageAvailable,
     required this.onPick,
     required this.onRemove,
-    required this.onClear,
     required this.onPreview,
   });
 
@@ -1062,8 +1066,9 @@ class _SkillActivationBar extends StatelessWidget {
   final bool storageAvailable;
   final VoidCallback onPick;
   final ValueChanged<String> onRemove;
-  final VoidCallback onClear;
   final VoidCallback onPreview;
+
+  bool get hasActiveSkills => references.isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -1074,63 +1079,49 @@ class _SkillActivationBar extends StatelessWidget {
             1)
           category.name,
     ];
-    return Material(
-      key: const Key('assistant-skill-bar'),
-      color: Theme.of(context).colorScheme.surfaceContainerLow,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    !storageAvailable
-                        ? 'Skills unavailable · chat continues without them'
-                        : appliesToNextRequest
-                        ? 'Skills for next message'
-                        : references.isEmpty
-                        ? 'Skills · none active'
-                        : 'Active skills for this conversation',
-                    style: Theme.of(context).textTheme.labelMedium,
-                  ),
-                ),
-                IconButton(
-                  key: const Key('assistant-preview-instructions'),
-                  tooltip:
-                      conflicts.isEmpty
-                          ? 'Preview instruction source order'
-                          : 'Conflicting skill categories: ${conflicts.join(', ')}. Review precedence.',
-                  onPressed: onPreview,
-                  icon: Icon(
-                    conflicts.isEmpty
-                        ? Icons.visibility_outlined
-                        : Icons.warning_amber_rounded,
-                    size: 20,
-                  ),
-                ),
-                TextButton.icon(
-                  key: const Key('assistant-pick-skills'),
-                  onPressed: storageAvailable ? onPick : null,
-                  icon: const Icon(Icons.psychology_alt_outlined, size: 20),
-                  label: const Text('Skills'),
-                ),
-                if (references.isNotEmpty)
-                  IconButton(
-                    key: const Key('assistant-clear-skills'),
-                    tooltip: 'Deactivate all skills',
-                    onPressed: onClear,
-                    icon: const Icon(Icons.layers_clear_outlined, size: 20),
-                  ),
-              ],
+    final status =
+        !storageAvailable
+            ? 'Skills unavailable · chat continues without them'
+            : appliesToNextRequest
+            ? 'Skills for next message'
+            : references.isEmpty
+            ? 'Skills · none active'
+            : 'Active skills for this conversation';
+    return Row(
+      key: const Key('assistant-skill-controls'),
+      children: [
+        Tooltip(
+          message: status,
+          child: IconButton(
+            key: const Key('assistant-pick-skills'),
+            onPressed: storageAvailable ? onPick : null,
+            isSelected: references.isNotEmpty,
+            icon: const Icon(Icons.psychology_alt_outlined),
+            selectedIcon: const Icon(Icons.psychology_alt_rounded),
+          ),
+        ),
+        if (references.isNotEmpty) ...[
+          IconButton(
+            key: const Key('assistant-preview-instructions'),
+            tooltip:
+                conflicts.isEmpty
+                    ? 'Preview instruction source order'
+                    : 'Conflicting skill categories: ${conflicts.join(', ')}. Review precedence.',
+            onPressed: onPreview,
+            icon: Icon(
+              conflicts.isEmpty
+                  ? Icons.visibility_outlined
+                  : Icons.warning_amber_rounded,
+              size: 20,
             ),
-            if (references.isNotEmpty)
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
                 children: [
-                  for (final reference in references)
+                  for (final reference in references) ...[
                     InputChip(
                       key: ValueKey('assistant-skill-${reference.id}'),
                       avatar: Icon(
@@ -1140,11 +1131,14 @@ class _SkillActivationBar extends StatelessWidget {
                       label: Text(_skillLabel(reference, byId[reference.id])),
                       onDeleted: () => onRemove(reference.id),
                     ),
+                    const SizedBox(width: 6),
+                  ],
                 ],
               ),
-          ],
-        ),
-      ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
