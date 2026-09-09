@@ -307,11 +307,11 @@ class _AssistantParticleBackgroundState
           children: [
             Positioned.fill(
               child: IgnorePointer(
-                key: const Key('assistant-particle-layer'),
+                key: const Key('app-particle-layer'),
                 child: ExcludeSemantics(
                   child: RepaintBoundary(
                     child: CustomPaint(
-                      key: const Key('assistant-particle-paint'),
+                      key: const Key('app-particle-paint'),
                       painter: AssistantParticlePainter(
                         field: field,
                         backgroundColor: theme.scaffoldBackgroundColor,

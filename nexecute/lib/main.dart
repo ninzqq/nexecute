@@ -10,6 +10,7 @@ import 'package:nexecute/models/app_theme_controller.dart';
 import 'package:nexecute/models/calendar_settings_controller.dart';
 import 'package:nexecute/repositories/repositories.dart';
 import 'package:nexecute/services/services.dart';
+import 'package:nexecute/shared/app_particle_background.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'firebase_options.dart';
@@ -255,6 +256,7 @@ class NexecuteState extends State<Nexecute> {
             (context, themeController, _) => MaterialApp(
               routes: appRoutes,
               theme: themeController.themeData,
+              builder: (context, child) => AppParticleBackground(child: child!),
               localizationsDelegates: GlobalMaterialLocalizations.delegates,
               supportedLocales: const [Locale('fi', 'FI')],
             ),

@@ -146,11 +146,9 @@ class _AssistantPageState extends State<AssistantPage> {
                 ),
               ),
             Expanded(
-              child: AssistantParticleBackground(
-                child: AdaptiveContentFrame(
-                  contentKey: const Key('assistant-content-frame'),
-                  child: _buildConversation(),
-                ),
+              child: AdaptiveContentFrame(
+                contentKey: const Key('assistant-content-frame'),
+                child: _buildConversation(),
               ),
             ),
             if (_applicationContext case final applicationContext?)

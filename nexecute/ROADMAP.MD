@@ -231,9 +231,9 @@ tool built around Calendar, Tasks, and Notes. New functionality should connect
 these areas without making the core workflows dependent on AI or a permanent
 network connection.
 
-### Animated Assistant background
+### Animated application background
 
-**Status:** 🚧 In progress — Phase 4 implemented; Android device validation pending
+**Status:** 🚧 In progress — application-wide rollout complete; Android device validation pending
 
 Replace the static Assistant conversation-viewport background with a subtle,
 theme-aware field of small drifting dots. Treat the effect as ambient depth,
@@ -335,6 +335,26 @@ Treat this as the release gate rather than expanding the feature's scope.
 **Phase 4 gate:** The effect is noticeable but subordinate, introduces no
 measurable interaction jank, and leaves the full Assistant workflow accessible
 and reliable.
+
+#### Phase 5: application-wide rollout
+
+Expand the proven effect without duplicating animation state on individual
+pages.
+
+- [x] Host one persistent particle field above the app theme and behind the
+  Navigator so every primary route and desktop workspace view shares it.
+- [x] Make structural `Scaffold` backgrounds transparent while retaining the
+  selected theme's real background color in the particle painter.
+- [x] Remove the Assistant-local painter so the Assistant does not render or
+  tick a second field.
+- [x] Keep navigation chrome, cards, dialogs, sheets, menus, and other content
+  surfaces opaque for contrast and readability.
+- [x] Verify that route changes preserve the same animation, all page
+  scaffolds reveal the field, and modal surfaces remain readable.
+
+**Phase 5 gate:** One continuous field spans authentication, loading, primary
+workspace tabs, standalone routes, and the visible area behind overlays without
+restarting on navigation or painting twice.
 
 ### Cross-platform laptop access
 

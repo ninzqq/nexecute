@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/ai/ai.dart';
 import 'package:nexecute/themes.dart';
+import 'package:nexecute/shared/app_particle_background.dart';
 import 'package:provider/provider.dart';
 
 import '../support/fake_ai_dependencies.dart';
@@ -58,23 +59,20 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        expect(
-          find.byKey(const Key('assistant-particle-layer')),
-          findsOneWidget,
-        );
+        expect(find.byKey(const Key('app-particle-layer')), findsOneWidget);
         expect(
           find.ancestor(
             of: find.text('Start a conversation'),
-            matching: find.byType(AssistantParticleBackground),
+            matching: find.byType(AppParticleBackground),
           ),
           findsOneWidget,
         );
         expect(
           find.ancestor(
             of: find.byKey(const Key('assistant-composer')),
-            matching: find.byType(AssistantParticleBackground),
+            matching: find.byType(AppParticleBackground),
           ),
-          findsNothing,
+          findsOneWidget,
         );
         await tester.tap(find.byKey(const Key('assistant-composer-options')));
         await tester.pumpAndSettle();
@@ -263,7 +261,7 @@ void main() {
     expect(contentRect.width, 840);
     expect(contentRect.center.dx, 700);
     final particleRect = tester.getRect(
-      find.byKey(const Key('assistant-particle-paint')),
+      find.byKey(const Key('app-particle-paint')),
     );
     expect(particleRect.width, 1400);
     expect(particleRect.center.dx, 700);
@@ -1120,7 +1118,7 @@ Widget _app({
       builder:
           (context, child) => MediaQuery(
             data: MediaQuery.of(context).copyWith(disableAnimations: true),
-            child: child!,
+            child: AppParticleBackground(child: child!),
           ),
       routes: {'/settings': (_) => const Scaffold(body: Text('Settings page'))},
       home: const AssistantPage(),

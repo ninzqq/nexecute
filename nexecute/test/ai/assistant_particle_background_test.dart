@@ -57,13 +57,11 @@ void main() {
       ),
     );
 
-    expect(find.byKey(const Key('assistant-particle-layer')), findsOneWidget);
-    expect(find.byKey(const Key('assistant-particle-paint')), findsOneWidget);
+    expect(find.byKey(const Key('app-particle-layer')), findsOneWidget);
+    expect(find.byKey(const Key('app-particle-paint')), findsOneWidget);
     expect(
       tester
-          .widget<IgnorePointer>(
-            find.byKey(const Key('assistant-particle-layer')),
-          )
+          .widget<IgnorePointer>(find.byKey(const Key('app-particle-layer')))
           .ignoring,
       isTrue,
     );
@@ -94,7 +92,7 @@ void main() {
     );
 
     final paint = tester.widget<CustomPaint>(
-      find.byKey(const Key('assistant-particle-paint')),
+      find.byKey(const Key('app-particle-paint')),
     );
     final painter = paint.painter! as AssistantParticlePainter;
     expect(painter.backgroundColor, background);
@@ -243,7 +241,7 @@ void main() {
     ], beforePositions.take(sharedCount));
     expect(after.particleColors, const [Color(0xFFAEB7C4), Color(0xFF737B86)]);
     expect(
-      tester.getSize(find.byKey(const Key('assistant-particle-paint'))),
+      tester.getSize(find.byKey(const Key('app-particle-paint'))),
       const Size(600, 800),
     );
   });
@@ -267,10 +265,7 @@ void main() {
         expect(find.text('Readable message content'), findsOneWidget);
         expect(find.bySemanticsLabel('Message the assistant'), findsOneWidget);
         expect(find.bySemanticsLabel('Send message'), findsOneWidget);
-        expect(
-          find.byKey(const Key('assistant-particle-layer')),
-          findsOneWidget,
-        );
+        expect(find.byKey(const Key('app-particle-layer')), findsOneWidget);
         expect(find.bySemanticsLabel('Assistant particles'), findsNothing);
 
         await tester.tap(find.byKey(const Key('release-composer')));
@@ -369,8 +364,6 @@ Widget _accessibilityApp(AppThemePreset preset) => MaterialApp(
 
 AssistantParticlePainter _particlePainter(WidgetTester tester) =>
     tester
-            .widget<CustomPaint>(
-              find.byKey(const Key('assistant-particle-paint')),
-            )
+            .widget<CustomPaint>(find.byKey(const Key('app-particle-paint')))
             .painter!
         as AssistantParticlePainter;

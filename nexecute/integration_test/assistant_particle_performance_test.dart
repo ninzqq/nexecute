@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:nexecute/ai/ai.dart';
 import 'package:nexecute/themes.dart';
+import 'package:nexecute/shared/app_particle_background.dart';
 import 'package:provider/provider.dart';
 
 import '../test/support/fake_ai_dependencies.dart';
@@ -43,7 +44,7 @@ void main() {
       ),
     );
     await _pumpFrames(tester, 30);
-    expect(find.byKey(const Key('assistant-particle-layer')), findsOneWidget);
+    expect(find.byKey(const Key('app-particle-layer')), findsOneWidget);
 
     await binding.watchPerformance(() async {
       final composer = find.byKey(const Key('assistant-composer'));
@@ -146,6 +147,7 @@ Widget _performanceApp({
   ],
   child: MaterialApp(
     theme: AppThemes.forPreset(AppThemePreset.cyberpunkMega),
+    builder: (context, child) => AppParticleBackground(child: child!),
     home: const AssistantPage(),
   ),
 );

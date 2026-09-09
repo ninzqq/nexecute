@@ -1,8 +1,8 @@
-# Assistant particle release validation
+# Application particle release validation
 
-This document is the release gate for the animated particle field behind the
-Assistant conversation. The effect must remain decorative: it may not delay or
-obscure messages, status banners, focus indicators, controls, or assistive
+This document is the release gate for the application-wide animated particle
+field. The effect must remain decorative: it may not delay or obscure page
+content, messages, status banners, focus indicators, controls, or assistive
 technology output.
 
 ## Automated coverage
@@ -18,7 +18,9 @@ The particle widget suite covers deterministic rendering, bounded area-based
 density, theme palettes, motion and wrapping, twinkle, resize stability,
 inactive-view suspension, reduced motion, pointer passthrough, semantic
 exclusion, keyboard focus, and text contrast at 320x720 and 1440x900 under all
-theme presets.
+theme presets. Shared-background tests verify that one field survives route
+changes, page scaffolds remain transparent, and dialogs and sheets retain
+opaque surfaces.
 
 Run the interaction benchmark in profile mode on each release target:
 
@@ -28,17 +30,19 @@ flutter drive --driver test_driver/integration_test.dart \
   -d <device-id> --profile
 ```
 
-The benchmark exercises the real Assistant page while opening keyboard focus,
-typing, streaming a long response, scrolling, and changing viewport sizes. It
-requires both 90th-percentile build and raster times to remain below Flutter's
-16 ms frame budget. Keep the emitted `ASSISTANT_PARTICLE_PERFORMANCE` summary
-with the release record so changes can be compared over time.
+The benchmark exercises the application-wide field behind the real Assistant
+page while opening keyboard focus, typing, streaming a long response,
+scrolling, and changing viewport sizes. It requires both 90th-percentile build
+and raster times to remain below Flutter's 16 ms frame budget. Keep the emitted
+`ASSISTANT_PARTICLE_PERFORMANCE` summary with the release record so changes can
+be compared over time.
 
 ## Manual device matrix
 
 For both a representative Android phone and macOS computer:
 
-1. Open an empty Assistant conversation under every theme.
+1. Visit authentication, Calendar, Tasks, Notes, Assistant, Tags, Archive,
+   Profile, Settings, and standalone search under every theme.
 2. Focus the composer, type continuously, and open and dismiss the keyboard.
 3. Stream a long answer while repeatedly scrolling through existing messages.
 4. On Android, rotate between portrait and landscape. On macOS, continuously
@@ -77,3 +81,15 @@ provide the stable regression coverage instead.
 - Relevant Assistant, theme, and navigation suites: 354 tests passed; static
   analysis reported no issues. The macOS profile integration scenario passed.
 - Intentional golden or screenshot changes: none.
+
+## Application-wide rollout record — 2026-09-09
+
+- Global macOS profile rerun: 322 measured frames; average build 0.430 ms;
+  p90 build 0.462 ms; p99 build 2.483 ms; average raster 0.942 ms; p90 raster
+  1.150 ms; p99 raster 2.952 ms; zero build or raster frames over 16 ms.
+- The complete Flutter suite passed 564 tests. The environment-dependent live
+  Ollama smoke test remained skipped as configured, and static analysis
+  reported no issues.
+- Route, modal-surface, Assistant, theme, navigation, editor, login, calendar,
+  task, note, archive, profile, settings, and search regressions are covered by
+  the complete suite. Intentional golden or screenshot changes: none.
