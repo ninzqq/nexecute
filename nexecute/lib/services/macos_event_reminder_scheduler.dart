@@ -1,7 +1,6 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:nexecute/models/event.dart';
-import 'package:nexecute/models/event_reminder.dart';
 import 'package:nexecute/services/event_reminder_scheduler.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
@@ -94,16 +93,20 @@ class MacOSEventReminderScheduler
   @override
   Future<EventReminderScheduleStatus> schedule(Event event) async {
     try {
-      await cancel(event.id);
+      await _cancelScheduledNotifications(event.id);
 
-      final scheduledTime = event.reminder.scheduledTime(event.startTime);
-      if (scheduledTime == null) {
+      final reminders = eventReminderNotifications(event);
+      if (reminders.isEmpty) {
         return EventReminderScheduleStatus.notRequested;
       }
       if (event.recurrence.repeats) {
         return EventReminderScheduleStatus.unsupported;
       }
-      if (!scheduledTime.isAfter(DateTime.now())) {
+      final now = DateTime.now();
+      final schedulableReminders = reminders
+          .where((reminder) => reminder.scheduledTime.isAfter(now))
+          .toList(growable: false);
+      if (schedulableReminders.isEmpty) {
         return EventReminderScheduleStatus.triggerInPast;
       }
 
@@ -111,25 +114,27 @@ class MacOSEventReminderScheduler
       final unavailableStatus = _scheduleStatusForPermission(permissionStatus);
       if (unavailableStatus != null) return unavailableStatus;
 
-      await _notifications.zonedSchedule(
-        id: eventReminderNotificationId(event.id),
-        title: event.title,
-        body: _notificationBody(event),
-        scheduledDate: tz.TZDateTime.from(scheduledTime, _location),
-        notificationDetails: const NotificationDetails(
-          macOS: DarwinNotificationDetails(
-            presentAlert: true,
-            presentSound: true,
-            presentBadge: false,
-            presentBanner: true,
-            presentList: true,
-            threadIdentifier: _threadIdentifier,
-            interruptionLevel: InterruptionLevel.active,
+      for (final reminder in schedulableReminders) {
+        await _notifications.zonedSchedule(
+          id: eventReminderNotificationId(event.id, reminder.kind),
+          title: reminder.title,
+          body: reminder.body,
+          scheduledDate: tz.TZDateTime.from(reminder.scheduledTime, _location),
+          notificationDetails: const NotificationDetails(
+            macOS: DarwinNotificationDetails(
+              presentAlert: true,
+              presentSound: true,
+              presentBadge: false,
+              presentBanner: true,
+              presentList: true,
+              threadIdentifier: _threadIdentifier,
+              interruptionLevel: InterruptionLevel.active,
+            ),
           ),
-        ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        payload: event.id,
-      );
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          payload: event.id,
+        );
+      }
       return EventReminderScheduleStatus.scheduled;
     } catch (_) {
       return EventReminderScheduleStatus.failed;
@@ -137,8 +142,22 @@ class MacOSEventReminderScheduler
   }
 
   @override
-  Future<void> cancel(String eventId) {
-    return _notifications.cancel(id: eventReminderNotificationId(eventId));
+  Future<void> cancel(String eventId) => _cancelScheduledNotifications(eventId);
+
+  Future<void> _cancelScheduledNotifications(String eventId) async {
+    await _notifications.cancel(id: eventReminderNotificationId(eventId));
+    await _notifications.cancel(
+      id: eventReminderNotificationId(
+        eventId,
+        EventReminderNotificationKind.allDayTomorrow,
+      ),
+    );
+    await _notifications.cancel(
+      id: eventReminderNotificationId(
+        eventId,
+        EventReminderNotificationKind.allDayToday,
+      ),
+    );
   }
 
   @override
@@ -155,13 +174,6 @@ class MacOSEventReminderScheduler
           .resolvePlatformSpecificImplementation<
             MacOSFlutterLocalNotificationsPlugin
           >();
-
-  String _notificationBody(Event event) {
-    if (event.description.trim().isNotEmpty) return event.description.trim();
-    return event.reminder == EventReminder.atStart
-        ? 'Starting now'
-        : 'Starting soon';
-  }
 }
 
 EventReminderScheduleStatus? _scheduleStatusForPermission(

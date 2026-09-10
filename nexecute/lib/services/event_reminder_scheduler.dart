@@ -31,6 +31,110 @@ abstract interface class PendingEventReminderReader {
   Future<Set<String>> pendingEventIds();
 }
 
+enum EventReminderNotificationKind { standard, allDayTomorrow, allDayToday }
+
+final class EventReminderNotification {
+  const EventReminderNotification({
+    required this.kind,
+    required this.scheduledTime,
+    required this.title,
+    required this.body,
+  });
+
+  final EventReminderNotificationKind kind;
+  final DateTime scheduledTime;
+  final String title;
+  final String body;
+}
+
+List<EventReminderNotification> eventReminderNotifications(Event event) {
+  if (event.reminder == EventReminder.none) return const [];
+
+  if (event.isAllDay) {
+    final eventDate = DateTime(
+      event.startTime.year,
+      event.startTime.month,
+      event.startTime.day,
+    );
+    return [
+      EventReminderNotification(
+        kind: EventReminderNotificationKind.allDayTomorrow,
+        scheduledTime: DateTime(
+          eventDate.year,
+          eventDate.month,
+          eventDate.day - 1,
+          21,
+        ),
+        title: eventReminderNotificationTitle(
+          event,
+          EventReminderNotificationKind.allDayTomorrow,
+        ),
+        body: eventReminderNotificationBody(
+          event,
+          EventReminderNotificationKind.allDayTomorrow,
+        ),
+      ),
+      EventReminderNotification(
+        kind: EventReminderNotificationKind.allDayToday,
+        scheduledTime: DateTime(
+          eventDate.year,
+          eventDate.month,
+          eventDate.day,
+          9,
+        ),
+        title: eventReminderNotificationTitle(
+          event,
+          EventReminderNotificationKind.allDayToday,
+        ),
+        body: eventReminderNotificationBody(
+          event,
+          EventReminderNotificationKind.allDayToday,
+        ),
+      ),
+    ];
+  }
+
+  final scheduledTime = event.reminder.scheduledTime(event.startTime)!;
+  return [
+    EventReminderNotification(
+      kind: EventReminderNotificationKind.standard,
+      scheduledTime: scheduledTime,
+      title: eventReminderNotificationTitle(
+        event,
+        EventReminderNotificationKind.standard,
+      ),
+      body: eventReminderNotificationBody(
+        event,
+        EventReminderNotificationKind.standard,
+      ),
+    ),
+  ];
+}
+
+String eventReminderNotificationTitle(
+  Event event,
+  EventReminderNotificationKind kind,
+) =>
+    kind == EventReminderNotificationKind.allDayTomorrow
+        ? '${event.title} Tomorrow'
+        : event.title;
+
+String eventReminderNotificationBody(
+  Event event,
+  EventReminderNotificationKind kind,
+) {
+  final description = event.description.trim();
+  if (description.isNotEmpty) return description;
+  return switch (kind) {
+    EventReminderNotificationKind.standard =>
+      event.reminder == EventReminder.atStart
+          ? 'Starting now'
+          : 'Starting soon',
+    EventReminderNotificationKind.allDayTomorrow => 'All-day event',
+    EventReminderNotificationKind.allDayToday => 'Today',
+  };
+}
+
 class NoopEventReminderScheduler implements EventReminderScheduler {
   const NoopEventReminderScheduler();
 
@@ -173,21 +277,28 @@ class AndroidEventReminderScheduler
   @override
   Future<EventReminderScheduleStatus> schedule(Event event) async {
     try {
-      await cancel(event.id);
+      await _cancelScheduledNotifications(event.id);
 
-      final scheduledTime = event.reminder.scheduledTime(event.startTime);
-      if (scheduledTime == null) {
+      final reminders = eventReminderNotifications(event);
+      if (reminders.isEmpty) {
         _pendingEvents.remove(event.id);
         return EventReminderScheduleStatus.notRequested;
       }
       final now = _now();
       final deliverImmediately =
           !event.recurrence.repeats &&
+          !event.isAllDay &&
           event.reminder == EventReminder.atStart &&
-          !scheduledTime.isAfter(now) &&
-          _isSameLocalMinute(scheduledTime, now);
+          !reminders.single.scheduledTime.isAfter(now) &&
+          _isSameLocalMinute(reminders.single.scheduledTime, now);
+      final schedulableReminders =
+          event.recurrence.repeats
+              ? reminders
+              : reminders
+                  .where((reminder) => reminder.scheduledTime.isAfter(now))
+                  .toList(growable: false);
       if (!event.recurrence.repeats &&
-          !scheduledTime.isAfter(now) &&
+          schedulableReminders.isEmpty &&
           !deliverImmediately) {
         _pendingEvents.remove(event.id);
         return EventReminderScheduleStatus.triggerInPast;
@@ -206,29 +317,33 @@ class AndroidEventReminderScheduler
       }
 
       _pendingEvents.remove(event.id);
-      final notificationId = eventReminderNotificationId(event.id);
-      final body = _notificationBody(event);
       if (deliverImmediately) {
+        final reminder = reminders.single;
         await _notifications.show(
-          id: notificationId,
-          title: event.title,
-          body: body,
+          id: eventReminderNotificationId(event.id),
+          title: reminder.title,
+          body: reminder.body,
           notificationDetails: _notificationDetails,
           payload: event.id,
         );
       } else {
-        await _notifications.zonedSchedule(
-          id: notificationId,
-          title: event.title,
-          body: body,
-          scheduledDate: tz.TZDateTime.from(scheduledTime, _location),
-          notificationDetails: _notificationDetails,
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-          matchDateTimeComponents: eventReminderDateTimeComponents(
-            event.recurrence,
-          ),
-          payload: event.id,
-        );
+        for (final reminder in schedulableReminders) {
+          await _notifications.zonedSchedule(
+            id: eventReminderNotificationId(event.id, reminder.kind),
+            title: reminder.title,
+            body: reminder.body,
+            scheduledDate: tz.TZDateTime.from(
+              reminder.scheduledTime,
+              _location,
+            ),
+            notificationDetails: _notificationDetails,
+            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+            matchDateTimeComponents: eventReminderDateTimeComponents(
+              event.recurrence,
+            ),
+            payload: event.id,
+          );
+        }
       }
       return EventReminderScheduleStatus.scheduled;
     } catch (_) {
@@ -237,9 +352,23 @@ class AndroidEventReminderScheduler
   }
 
   @override
-  Future<void> cancel(String eventId) {
+  Future<void> cancel(String eventId) => _cancelScheduledNotifications(eventId);
+
+  Future<void> _cancelScheduledNotifications(String eventId) async {
     _pendingEvents.remove(eventId);
-    return _notifications.cancel(id: eventReminderNotificationId(eventId));
+    await _notifications.cancel(id: eventReminderNotificationId(eventId));
+    await _notifications.cancel(
+      id: eventReminderNotificationId(
+        eventId,
+        EventReminderNotificationKind.allDayTomorrow,
+      ),
+    );
+    await _notifications.cancel(
+      id: eventReminderNotificationId(
+        eventId,
+        EventReminderNotificationKind.allDayToday,
+      ),
+    );
   }
 
   @override
@@ -257,13 +386,6 @@ class AndroidEventReminderScheduler
     for (final event in pending) {
       await schedule(event);
     }
-  }
-
-  String _notificationBody(Event event) {
-    if (event.description.trim().isNotEmpty) return event.description.trim();
-    return event.reminder == EventReminder.atStart
-        ? 'Starting now'
-        : 'Starting soon';
   }
 
   static const _notificationDetails = NotificationDetails(
@@ -308,9 +430,16 @@ DateTimeComponents? eventReminderDateTimeComponents(
   EventRecurrence.yearly => DateTimeComponents.dateAndTime,
 };
 
-int eventReminderNotificationId(String eventId) {
+int eventReminderNotificationId(
+  String eventId, [
+  EventReminderNotificationKind kind = EventReminderNotificationKind.standard,
+]) {
+  final notificationKey =
+      kind == EventReminderNotificationKind.standard
+          ? eventId
+          : '$eventId:${kind.name}';
   var hash = 0x811c9dc5;
-  for (final codeUnit in eventId.codeUnits) {
+  for (final codeUnit in notificationKey.codeUnits) {
     hash ^= codeUnit;
     hash = (hash * 0x01000193) & 0xffffffff;
   }

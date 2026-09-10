@@ -69,6 +69,8 @@ void main() {
     );
     expect(calls.map((call) => call.method), [
       'cancel',
+      'cancel',
+      'cancel',
       'areNotificationsEnabled',
       'show',
     ]);
@@ -101,6 +103,8 @@ void main() {
     );
     expect(calls.map((call) => call.method), [
       'cancel',
+      'cancel',
+      'cancel',
       'areNotificationsEnabled',
       'canScheduleExactNotifications',
       'zonedSchedule',
@@ -119,7 +123,7 @@ void main() {
     );
 
     expect(status, EventReminderScheduleStatus.triggerInPast);
-    expect(calls.map((call) => call.method), ['cancel']);
+    expect(calls.map((call) => call.method), ['cancel', 'cancel', 'cancel']);
   });
 
   test(
@@ -151,6 +155,38 @@ void main() {
       expect(calls.map((call) => call.method), contains('zonedSchedule'));
     },
   );
+
+  test('schedules both all-day reminders with distinct copy and IDs', () async {
+    final scheduler = await AndroidEventReminderScheduler.initialize(
+      now: () => DateTime(2099, 8, 31, 12),
+    );
+    calls.clear();
+    final event = Event(
+      id: 'android-all-day',
+      title: 'Launch day',
+      startTime: DateTime(2099, 9, 1),
+      endTime: DateTime(2099, 9, 2),
+      isAllDay: true,
+      reminder: EventReminder.atStart,
+    );
+
+    final status = await scheduler.schedule(event);
+
+    expect(status, EventReminderScheduleStatus.scheduled);
+    final schedules = calls.where((call) => call.method == 'zonedSchedule');
+    expect(schedules, hasLength(2));
+    final arguments =
+        schedules
+            .map((call) => call.arguments! as Map<Object?, Object?>)
+            .toList();
+    expect(arguments.map((value) => value['title']), [
+      'Launch day Tomorrow',
+      'Launch day',
+    ]);
+    expect(arguments.map((value) => value['body']), ['All-day event', 'Today']);
+    expect(arguments.map((value) => value['id']).toSet(), hasLength(2));
+    expect(arguments.every((value) => value['payload'] == event.id), isTrue);
+  });
 }
 
 Event _event({required DateTime startTime}) {

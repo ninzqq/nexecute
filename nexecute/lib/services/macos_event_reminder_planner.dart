@@ -11,6 +11,7 @@ final class MacOSEventReminderRequest {
   const MacOSEventReminderRequest({
     required this.notificationId,
     required this.event,
+    required this.kind,
     required this.occurrenceKey,
     required this.occurrenceStart,
     required this.scheduledDate,
@@ -18,9 +19,14 @@ final class MacOSEventReminderRequest {
 
   final int notificationId;
   final Event event;
+  final EventReminderNotificationKind kind;
   final String occurrenceKey;
   final tz.TZDateTime occurrenceStart;
   final tz.TZDateTime scheduledDate;
+
+  String get notificationTitle => eventReminderNotificationTitle(event, kind);
+
+  String get notificationBody => eventReminderNotificationBody(event, kind);
 }
 
 final class MacOSEventReminderPlan {
@@ -69,13 +75,14 @@ final class MacOSEventReminderPlanner {
           ),
         );
       } else {
-        final request = _oneShotRequest(
-          accountId: accountId,
-          event: event,
-          location: location,
-          now: now,
+        candidates.addAll(
+          _oneShotRequests(
+            accountId: accountId,
+            event: event,
+            location: location,
+            now: now,
+          ),
         );
-        if (request != null) candidates.add(request);
       }
     }
 
@@ -91,23 +98,25 @@ final class MacOSEventReminderPlanner {
     );
   }
 
-  MacOSEventReminderRequest? _oneShotRequest({
+  Iterable<MacOSEventReminderRequest> _oneShotRequests({
     required String accountId,
     required Event event,
     required tz.Location location,
     required tz.TZDateTime now,
-  }) {
+  }) sync* {
     final occurrenceStart = _inLocation(event.seriesStartTime, location);
-    final scheduledDate = _scheduledDate(event, occurrenceStart, location);
-    if (!scheduledDate.isAfter(now)) return null;
     const occurrenceKey = 'single';
-    return _request(
-      accountId: accountId,
-      event: event,
-      occurrenceKey: occurrenceKey,
-      occurrenceStart: occurrenceStart,
-      scheduledDate: scheduledDate,
-    );
+    for (final timing in _reminderTimings(event, occurrenceStart, location)) {
+      if (!timing.scheduledDate.isAfter(now)) continue;
+      yield _request(
+        accountId: accountId,
+        event: event,
+        kind: timing.kind,
+        occurrenceKey: occurrenceKey,
+        occurrenceStart: occurrenceStart,
+        scheduledDate: timing.scheduledDate,
+      );
+    }
   }
 
   Iterable<MacOSEventReminderRequest> _recurringRequests({
@@ -133,22 +142,25 @@ final class MacOSEventReminderPlanner {
     );
     for (final occurrence in occurrences) {
       final occurrenceStart = _inLocation(occurrence.startTime, location);
-      final scheduledDate = _scheduledDate(event, occurrenceStart, location);
-      if (!scheduledDate.isAfter(now)) continue;
       final occurrenceKey = _occurrenceKey(occurrenceStart);
-      yield _request(
-        accountId: accountId,
-        event: event,
-        occurrenceKey: occurrenceKey,
-        occurrenceStart: occurrenceStart,
-        scheduledDate: scheduledDate,
-      );
+      for (final timing in _reminderTimings(event, occurrenceStart, location)) {
+        if (!timing.scheduledDate.isAfter(now)) continue;
+        yield _request(
+          accountId: accountId,
+          event: event,
+          kind: timing.kind,
+          occurrenceKey: occurrenceKey,
+          occurrenceStart: occurrenceStart,
+          scheduledDate: timing.scheduledDate,
+        );
+      }
     }
   }
 
   MacOSEventReminderRequest _request({
     required String accountId,
     required Event event,
+    required EventReminderNotificationKind kind,
     required String occurrenceKey,
     required tz.TZDateTime occurrenceStart,
     required tz.TZDateTime scheduledDate,
@@ -158,8 +170,10 @@ final class MacOSEventReminderPlanner {
         accountId: accountId,
         eventId: event.id,
         occurrenceKey: occurrenceKey,
+        kind: kind,
       ),
       event: event,
+      kind: kind,
       occurrenceKey: occurrenceKey,
       occurrenceStart: occurrenceStart,
       scheduledDate: scheduledDate,
@@ -171,20 +185,56 @@ int macOSEventReminderNotificationId({
   required String accountId,
   required String eventId,
   required String occurrenceKey,
+  EventReminderNotificationKind kind = EventReminderNotificationKind.standard,
 }) => eventReminderNotificationId(
   'nexecute:macos:event-reminder:$accountId:$eventId:$occurrenceKey',
+  kind,
 );
 
-tz.TZDateTime _scheduledDate(
+Iterable<_ReminderTiming> _reminderTimings(
   Event event,
   tz.TZDateTime occurrenceStart,
   tz.Location location,
-) {
+) sync* {
+  if (event.isAllDay) {
+    yield _ReminderTiming(
+      kind: EventReminderNotificationKind.allDayTomorrow,
+      scheduledDate: tz.TZDateTime(
+        location,
+        occurrenceStart.year,
+        occurrenceStart.month,
+        occurrenceStart.day - 1,
+        21,
+      ),
+    );
+    yield _ReminderTiming(
+      kind: EventReminderNotificationKind.allDayToday,
+      scheduledDate: tz.TZDateTime(
+        location,
+        occurrenceStart.year,
+        occurrenceStart.month,
+        occurrenceStart.day,
+        9,
+      ),
+    );
+    return;
+  }
+
   final minutesBefore = event.reminder.minutesBefore!;
-  return tz.TZDateTime.from(
-    occurrenceStart.subtract(Duration(minutes: minutesBefore)),
-    location,
+  yield _ReminderTiming(
+    kind: EventReminderNotificationKind.standard,
+    scheduledDate: tz.TZDateTime.from(
+      occurrenceStart.subtract(Duration(minutes: minutesBefore)),
+      location,
+    ),
   );
+}
+
+final class _ReminderTiming {
+  const _ReminderTiming({required this.kind, required this.scheduledDate});
+
+  final EventReminderNotificationKind kind;
+  final tz.TZDateTime scheduledDate;
 }
 
 tz.TZDateTime _inLocation(DateTime value, tz.Location location) {

@@ -139,7 +139,12 @@ void main() {
     final status = await scheduler.schedule(_futureEvent());
 
     expect(status, EventReminderScheduleStatus.permissionDenied);
-    expect(calls.map((call) => call.method), ['cancel', 'checkPermissions']);
+    expect(calls.map((call) => call.method), [
+      'cancel',
+      'cancel',
+      'cancel',
+      'checkPermissions',
+    ]);
     expect(
       calls.map((call) => call.method),
       isNot(contains('requestPermissions')),
@@ -158,6 +163,8 @@ void main() {
 
       expect(status, EventReminderScheduleStatus.scheduled);
       expect(calls.map((call) => call.method), [
+        'cancel',
+        'cancel',
         'cancel',
         'checkPermissions',
         'zonedSchedule',
@@ -196,7 +203,7 @@ void main() {
     );
 
     expect(status, EventReminderScheduleStatus.notRequested);
-    expect(calls.map((call) => call.method), ['cancel']);
+    expect(calls.map((call) => call.method), ['cancel', 'cancel', 'cancel']);
   });
 
   test('defers recurring reminders to the lifecycle reconciler', () async {
@@ -208,7 +215,29 @@ void main() {
     );
 
     expect(status, EventReminderScheduleStatus.unsupported);
-    expect(calls.map((call) => call.method), ['cancel']);
+    expect(calls.map((call) => call.method), ['cancel', 'cancel', 'cancel']);
+  });
+
+  test('schedules two notifications for an all-day event', () async {
+    final scheduler = await MacOSEventReminderScheduler.initialize();
+    calls.clear();
+    final event = _futureEvent(isAllDay: true, reminder: EventReminder.atStart);
+
+    final status = await scheduler.schedule(event);
+
+    expect(status, EventReminderScheduleStatus.scheduled);
+    final schedules = calls.where((call) => call.method == 'zonedSchedule');
+    expect(schedules, hasLength(2));
+    final arguments =
+        schedules
+            .map((call) => call.arguments! as Map<Object?, Object?>)
+            .toList();
+    expect(arguments.map((value) => value['title']), [
+      'Passport appointment Tomorrow',
+      'Passport appointment',
+    ]);
+    expect(arguments.map((value) => value['body']), ['All-day event', 'Today']);
+    expect(arguments.map((value) => value['id']).toSet(), hasLength(2));
   });
 }
 
@@ -216,6 +245,7 @@ Event _futureEvent({
   String description = '',
   EventReminder reminder = EventReminder.fifteenMinutesBefore,
   EventRecurrence recurrence = EventRecurrence.none,
+  bool isAllDay = false,
 }) {
   return Event(
     id: 'macos-event',
@@ -223,6 +253,7 @@ Event _futureEvent({
     description: description,
     startTime: DateTime(2099, 9, 1, 9),
     endTime: DateTime(2099, 9, 1, 10),
+    isAllDay: isAllDay,
     reminder: reminder,
     recurrence: recurrence,
   );

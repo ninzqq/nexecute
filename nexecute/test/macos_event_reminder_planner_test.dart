@@ -1,6 +1,7 @@
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/event_recurrence.dart';
 import 'package:nexecute/models/event_reminder.dart';
+import 'package:nexecute/services/event_reminder_scheduler.dart';
 import 'package:nexecute/services/macos_event_reminder_planner.dart';
 import 'package:test/test.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
@@ -106,6 +107,66 @@ void main() {
     expect(
       plan.requests.first.scheduledDate,
       tz.TZDateTime(helsinki, 2026, 9, 7, 23, 30),
+    );
+  });
+
+  test('plans two reminders for every all-day occurrence', () {
+    final plan = planner.build(
+      accountId: 'account-a',
+      events: [
+        _event(
+          id: 'holiday',
+          start: DateTime(2026, 9, 8),
+          recurrence: EventRecurrence.none,
+          isAllDay: true,
+        ),
+      ],
+      location: helsinki,
+      now: tz.TZDateTime(helsinki, 2026, 9, 7, 12),
+    );
+
+    expect(plan.requests, hasLength(2));
+    expect(plan.requests.map((request) => request.scheduledDate), [
+      tz.TZDateTime(helsinki, 2026, 9, 7, 21),
+      tz.TZDateTime(helsinki, 2026, 9, 8, 9),
+    ]);
+    expect(plan.requests.map((request) => request.notificationTitle), [
+      'Event holiday Tomorrow',
+      'Event holiday',
+    ]);
+    expect(plan.requests.map((request) => request.notificationBody), [
+      'All-day event',
+      'Today',
+    ]);
+    expect(
+      plan.requests.map((request) => request.notificationId).toSet(),
+      hasLength(2),
+    );
+  });
+
+  test('keeps the morning all-day reminder after the evening one passes', () {
+    final plan = planner.build(
+      accountId: 'account-a',
+      events: [
+        _event(
+          id: 'holiday',
+          start: DateTime(2026, 9, 8),
+          recurrence: EventRecurrence.none,
+          isAllDay: true,
+        ),
+      ],
+      location: helsinki,
+      now: tz.TZDateTime(helsinki, 2026, 9, 7, 22),
+    );
+
+    expect(plan.requests, hasLength(1));
+    expect(
+      plan.requests.single.kind,
+      EventReminderNotificationKind.allDayToday,
+    );
+    expect(
+      plan.requests.single.scheduledDate,
+      tz.TZDateTime(helsinki, 2026, 9, 8, 9),
     );
   });
 
@@ -227,12 +288,14 @@ Event _event({
   required DateTime start,
   required EventRecurrence recurrence,
   EventReminder reminder = EventReminder.fifteenMinutesBefore,
+  bool isAllDay = false,
 }) {
   return Event(
     id: id,
     title: 'Event $id',
     startTime: start,
     endTime: start.add(const Duration(hours: 1)),
+    isAllDay: isAllDay,
     reminder: reminder,
     recurrence: recurrence,
   );
