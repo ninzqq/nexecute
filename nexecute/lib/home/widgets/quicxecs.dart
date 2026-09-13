@@ -1,16 +1,25 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:nexecute/home/bottomsheets/item_editor_sheet.dart';
 import 'package:nexecute/home/widgets/quicxecitem.dart';
 import 'package:nexecute/home/widgets/searchbox.dart';
+import 'package:nexecute/home/widgets/taglistitem.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/note_folder.dart';
 import 'package:nexecute/models/notes_controller.dart';
 import 'package:nexecute/models/quicxec.dart';
+import 'package:nexecute/models/tag.dart';
 import 'package:nexecute/repositories/note_folder_repository.dart';
 import 'package:nexecute/shared/adaptive_navigation_shell.dart';
 import 'package:nexecute/shared/app_shortcuts.dart';
 import 'package:nexecute/shared/data_state_placeholder.dart';
 import 'package:provider/provider.dart';
+
+const notesSplitMinContentWidth = 1040.0;
+
+enum _UnsavedNoteChoice { save, discard, stay }
 
 class Quicxecs extends StatefulWidget {
   const Quicxecs({super.key});
@@ -20,28 +29,241 @@ class Quicxecs extends StatefulWidget {
 }
 
 class _QuicxecsState extends State<Quicxecs> {
+  static const _previewWidth = 400.0;
+
   final _searchController = TextEditingController();
+  final _inlineEditorController = ItemEditorController();
+  final _inlineEditorHostKey = GlobalKey();
   String _searchQuery = '';
+  String? _editingNoteId;
+  Quicxec? _editingSourceNote;
+  int _draftGeneration = 0;
+  NotesController? _notesController;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final controller = context.read<NotesController>();
+    if (_notesController == controller) return;
+    _notesController?.setSelectionGuard(null);
+    _notesController = controller;
+    controller.setSelectionGuard(_canLeaveInlineEditor);
+  }
 
   @override
   void dispose() {
+    _notesController?.setSelectionGuard(null);
     _searchController.dispose();
     super.dispose();
   }
 
+  bool get _isInlineEditing {
+    final controller = _notesController;
+    return controller != null &&
+        (controller.isCreatingNote ||
+            (_editingNoteId != null &&
+                _editingNoteId == controller.selectedNoteId));
+  }
+
+  Future<bool> _canLeaveInlineEditor() async {
+    if (!_isInlineEditing) return true;
+    if (_inlineEditorController.isSaving) return false;
+    if (_inlineEditorController.isDirty) {
+      final choice = await showDialog<_UnsavedNoteChoice>(
+        context: context,
+        builder:
+            (dialogContext) => AlertDialog(
+              title: const Text('Save changes to this note?'),
+              content: const Text(
+                'Your edits will be lost if you discard them.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed:
+                      () =>
+                          Navigator.pop(dialogContext, _UnsavedNoteChoice.stay),
+                  child: const Text('Stay'),
+                ),
+                TextButton(
+                  onPressed:
+                      () => Navigator.pop(
+                        dialogContext,
+                        _UnsavedNoteChoice.discard,
+                      ),
+                  child: const Text('Discard'),
+                ),
+                FilledButton(
+                  onPressed:
+                      () =>
+                          Navigator.pop(dialogContext, _UnsavedNoteChoice.save),
+                  child: const Text('Save'),
+                ),
+              ],
+            ),
+      );
+      if (!mounted || choice == null || choice == _UnsavedNoteChoice.stay) {
+        return false;
+      }
+      if (choice == _UnsavedNoteChoice.save) {
+        return _inlineEditorController.save();
+      }
+    }
+    if (mounted) {
+      setState(() {
+        _editingNoteId = null;
+        _editingSourceNote = null;
+        _draftGeneration++;
+      });
+    }
+    return true;
+  }
+
+  Future<void> _cancelInlineEditor() async {
+    if (!await _canLeaveInlineEditor() || !mounted) return;
+    final controller = _notesController;
+    if (controller?.isCreatingNote == true) {
+      _editingSourceNote = null;
+      _draftGeneration++;
+      controller!.clearNoteSelection();
+    } else {
+      setState(() {
+        _editingNoteId = null;
+        _editingSourceNote = null;
+        _draftGeneration++;
+      });
+    }
+  }
+
+  Widget _buildInlineEditor(
+    NotesController controller,
+    Quicxec? selectedNote, {
+    required bool sourceUnavailable,
+    required bool sourceChanged,
+  }) {
+    final source =
+        _editingSourceNote ??=
+            selectedNote ??
+            Quicxec(
+              id: '',
+              text: '',
+              created: DateTime.now(),
+              folderId: controller.creationFolderId,
+            );
+    return KeyedSubtree(
+      key: const Key('inline-note-editor'),
+      child: Column(
+        children: [
+          if (sourceUnavailable || sourceChanged)
+            MaterialBanner(
+              content: Text(
+                sourceUnavailable
+                    ? 'This note is no longer available. Your draft is preserved.'
+                    : 'This note changed elsewhere. Your draft is preserved; saving may replace the newer version.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => unawaited(_cancelInlineEditor()),
+                  child: const Text('Close'),
+                ),
+              ],
+            ),
+          Expanded(
+            child: KeyedSubtree(
+              key: _inlineEditorHostKey,
+              child: ItemEditorSheet(
+                key: ValueKey('inline-note-${source.id}-$_draftGeneration'),
+                quicxec: source,
+                isEditing: !controller.isCreatingNote,
+                desktopPresentation: true,
+                inlinePresentation: true,
+                editorController: _inlineEditorController,
+                onSaved: () {
+                  if (controller.isCreatingNote ||
+                      selectedNote == null ||
+                      sourceUnavailable) {
+                    controller.clearNoteSelection();
+                  }
+                  if (mounted) {
+                    setState(() {
+                      _editingNoteId = null;
+                      _editingSourceNote = null;
+                      _draftGeneration++;
+                    });
+                  }
+                },
+                onCancelled: () => unawaited(_cancelInlineEditor()),
+                onArchived: () {
+                  controller.clearNoteSelection();
+                  if (mounted) {
+                    setState(() {
+                      _editingNoteId = null;
+                      _editingSourceNote = null;
+                      _draftGeneration++;
+                    });
+                  }
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _preservedDraftWhileUnavailable(
+    NotesController controller,
+    String message,
+  ) => Column(
+    children: [
+      MaterialBanner(
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => unawaited(_cancelInlineEditor()),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+      Expanded(
+        child: _buildInlineEditor(
+          controller,
+          null,
+          sourceUnavailable: false,
+          sourceChanged: false,
+        ),
+      ),
+    ],
+  );
+
   @override
   Widget build(BuildContext context) {
     final noteState = context.watch<DataState<List<Quicxec>>>();
+    final notesController = context.watch<NotesController>();
 
     final content = switch (noteState) {
+      DataLoading<List<Quicxec>>() when _isInlineEditing =>
+        _preservedDraftWhileUnavailable(
+          notesController,
+          'Notes are loading. Your draft is preserved.',
+        ),
       DataLoading<List<Quicxec>>() => const DataStatePlaceholder(
         presentation: DataStatePresentation.loading,
         title: 'Loading notes…',
       ),
+      DataUnauthenticated<List<Quicxec>>() when _isInlineEditing =>
+        _preservedDraftWhileUnavailable(
+          notesController,
+          'Sign in to save this note. Your draft is preserved.',
+        ),
       DataUnauthenticated<List<Quicxec>>() => const DataStatePlaceholder(
         presentation: DataStatePresentation.unauthenticated,
         message: 'Sign in to access your notes.',
       ),
+      DataFailure<List<Quicxec>>() when _isInlineEditing =>
+        _preservedDraftWhileUnavailable(
+          notesController,
+          'Notes could not be loaded. Your draft is preserved.',
+        ),
       DataFailure<List<Quicxec>>() => const DataStatePlaceholder(
         presentation: DataStatePresentation.failure,
         title: 'Could not load notes',
@@ -55,7 +277,6 @@ class _QuicxecsState extends State<Quicxecs> {
         value,
       ),
     };
-    final notesController = context.watch<NotesController>();
     return FocusTraversalGroup(
       child: PopScope(
         canPop: notesController.location == NotesLocation.root,
@@ -93,6 +314,7 @@ class _QuicxecsState extends State<Quicxecs> {
         context,
         title: 'Search results',
         notes: results,
+        availableNotes: activeNotes,
         folders: folders,
         showBack: controller.location != NotesLocation.root,
         emptyTitle: 'No matching notes',
@@ -154,6 +376,7 @@ class _QuicxecsState extends State<Quicxecs> {
       context,
       title: title,
       notes: visibleNotes,
+      availableNotes: activeNotes,
       folders: folders,
       showBack: true,
       folder: selectedFolder,
@@ -273,6 +496,7 @@ class _QuicxecsState extends State<Quicxecs> {
     BuildContext context, {
     required String title,
     required List<Quicxec> notes,
+    required List<Quicxec> availableNotes,
     required List<NoteFolder> folders,
     required bool showBack,
     required String emptyTitle,
@@ -281,6 +505,7 @@ class _QuicxecsState extends State<Quicxecs> {
     int? folderTotalNoteCount,
   }) {
     final layoutClass = AppLayoutBreakpoints.fromContext(context);
+    final notesController = context.watch<NotesController>();
     return Column(
       children: [
         _searchBox(),
@@ -336,39 +561,170 @@ class _QuicxecsState extends State<Quicxecs> {
           ),
         ),
         Expanded(
-          child:
-              notes.isEmpty
-                  ? DataStatePlaceholder(
-                    presentation: DataStatePresentation.empty,
-                    title: emptyTitle,
-                    message: emptyMessage,
-                  )
-                  : Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: LayoutBuilder(
-                      builder:
-                          (context, constraints) => MasonryGridView.count(
-                            key: const Key('notes-masonry-grid'),
-                            padding: const EdgeInsets.only(bottom: 96),
-                            crossAxisCount: layoutClass
-                                .notesColumnCountForWidth(constraints.maxWidth),
-                            mainAxisSpacing: 8,
-                            crossAxisSpacing: 8,
-                            itemCount: notes.length,
-                            itemBuilder: (context, index) {
-                              final note = notes[index];
-                              return QuicxecItem(
-                                quicxec: note,
-                                folderName:
-                                    title == 'All Notes' ||
-                                            title == 'Search results'
-                                        ? _folderName(folders, note.folderId)
-                                        : null,
-                              );
-                            },
-                          ),
-                    ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final split =
+                  layoutClass == AppLayoutClass.expanded &&
+                  constraints.maxWidth >= notesSplitMinContentWidth;
+              final selectedNote =
+                  !notesController.isCreatingNote
+                      ? notes
+                          .where(
+                            (note) => note.id == notesController.selectedNoteId,
+                          )
+                          .firstOrNull
+                      : null;
+              final sourceUnavailable =
+                  _editingSourceNote != null &&
+                  _editingSourceNote!.id.isNotEmpty &&
+                  !availableNotes.any(
+                    (note) => note.id == _editingSourceNote!.id,
+                  );
+              final currentSource =
+                  _editingSourceNote == null
+                      ? null
+                      : availableNotes
+                          .where((note) => note.id == _editingSourceNote!.id)
+                          .firstOrNull;
+              final sourceChanged =
+                  currentSource != null &&
+                  currentSource.updatedAt != _editingSourceNote!.updatedAt;
+              if (sourceChanged && !_inlineEditorController.isDirty) {
+                _editingSourceNote = currentSource;
+                _draftGeneration++;
+              }
+              final hasConflictingUpdate =
+                  sourceChanged && _inlineEditorController.isDirty;
+              if (sourceUnavailable &&
+                  _isInlineEditing &&
+                  !_inlineEditorController.isDirty) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted || !_isInlineEditing) return;
+                  notesController.clearNoteSelection();
+                  setState(() {
+                    _editingNoteId = null;
+                    _editingSourceNote = null;
+                    _draftGeneration++;
+                  });
+                });
+              } else if (!notesController.isCreatingNote &&
+                  notesController.selectedNoteId != null &&
+                  selectedNote == null &&
+                  !_isInlineEditing) {
+                final staleId = notesController.selectedNoteId;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted &&
+                      notesController.selectedNoteId == staleId &&
+                      !_isInlineEditing) {
+                    notesController.clearNoteSelection();
+                  }
+                });
+              }
+              final list =
+                  notes.isEmpty
+                      ? DataStatePlaceholder(
+                        presentation: DataStatePresentation.empty,
+                        title: emptyTitle,
+                        message: emptyMessage,
+                      )
+                      : Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: LayoutBuilder(
+                          builder:
+                              (context, gridConstraints) =>
+                                  MasonryGridView.count(
+                                    key: const Key('notes-masonry-grid'),
+                                    padding: const EdgeInsets.only(bottom: 96),
+                                    crossAxisCount: layoutClass
+                                        .notesColumnCountForWidth(
+                                          gridConstraints.maxWidth,
+                                          minimumColumns: split ? 2 : null,
+                                        ),
+                                    mainAxisSpacing: 8,
+                                    crossAxisSpacing: 8,
+                                    itemCount: notes.length,
+                                    itemBuilder: (context, index) {
+                                      final note = notes[index];
+                                      return QuicxecItem(
+                                        quicxec: note,
+                                        selected:
+                                            split &&
+                                            note.id ==
+                                                notesController.selectedNoteId,
+                                        onTap:
+                                            split
+                                                ? () => unawaited(
+                                                  notesController
+                                                      .requestSelectNote(
+                                                        note.id,
+                                                      ),
+                                                )
+                                                : null,
+                                        folderName:
+                                            title == 'All Notes' ||
+                                                    title == 'Search results'
+                                                ? _folderName(
+                                                  folders,
+                                                  note.folderId,
+                                                )
+                                                : null,
+                                      );
+                                    },
+                                  ),
+                        ),
+                      );
+              if (!split) {
+                return _isInlineEditing
+                    ? _buildInlineEditor(
+                      notesController,
+                      selectedNote,
+                      sourceUnavailable: sourceUnavailable,
+                      sourceChanged: hasConflictingUpdate,
+                    )
+                    : list;
+              }
+
+              return Row(
+                children: [
+                  Expanded(child: list),
+                  VerticalDivider(width: 1, thickness: 1),
+                  SizedBox(
+                    width: _previewWidth,
+                    child:
+                        _isInlineEditing
+                            ? _buildInlineEditor(
+                              notesController,
+                              selectedNote,
+                              sourceUnavailable: sourceUnavailable,
+                              sourceChanged: hasConflictingUpdate,
+                            )
+                            : _SelectedNotePreview(
+                              note: selectedNote,
+                              folderName:
+                                  selectedNote == null
+                                      ? null
+                                      : _folderName(
+                                        folders,
+                                        selectedNote.folderId,
+                                      ),
+                              onClose:
+                                  () => unawaited(
+                                    notesController.requestClearNoteSelection(),
+                                  ),
+                              onEdit: () {
+                                if (selectedNote != null) {
+                                  setState(() {
+                                    _editingNoteId = selectedNote.id;
+                                    _editingSourceNote = selectedNote;
+                                  });
+                                }
+                              },
+                            ),
                   ),
+                ],
+              );
+            },
+          ),
         ),
       ],
     );
@@ -380,10 +736,11 @@ class _QuicxecsState extends State<Quicxecs> {
     onChanged: (value) => setState(() => _searchQuery = value),
   );
 
-  void _openRoot(BuildContext context) {
+  Future<void> _openRoot(BuildContext context) async {
+    final controller = context.read<NotesController>();
+    if (!await controller.requestOpenRoot() || !mounted) return;
     _searchController.clear();
-    if (mounted) setState(() => _searchQuery = '');
-    context.read<NotesController>().openRoot();
+    setState(() => _searchQuery = '');
   }
 
   bool _matches(Quicxec note, String query) {
@@ -576,6 +933,138 @@ class _FolderNameDialogState extends State<_FolderNameDialog> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SelectedNotePreview extends StatelessWidget {
+  const _SelectedNotePreview({
+    required this.note,
+    required this.folderName,
+    required this.onClose,
+    required this.onEdit,
+  });
+
+  final Quicxec? note;
+  final String? folderName;
+  final VoidCallback onClose;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final note = this.note;
+    return ColoredBox(
+      key: const Key('notes-preview-pane'),
+      color: Theme.of(context).colorScheme.surface,
+      child:
+          note == null
+              ? Center(
+                child: Text(
+                  'Select a note to preview',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              )
+              : Column(
+                key: const Key('selected-note-preview'),
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 12, 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            folderName ?? 'Note',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelLarge,
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Close note preview',
+                          onPressed: onClose,
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            note.title.trim().isEmpty
+                                ? 'Untitled note'
+                                : note.title,
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          const SizedBox(height: 16),
+                          if (note.isChecklist)
+                            for (final item in note.checklistItems)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(
+                                      item.isChecked
+                                          ? Icons.check_box_rounded
+                                          : Icons
+                                              .check_box_outline_blank_rounded,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: SelectableText(
+                                        item.text,
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.bodyMedium?.copyWith(
+                                          decoration:
+                                              item.isChecked
+                                                  ? TextDecoration.lineThrough
+                                                  : null,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                          else
+                            SelectableText(
+                              note.text.isEmpty ? 'No content' : note.text,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          if (note.tags.isNotEmpty) ...[
+                            const SizedBox(height: 20),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: [
+                                for (final tag in note.tags)
+                                  TagListItem(
+                                    tag: Tag(name: tag),
+                                    compact: true,
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: FilledButton.icon(
+                      onPressed: onEdit,
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text('Edit note'),
+                    ),
+                  ),
+                ],
+              ),
     );
   }
 }

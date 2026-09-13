@@ -29,30 +29,43 @@ class NoteEditorFields extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text('Note format', style: Theme.of(context).textTheme.labelLarge),
-            const Spacer(),
-            SegmentedButton<NoteContentType>(
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 440;
+            final selector = SegmentedButton<NoteContentType>(
               key: const Key('note-format-selector'),
               showSelectedIcon: false,
-              segments: const [
+              segments: [
                 ButtonSegment(
                   value: NoteContentType.text,
-                  label: Text('Text'),
-                  icon: Icon(Icons.subject_rounded),
+                  label: const Text('Text'),
+                  icon: compact ? null : const Icon(Icons.subject_rounded),
                 ),
                 ButtonSegment(
                   value: NoteContentType.checklist,
-                  label: Text('Checklist'),
-                  icon: Icon(Icons.checklist_rounded),
+                  label: const Text('Checklist'),
+                  icon: compact ? null : const Icon(Icons.checklist_rounded),
                 ),
               ],
               selected: {contentType},
               onSelectionChanged:
                   (selection) => onContentTypeChanged(selection.first),
-            ),
-          ],
+            );
+            final label = Text(
+              'Note format',
+              style: Theme.of(context).textTheme.labelLarge,
+            );
+            return compact
+                ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    label,
+                    const SizedBox(height: 8),
+                    Align(alignment: Alignment.centerRight, child: selector),
+                  ],
+                )
+                : Row(children: [label, const Spacer(), selector]);
+          },
         ),
         const SizedBox(height: 12),
         if (contentType == NoteContentType.checklist)

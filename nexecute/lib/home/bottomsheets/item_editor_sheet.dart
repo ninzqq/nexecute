@@ -22,6 +22,15 @@ import 'package:provider/provider.dart';
 typedef SaveQuicxecCallback =
     Future<void> Function(Quicxec note, bool isExisting);
 
+class ItemEditorController {
+  _ItemEditorSheetState? _state;
+
+  bool get isDirty => _state?._isDirty ?? false;
+  bool get isSaving => _state?._isSaving ?? false;
+
+  Future<bool> save() => _state?._submit() ?? Future.value(false);
+}
+
 class ItemEditorSheet extends StatefulWidget {
   const ItemEditorSheet({
     super.key,
@@ -31,6 +40,11 @@ class ItemEditorSheet extends StatefulWidget {
     this.isEditing = false,
     this.onSaveQuicxec,
     this.desktopPresentation = false,
+    this.inlinePresentation = false,
+    this.editorController,
+    this.onSaved,
+    this.onCancelled,
+    this.onArchived,
   });
 
   final Event? event;
@@ -39,6 +53,11 @@ class ItemEditorSheet extends StatefulWidget {
   final bool isEditing;
   final SaveQuicxecCallback? onSaveQuicxec;
   final bool desktopPresentation;
+  final bool inlinePresentation;
+  final ItemEditorController? editorController;
+  final VoidCallback? onSaved;
+  final VoidCallback? onCancelled;
+  final VoidCallback? onArchived;
 
   @override
   State<ItemEditorSheet> createState() => _ItemEditorSheetState();
@@ -61,6 +80,9 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
   List<String> _tags = [];
   String? _folderId;
   bool _isSaving = false;
+  bool _isDirty = false;
+  late String _initialTitleText;
+  late String _initialDescriptionText;
 
   @override
   void initState() {
@@ -91,16 +113,26 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
       _folderId = widget.quicxec!.folderId;
     }
     _selectedDate = widget.date;
+    _initialTitleText = _titleController.text;
+    _initialDescriptionText = _descriptionController.text;
+    _titleController.addListener(_markTextDirty);
+    _descriptionController.addListener(_markTextDirty);
+    widget.editorController?._state = this;
   }
 
   @override
   void dispose() {
+    if (widget.editorController?._state == this) {
+      widget.editorController?._state = null;
+    }
     _titleController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
 
   void onItemTypeChanged(ItemType type) {
+    if (type == _type) return;
+    _markDirty();
     if (type == ItemType.event &&
         _type == ItemType.quicxec &&
         _noteContentType == NoteContentType.checklist) {
@@ -141,6 +173,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
 
   void _setNoteContentType(NoteContentType type) {
     if (type == _noteContentType) return;
+    _markDirty();
 
     setState(() {
       if (type == NoteContentType.checklist && _checklistItems.isEmpty) {
@@ -158,6 +191,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
   }
 
   void _updateChecklistItem(NoteChecklistItem updatedItem) {
+    _markDirty();
     setState(() {
       final index = _checklistItems.indexWhere(
         (item) => item.id == updatedItem.id,
@@ -167,10 +201,12 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
   }
 
   void _removeChecklistItem(String id) {
+    _markDirty();
     setState(() => _checklistItems.removeWhere((item) => item.id == id));
   }
 
   void _addChecklistItem() {
+    _markDirty();
     setState(() {
       _checklistItems.add(
         NoteChecklistItem(id: _newChecklistItemId(), text: ''),
@@ -179,12 +215,14 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
   }
 
   void _toggleTag(String tag) {
+    _markDirty();
     setState(() {
       _tags.contains(tag) ? _tags.remove(tag) : _tags.add(tag);
     });
   }
 
   void _setStartTime(DateTime time) {
+    _markDirty();
     setState(() {
       _startTime = time;
       if (time.isAfter(_endTime)) {
@@ -194,6 +232,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
   }
 
   void _setStartDate(DateTime date) {
+    _markDirty();
     setState(() {
       _selectedDate = date;
       _startTime = combineDateAndTime(date, _startTime);
@@ -272,8 +311,17 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
     }
   }
 
-  Future<void> _submit() async {
-    if (_isSaving || !_formKey.currentState!.validate()) return;
+  void _markDirty() => _isDirty = true;
+
+  void _markTextDirty() {
+    if (_titleController.text != _initialTitleText ||
+        _descriptionController.text != _initialDescriptionText) {
+      _markDirty();
+    }
+  }
+
+  Future<bool> _submit() async {
+    if (_isSaving || !_formKey.currentState!.validate()) return false;
 
     setState(() => _isSaving = true);
     try {
@@ -295,9 +343,16 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
         await _submitEvent();
       }
 
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) {
+        if (widget.onSaved case final onSaved?) {
+          onSaved();
+        } else {
+          Navigator.of(context).pop();
+        }
+      }
+      return true;
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -305,8 +360,18 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
           ),
         ),
       );
+      return false;
     } finally {
       if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  void _cancel() {
+    if (_isSaving) return;
+    if (widget.onCancelled case final onCancelled?) {
+      onCancelled();
+    } else {
+      Navigator.maybePop(context);
     }
   }
 
@@ -321,6 +386,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
         event: widget.event,
         note: widget.quicxec,
         onTypeChanged: onItemTypeChanged,
+        onNoteArchived: widget.inlinePresentation ? widget.onArchived : null,
       ),
       const SizedBox(height: 16),
       TextFormField(
@@ -387,7 +453,10 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
         NoteFolderField(
           folderState: context.watch<DataState<List<NoteFolder>>>(),
           selectedFolderId: _folderId,
-          onChanged: (folderId) => setState(() => _folderId = folderId),
+          onChanged: (folderId) {
+            _markDirty();
+            setState(() => _folderId = folderId);
+          },
         ),
         const SizedBox(height: 8),
       ],
@@ -421,7 +490,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         TextButton(
-          onPressed: _isSaving ? null : () => Navigator.maybePop(context),
+          onPressed: _isSaving ? null : _cancel,
           child: const Text('Cancel'),
         ),
         const SizedBox(width: 8),
@@ -434,16 +503,18 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
   Widget build(BuildContext context) {
     return AppEditorShortcutRegion(
       onSave: _submit,
-      onCancel: () => Navigator.maybePop(context),
+      onCancel: _cancel,
       child: Container(
         key:
-            widget.desktopPresentation
+            widget.desktopPresentation && !widget.inlinePresentation
                 ? const Key('desktop-item-editor-surface')
                 : null,
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius:
-              widget.desktopPresentation
+              widget.inlinePresentation
+                  ? BorderRadius.zero
+                  : widget.desktopPresentation
                   ? BorderRadius.circular(12)
                   : const BorderRadius.only(
                     topLeft: Radius.circular(16),

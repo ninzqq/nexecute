@@ -9,8 +9,14 @@ import 'package:provider/provider.dart';
 class DeleteButton extends StatelessWidget {
   final Quicxec? quicxec;
   final Event? event;
+  final VoidCallback? onNoteArchived;
 
-  const DeleteButton({super.key, required this.quicxec, required this.event});
+  const DeleteButton({
+    super.key,
+    required this.quicxec,
+    required this.event,
+    this.onNoteArchived,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -20,11 +26,16 @@ class DeleteButton extends StatelessWidget {
     return IconButton(
       onPressed: () async {
         if (quicxec != null && existsQuicxec) {
-          context.read<NoteRepository>().toggleTrashed(quicxec!);
+          await context.read<NoteRepository>().toggleTrashed(quicxec!);
+          if (!context.mounted) return;
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(content: Text('Note archived')));
-          Navigator.popUntil(context, (route) => route.isFirst);
+          if (onNoteArchived case final onArchived?) {
+            onArchived();
+          } else {
+            Navigator.popUntil(context, (route) => route.isFirst);
+          }
         } else if (event != null && existsEvent) {
           final confirmed = await confirmEventDeletion(context, event!);
           if (!confirmed || !context.mounted) return;

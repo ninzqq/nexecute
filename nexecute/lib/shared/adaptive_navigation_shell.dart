@@ -16,11 +16,10 @@ extension AppLayoutClassDetails on AppLayoutClass {
     AppLayoutClass.expanded => 4,
   };
 
-  int notesColumnCountForWidth(double availableWidth) {
+  int notesColumnCountForWidth(double availableWidth, {int? minimumColumns}) {
+    final minimum = minimumColumns ?? notesColumnCount;
     final widthBasedCount = (availableWidth / 220).floor();
-    return widthBasedCount > notesColumnCount
-        ? widthBasedCount
-        : notesColumnCount;
+    return widthBasedCount > minimum ? widthBasedCount : minimum;
   }
 
   double? get readableContentMaxWidth => switch (this) {

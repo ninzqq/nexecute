@@ -132,6 +132,10 @@ bool canInvokeGlobalAppShortcut(BuildContext context) {
 
   final focusContext = FocusManager.instance.primaryFocus?.context;
   if (focusContext == null) return true;
+  if (focusContext.findAncestorWidgetOfExactType<AppEditorShortcutRegion>() !=
+      null) {
+    return false;
+  }
   return focusContext.widget is! EditableText &&
       focusContext.findAncestorWidgetOfExactType<EditableText>() == null;
 }

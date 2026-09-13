@@ -12,6 +12,7 @@ class ItemEditorHeader extends StatelessWidget {
     required this.onTypeChanged,
     this.event,
     this.note,
+    this.onNoteArchived,
   });
 
   final String title;
@@ -19,6 +20,7 @@ class ItemEditorHeader extends StatelessWidget {
   final ValueChanged<ItemType> onTypeChanged;
   final Event? event;
   final Quicxec? note;
+  final VoidCallback? onNoteArchived;
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +52,11 @@ class ItemEditorHeader extends StatelessWidget {
             ),
             if (hasExistingItem) ...[
               const SizedBox(width: 8),
-              DeleteButton(quicxec: note, event: event),
+              DeleteButton(
+                quicxec: note,
+                event: event,
+                onNoteArchived: onNoteArchived,
+              ),
             ],
           ],
         );

@@ -275,7 +275,7 @@ void main() {
       find.descendant(of: description, matching: find.byType(EditableText)),
     );
     final editorSurface = tester.getRect(
-      find.byKey(const Key('desktop-item-editor-surface')),
+      find.byKey(const Key('inline-note-editor')),
     );
     final actionBar = tester.getRect(
       find.byKey(const Key('item-editor-sticky-actions')),
@@ -284,6 +284,21 @@ void main() {
     expect(editableText.expands, isTrue);
     expect(tester.getSize(description).height, greaterThan(300));
     expect(actionBar.bottom, editorSurface.bottom);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('wide New note opens an inline note editor', (tester) async {
+    _setViewport(tester, const Size(1200, 900));
+    await _pumpHome(tester);
+
+    await tester.tap(find.byKey(const Key('all-notes-location')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('desktop-create-command')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('inline-note-editor')), findsOneWidget);
+    expect(find.byKey(const Key('note-description-field')), findsOneWidget);
+    expect(find.byKey(const Key('desktop-item-editor-dialog')), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -438,8 +453,9 @@ void main() {
     FocusManager.instance.primaryFocus?.unfocus();
     await tester.pump();
     await _pressControlShortcut(tester, LogicalKeyboardKey.keyN);
+    expect(find.byKey(const Key('inline-note-editor')), findsOneWidget);
     expect(find.byType(ItemEditorSheet), findsOneWidget);
-    expect(find.byKey(const Key('desktop-item-editor-dialog')), findsOneWidget);
+    expect(find.byKey(const Key('desktop-item-editor-dialog')), findsNothing);
 
     await _pressControlShortcut(tester, LogicalKeyboardKey.digit1);
     expect(_selectedDestination(tester), 2);

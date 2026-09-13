@@ -355,6 +355,15 @@ class _HomeScreenState extends State<HomeScreen> {
         showTodoEditor(context);
         break;
       case 2:
+        if (_desktopTabIndex == 2 &&
+            AppLayoutBreakpoints.fromContext(context) ==
+                AppLayoutClass.expanded &&
+            MediaQuery.sizeOf(context).width -
+                    PersistentMainMenu.compactWidth >=
+                notesSplitMinContentWidth) {
+          unawaited(context.read<NotesController>().requestOpenNewNote());
+          break;
+        }
         showItemEditor(
           context,
           quicxec: Quicxec(

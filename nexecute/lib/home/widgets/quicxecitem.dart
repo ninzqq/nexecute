@@ -18,10 +18,18 @@ import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
 
 class QuicxecItem extends StatelessWidget {
-  const QuicxecItem({super.key, required this.quicxec, this.folderName});
+  const QuicxecItem({
+    super.key,
+    required this.quicxec,
+    this.folderName,
+    this.onTap,
+    this.selected = false,
+  });
 
   final Quicxec quicxec;
   final String? folderName;
+  final VoidCallback? onTap;
+  final bool selected;
 
   void _showActions(BuildContext context) {
     final folderState = context.read<DataState<List<NoteFolder>>>();
@@ -214,11 +222,17 @@ class QuicxecItem extends StatelessWidget {
         child: Card(
           clipBehavior: Clip.antiAlias,
           shape: RoundedRectangleBorder(
-            side: BorderSide(color: context.appPalette.outline),
+            side: BorderSide(
+              color:
+                  selected
+                      ? Theme.of(context).colorScheme.primary
+                      : context.appPalette.outline,
+            ),
             borderRadius: const BorderRadius.all(Radius.circular(12)),
           ),
           child: InkWell(
             onTap:
+                onTap ??
                 () =>
                     showItemEditor(context, quicxec: quicxec, isEditing: true),
             child: Padding(
