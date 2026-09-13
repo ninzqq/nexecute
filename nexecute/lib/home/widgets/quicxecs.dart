@@ -345,23 +345,28 @@ class _QuicxecsState extends State<Quicxecs> {
                   )
                   : Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: MasonryGridView.count(
-                      key: const Key('notes-masonry-grid'),
-                      padding: const EdgeInsets.only(bottom: 96),
-                      crossAxisCount: layoutClass.notesColumnCount,
-                      mainAxisSpacing: 8,
-                      crossAxisSpacing: 8,
-                      itemCount: notes.length,
-                      itemBuilder: (context, index) {
-                        final note = notes[index];
-                        return QuicxecItem(
-                          quicxec: note,
-                          folderName:
-                              title == 'All Notes' || title == 'Search results'
-                                  ? _folderName(folders, note.folderId)
-                                  : null,
-                        );
-                      },
+                    child: LayoutBuilder(
+                      builder:
+                          (context, constraints) => MasonryGridView.count(
+                            key: const Key('notes-masonry-grid'),
+                            padding: const EdgeInsets.only(bottom: 96),
+                            crossAxisCount: layoutClass
+                                .notesColumnCountForWidth(constraints.maxWidth),
+                            mainAxisSpacing: 8,
+                            crossAxisSpacing: 8,
+                            itemCount: notes.length,
+                            itemBuilder: (context, index) {
+                              final note = notes[index];
+                              return QuicxecItem(
+                                quicxec: note,
+                                folderName:
+                                    title == 'All Notes' ||
+                                            title == 'Search results'
+                                        ? _folderName(folders, note.folderId)
+                                        : null,
+                              );
+                            },
+                          ),
                     ),
                   ),
         ),

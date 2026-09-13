@@ -37,6 +37,9 @@ void main() {
       tester.getSize(longCard).height,
       greaterThan(tester.getSize(shortCard).height),
     );
+    expect(tester.widget<Text>(find.text('Short note')).style?.fontSize, 15);
+    expect(tester.widget<Text>(find.text('One line')).style?.fontSize, 14);
+    expect(tester.widget<Text>(find.text(_notes[1].text)).maxLines, 6);
   });
 
   testWidgets('notes derive desktop column counts from the shared layout', (
@@ -53,7 +56,7 @@ void main() {
 
     tester.view.physicalSize = const Size(1200, 900);
     await tester.pumpAndSettle();
-    expect(_columnCount(tester), 4);
+    expect(_columnCount(tester), 5);
     expect(tester.takeException(), isNull);
   });
 }

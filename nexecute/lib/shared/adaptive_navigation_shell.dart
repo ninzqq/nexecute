@@ -16,6 +16,13 @@ extension AppLayoutClassDetails on AppLayoutClass {
     AppLayoutClass.expanded => 4,
   };
 
+  int notesColumnCountForWidth(double availableWidth) {
+    final widthBasedCount = (availableWidth / 220).floor();
+    return widthBasedCount > notesColumnCount
+        ? widthBasedCount
+        : notesColumnCount;
+  }
+
   double? get readableContentMaxWidth => switch (this) {
     AppLayoutClass.compact => null,
     AppLayoutClass.medium => 720,

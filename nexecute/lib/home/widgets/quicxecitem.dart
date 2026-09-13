@@ -222,7 +222,7 @@ class QuicxecItem extends StatelessWidget {
                 () =>
                     showItemEditor(context, quicxec: quicxec, isEditing: true),
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(9),
               child: NoteCardContent(
                 note: quicxec,
                 folderName: folderName,

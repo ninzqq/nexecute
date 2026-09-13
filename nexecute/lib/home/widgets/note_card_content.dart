@@ -43,18 +43,19 @@ class NoteCardContent extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
         ],
         if (hasTitle)
           Text(
             note.title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
-        if (hasTitle && hasContent) const SizedBox(height: 8),
+        if (hasTitle && hasContent) const SizedBox(height: 6),
         if (note.isChecklist)
           _ChecklistPreview(
             items: note.checklistItems,
@@ -63,12 +64,14 @@ class NoteCardContent extends StatelessWidget {
         else if (hasText)
           Text(
             note.text,
-            style: Theme.of(context).textTheme.bodyLarge,
-            maxLines: 8,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(fontSize: 14),
+            maxLines: 6,
             overflow: TextOverflow.ellipsis,
           ),
         if (note.tags.isNotEmpty) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Wrap(
             spacing: 6,
             runSpacing: 6,
@@ -94,7 +97,7 @@ class _ChecklistPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.appPalette;
-    final visibleItems = items.take(5).toList();
+    final visibleItems = items.take(4).toList();
 
     return Column(
       key: const Key('note-checklist-preview'),
@@ -105,8 +108,8 @@ class _ChecklistPreview extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(
-                width: 28,
-                height: 28,
+                width: 26,
+                height: 26,
                 child: Checkbox(
                   key: ValueKey('preview-checkbox-${item.id}'),
                   value: item.isChecked,
@@ -129,6 +132,7 @@ class _ChecklistPreview extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontSize: 13,
                       decoration:
                           item.isChecked ? TextDecoration.lineThrough : null,
                       color:

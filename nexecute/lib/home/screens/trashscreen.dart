@@ -85,22 +85,26 @@ class _TrashGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final columnCount =
-        AppLayoutBreakpoints.fromContext(context).notesColumnCount;
-    return MasonryGridView.count(
-      key: const Key('trash-notes-grid'),
-      padding: const EdgeInsets.all(8),
-      crossAxisCount: columnCount,
-      mainAxisSpacing: 8,
-      crossAxisSpacing: 8,
-      itemCount: notes.length,
-      itemBuilder: (context, index) {
-        final quicxec = notes[index];
-        return QuicxecItem(
-          key: ValueKey('trash-note-${quicxec.id}'),
-          quicxec: quicxec,
-        );
-      },
+    final layoutClass = AppLayoutBreakpoints.fromContext(context);
+    return LayoutBuilder(
+      builder:
+          (context, constraints) => MasonryGridView.count(
+            key: const Key('trash-notes-grid'),
+            padding: const EdgeInsets.all(8),
+            crossAxisCount: layoutClass.notesColumnCountForWidth(
+              constraints.maxWidth - 16,
+            ),
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            itemCount: notes.length,
+            itemBuilder: (context, index) {
+              final quicxec = notes[index];
+              return QuicxecItem(
+                key: ValueKey('trash-note-${quicxec.id}'),
+                quicxec: quicxec,
+              );
+            },
+          ),
     );
   }
 }
