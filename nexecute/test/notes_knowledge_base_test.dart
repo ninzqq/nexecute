@@ -90,6 +90,51 @@ void main() {
 
     expect(repository.addedName, 'Research');
   });
+
+  testWidgets('root locations and folders tile across screen widths', (
+    tester,
+  ) async {
+    final folders = [
+      folder,
+      for (final name in ['Research', 'Ideas'])
+        NoteFolder(
+          id: name.toLowerCase(),
+          name: name,
+          createdAt: DateTime(2026, 8, 28),
+          updatedAt: DateTime(2026, 8, 28),
+        ),
+    ];
+    await _pumpKnowledgeBase(tester, notes: notes, folders: folders);
+
+    tester.view.physicalSize = const Size(390, 844);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('notes-main-locations-grid')), findsOneWidget);
+    expect(find.byKey(const Key('note-folders-grid')), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.byKey(const Key('quick-notes-location'))).dy,
+      tester.getTopLeft(find.byKey(const Key('all-notes-location'))).dy,
+    );
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('note-folder-projects'))).dy,
+      tester.getTopLeft(find.byKey(const ValueKey('note-folder-research'))).dy,
+    );
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('note-folder-ideas'))).dy,
+      greaterThan(
+        tester
+            .getTopLeft(find.byKey(const ValueKey('note-folder-projects')))
+            .dy,
+      ),
+    );
+
+    tester.view.physicalSize = const Size(800, 1200);
+    await tester.pumpAndSettle();
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('note-folder-ideas'))).dy,
+      tester.getTopLeft(find.byKey(const ValueKey('note-folder-projects'))).dy,
+    );
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Future<void> _pumpKnowledgeBase(

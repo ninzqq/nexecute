@@ -418,22 +418,27 @@ class _QuicxecsState extends State<Quicxecs> {
             key: const Key('notes-knowledge-base-root'),
             padding: const EdgeInsets.fromLTRB(12, 4, 12, 96),
             children: [
-              _LocationTile(
-                key: const Key('quick-notes-location'),
-                icon: Icons.bolt_rounded,
-                title: 'Quick Notes',
-                subtitle: 'Your inbox for new and unfiled notes',
-                count: quickCount,
-                onTap: context.read<NotesController>().openQuickNotes,
-              ),
-              const SizedBox(height: 8),
-              _LocationTile(
-                key: const Key('all-notes-location'),
-                icon: Icons.library_books_outlined,
-                title: 'All Notes',
-                subtitle: 'Browse your complete knowledge base',
-                count: activeNotes.length,
-                onTap: context.read<NotesController>().openAllNotes,
+              _locationGrid(
+                context,
+                key: const Key('notes-main-locations-grid'),
+                children: [
+                  _LocationTile(
+                    key: const Key('quick-notes-location'),
+                    icon: Icons.bolt_rounded,
+                    title: 'Quick Notes',
+                    subtitle: 'New and unfiled',
+                    count: quickCount,
+                    onTap: context.read<NotesController>().openQuickNotes,
+                  ),
+                  _LocationTile(
+                    key: const Key('all-notes-location'),
+                    icon: Icons.library_books_outlined,
+                    title: 'All Notes',
+                    subtitle: 'Every note',
+                    count: activeNotes.length,
+                    onTap: context.read<NotesController>().openAllNotes,
+                  ),
+                ],
               ),
               const SizedBox(height: 20),
               Row(
@@ -470,31 +475,52 @@ class _QuicxecsState extends State<Quicxecs> {
                   ),
                 )
               else
-                for (final folder in folders)
-                  Card(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: ListTile(
-                      key: ValueKey('note-folder-${folder.id}'),
-                      leading: const Icon(Icons.folder_outlined),
-                      title: Text(folder.name),
-                      trailing: _CountBadge(
+                _locationGrid(
+                  context,
+                  key: const Key('note-folders-grid'),
+                  children: [
+                    for (final folder in folders)
+                      _LocationTile(
+                        key: ValueKey('note-folder-${folder.id}'),
+                        icon: Icons.folder_outlined,
+                        title: folder.name,
                         count:
                             activeNotes
                                 .where((note) => note.folderId == folder.id)
                                 .length,
+                        onTap:
+                            () => context.read<NotesController>().openFolder(
+                              folder.id,
+                            ),
                       ),
-                      onTap:
-                          () => context.read<NotesController>().openFolder(
-                            folder.id,
-                          ),
-                    ),
-                  ),
+                  ],
+                ),
             ],
           ),
         ),
       ],
     );
   }
+
+  Widget _locationGrid(
+    BuildContext context, {
+    required Key key,
+    required List<Widget> children,
+  }) => LayoutBuilder(
+    builder:
+        (context, constraints) => GridView.count(
+          key: key,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: AppLayoutBreakpoints.fromContext(
+            context,
+          ).notesColumnCountForWidth(constraints.maxWidth),
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+          mainAxisExtent: 108,
+          children: children,
+        ),
+  );
 
   Widget _notesView(
     BuildContext context, {
@@ -1079,14 +1105,14 @@ class _LocationTile extends StatelessWidget {
     super.key,
     required this.icon,
     required this.title,
-    required this.subtitle,
+    this.subtitle,
     required this.count,
     required this.onTap,
   });
 
   final IconData icon;
   final String title;
-  final String subtitle;
+  final String? subtitle;
   final int count;
   final VoidCallback onTap;
 
@@ -1094,13 +1120,40 @@ class _LocationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: EdgeInsets.zero,
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Icon(icon, size: 30),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-        subtitle: Text(subtitle),
-        trailing: _CountBadge(count: count),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
         onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, size: 24),
+                  const Spacer(),
+                  _CountBadge(count: count),
+                ],
+              ),
+              const Spacer(),
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              if (subtitle != null)
+                Text(
+                  subtitle!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
