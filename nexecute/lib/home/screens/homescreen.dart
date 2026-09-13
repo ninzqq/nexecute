@@ -154,8 +154,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             usesPersistentWorkspace
                                 ? _desktopTabIndex
                                 : tabIndex;
-                        final compactMenu =
-                            layoutClass == AppLayoutClass.medium;
                         return AdaptiveNavigationShell(
                           selectedIndex: tabIndex,
                           onDestinationSelected:
@@ -167,7 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           drawer: const MainDrawer(),
                           persistentMenu: PersistentMainMenu(
-                            compact: compactMenu,
+                            compact: true,
                             selectedIndex: activeIndex,
                             onDestinationSelected:
                                 (index) => _selectDesktopTab(tab, index),
@@ -178,10 +176,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   respectFocusedEditor: false,
                                 ),
                           ),
-                          persistentMenuWidth:
-                              compactMenu
-                                  ? PersistentMainMenu.compactWidth
-                                  : PersistentMainMenu.width,
+                          persistentMenuWidth: PersistentMainMenu.compactWidth,
                           body: _desktopTabHost(tab, activeIndex),
                           floatingActionButton:
                               activeIndex < 3

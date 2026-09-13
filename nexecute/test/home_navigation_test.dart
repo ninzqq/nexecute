@@ -181,7 +181,7 @@ void main() {
     },
   );
 
-  testWidgets('expanded layout keeps the app menu visible beside content', (
+  testWidgets('expanded layout keeps the compact rail beside content', (
     tester,
   ) async {
     _setViewport(tester, const Size(1200, 900));
@@ -191,7 +191,18 @@ void main() {
     expect(find.byType(NavigationRail), findsNothing);
     expect(find.byKey(const Key('persistent-main-menu')), findsOneWidget);
     expect(find.byKey(const Key('desktop-destination-selector')), findsNothing);
-    expect(find.byKey(const Key('desktop-source-list')), findsOneWidget);
+    expect(
+      find.byKey(const Key('medium-persistent-navigation-rail')),
+      findsOneWidget,
+    );
+    expect(
+      tester.getSize(find.byKey(const Key('persistent-main-menu'))).width,
+      PersistentMainMenu.compactWidth,
+    );
+    expect(
+      tester.getRect(find.byKey(const Key('adaptive-navigation-content'))).left,
+      PersistentMainMenu.compactWidth,
+    );
     expect(find.byKey(const Key('desktop-page-title')), findsOneWidget);
     expect(find.byKey(const Key('desktop-create-command')), findsOneWidget);
     expect(
@@ -207,7 +218,7 @@ void main() {
     expect(find.text('Assistant'), findsOneWidget);
     expect(find.text('Tags'), findsOneWidget);
     expect(find.text('Archive'), findsOneWidget);
-    expect(find.text('Keyboard shortcuts'), findsOneWidget);
+    expect(find.byTooltip('Keyboard shortcuts'), findsOneWidget);
     expect(find.text('Settings'), findsOneWidget);
     expect(_selectedDestination(tester), 2);
     expect(find.text('Calendar'), findsOneWidget);
@@ -219,6 +230,10 @@ void main() {
 
     expect(_selectedDestination(tester), 0);
     expect(find.byKey(const Key('persistent-main-menu')), findsOneWidget);
+    expect(
+      find.byKey(const Key('medium-persistent-navigation-rail')),
+      findsOneWidget,
+    );
     expect(find.text('Profile'), findsOneWidget);
     expect(find.text('Settings'), findsOneWidget);
     expect(find.byKey(const Key('calendar-side-by-side-layout')), findsOne);
@@ -456,10 +471,10 @@ void main() {
     );
     expect(createSemantics.getSemanticsData().hint, contains('Ctrl+N'));
 
-    expect(find.text('Keyboard shortcuts'), findsOneWidget);
+    expect(find.byTooltip('Keyboard shortcuts'), findsOneWidget);
     expect(find.text(AppShortcutLabels.search), findsOneWidget);
 
-    await tester.tap(find.text('Keyboard shortcuts'));
+    await tester.tap(find.byTooltip('Keyboard shortcuts'));
     await tester.pumpAndSettle();
     expect(find.text('Save or confirm'), findsOneWidget);
     expect(find.text(AppShortcutLabels.save), findsOneWidget);

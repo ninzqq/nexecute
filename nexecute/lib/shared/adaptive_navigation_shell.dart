@@ -231,12 +231,8 @@ class AdaptiveNavigationShell extends StatelessWidget {
       toolbarHeight: 58,
       automaticallyImplyLeading: false,
       leadingWidth: persistentMenuWidth,
-      leading: Align(
-        alignment: compact ? Alignment.center : Alignment.centerLeft,
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: compact ? 0 : 20),
-          child: const NexecuteAppIcon(key: Key('app-shell-icon'), size: 50),
-        ),
+      leading: const Center(
+        child: NexecuteAppIcon(key: Key('app-shell-icon'), size: 50),
       ),
       titleSpacing: 16,
       title: Text(
