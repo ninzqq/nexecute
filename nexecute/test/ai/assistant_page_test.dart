@@ -12,6 +12,158 @@ import 'package:provider/provider.dart';
 import '../support/fake_ai_dependencies.dart';
 
 void main() {
+  testWidgets('previews a frozen conversation note source without sending', (
+    tester,
+  ) async {
+    final profile = AiConnectionProfile(
+      id: 'home',
+      name: 'Home AI',
+      protocol: AiProtocol.openAiCompatibleChat,
+      baseUrl: Uri.parse('https://ai.example.test/v1'),
+      modelId: 'local-model',
+    );
+    final now = DateTime.utc(2026, 9, 13, 10);
+    final conversation = AiConversation(
+      id: 'conversation',
+      title: 'Planning',
+      connectionProfileId: profile.id,
+      modelId: profile.modelId,
+      createdAt: now,
+      updatedAt: now,
+      messages: [
+        AiChatMessage(
+          id: 'u1',
+          role: AiMessageRole.user,
+          content: 'Plan the launch',
+          createdAt: now,
+        ),
+        AiChatMessage(
+          id: 'a1',
+          role: AiMessageRole.assistant,
+          content: 'Decide a date',
+          createdAt: now.add(const Duration(minutes: 1)),
+        ),
+        AiChatMessage(
+          id: 'u2',
+          role: AiMessageRole.user,
+          content: 'What about budget?',
+          createdAt: now.add(const Duration(minutes: 2)),
+        ),
+        AiChatMessage(
+          id: 'a2',
+          role: AiMessageRole.assistant,
+          content: 'Set a budget',
+          createdAt: now.add(const Duration(minutes: 3)),
+        ),
+      ],
+    );
+    final profiles = FakeAiConnectionProfileStore(
+      profiles: [profile],
+      activeProfileId: profile.id,
+    );
+    final conversations = FakeAiConversationStore(
+      conversations: [conversation],
+    );
+    final repository = FakeAiAssistantRepository();
+    addTearDown(profiles.dispose);
+    addTearDown(conversations.dispose);
+
+    await tester.pumpWidget(
+      _app(
+        assistantRepository: repository,
+        profileStore: profiles,
+        conversationStore: conversations,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final action = find.byKey(
+      const Key('assistant-create-note-from-conversation'),
+    );
+    expect(tester.widget<IconButton>(action).onPressed, isNotNull);
+    await tester.tap(action);
+    await tester.pumpAndSettle();
+    expect(find.text('Source preview · Home AI · local-model'), findsOneWidget);
+    expect(
+      find.text('4 messages selected · 0 older messages omitted'),
+      findsOneWidget,
+    );
+    final payload =
+        AiConversationNoteSource.fromConversation(conversation)!.payload;
+    expect(find.text(payload), findsOneWidget);
+    expect(repository.startedRequests, isEmpty);
+
+    await conversations.saveMessage(
+      conversation.id,
+      AiChatMessage(
+        id: 'u3',
+        role: AiMessageRole.user,
+        content: 'A later message',
+        createdAt: now.add(const Duration(minutes: 4)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text(payload), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('conversation-note-start')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Message 3 ·').last);
+    await tester.pumpAndSettle();
+    expect(
+      find.text('2 messages selected · 0 older messages omitted'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('2 more before selection · 0 after selection'),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<SelectableText>(
+            find.byKey(const Key('conversation-note-payload')),
+          )
+          .data,
+      isNot(contains('Plan the launch')),
+    );
+    expect(repository.startedRequests, isEmpty);
+  });
+
+  testWidgets(
+    'disables conversation note action without a completed exchange',
+    (tester) async {
+      final profile = AiConnectionProfile(
+        id: 'home',
+        name: 'Home AI',
+        protocol: AiProtocol.openAiCompatibleChat,
+        baseUrl: Uri.parse('https://ai.example.test/v1'),
+        modelId: 'local-model',
+      );
+      final profiles = FakeAiConnectionProfileStore(
+        profiles: [profile],
+        activeProfileId: profile.id,
+      );
+      final conversations = FakeAiConversationStore();
+      addTearDown(profiles.dispose);
+      addTearDown(conversations.dispose);
+      await tester.pumpWidget(
+        _app(
+          assistantRepository: FakeAiAssistantRepository(),
+          profileStore: profiles,
+          conversationStore: conversations,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<IconButton>(
+              find.byKey(const Key('assistant-create-note-from-conversation')),
+            )
+            .onPressed,
+        isNull,
+      );
+    },
+  );
+
   for (final preset in AppThemePreset.values) {
     testWidgets(
       'shows multi-skill conflict and budget recovery on a narrow ${preset.name} phone',

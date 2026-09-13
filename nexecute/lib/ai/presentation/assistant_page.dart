@@ -119,7 +119,26 @@ class _AssistantPageState extends State<AssistantPage> {
   @override
   Widget build(BuildContext context) {
     final profile = _controller.activeProfile;
+    final noteSource =
+        _controller.isGenerating
+            ? null
+            : AiConversationNoteSource.fromConversation(
+              _controller.conversation,
+            );
     final actions = [
+      IconButton(
+        key: const Key('assistant-create-note-from-conversation'),
+        tooltip: 'Create note from conversation',
+        onPressed:
+            noteSource == null || profile == null
+                ? null
+                : () => showAiConversationNoteSourcePreview(
+                  context,
+                  source: noteSource,
+                  profile: profile,
+                ),
+        icon: const Icon(Icons.note_add_outlined),
+      ),
       IconButton(
         key: const Key('assistant-new-conversation'),
         tooltip: 'New conversation',

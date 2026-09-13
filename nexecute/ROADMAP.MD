@@ -1219,32 +1219,33 @@ and immutable model version or digest are supplied to the quality runner.
 
 ##### Step 10E: conversation → reviewed note → existing note actions
 
-**Status:** Planned. Build this after the Step 10D live-model validation. The
-first chat-originated write creates one new plain-text note from the current
-conversation. The user can then run the existing Note → proposed tasks or
+**Status:** Step 10E-a complete; Steps 10E-b through 10E-d planned. Step
+10E-a starts with a source-only preview; model generation and writes remain
+gated on the Step 10D live-model validation. The first chat-originated write
+creates one new plain-text note from the current conversation. The user can
+then run the existing Note → proposed tasks or
 Note → proposed event action on that saved note. This step does not create
 tasks or events directly from chat and does not modify existing notes.
 
 ###### Step 10E-a: explicit source and request boundary
 
-- [ ] Add **Create note from conversation** to the Assistant conversation
+- [x] Add **Create note from conversation** to the Assistant conversation
   actions, enabled only when the selected conversation has completed user and
   assistant messages and no generation is in progress.
-- [ ] Build an immutable, ordered snapshot from ordinary completed user and
+- [x] Build an immutable, ordered snapshot from ordinary completed user and
   assistant message text. Exclude system/tool messages, streamed reasoning,
   failed or cancelled responses, transient read-tool results, and application
   attachments that were not persisted in chat history.
-- [ ] Default to the newest 24 completed messages, beginning at a user turn,
+- [x] Default to the newest 24 completed messages, beginning at a user turn,
   consistent with the current chat request window. Show the included message
   count, first and last message times, and count of older omitted messages.
   Let the user narrow the source to a contiguous range of completed turns.
-- [ ] Bound the serialized source to 16,000 characters. If the selected range
+- [x] Bound the serialized source to 16,000 characters. If the selected range
   exceeds that cap, require a narrower range before generation; never silently
   truncate a message or imply that omitted conversation content was included.
-- [ ] Preview the exact source text and the active connection/model before the
-  request. Treat transcript text as untrusted data, including instructions
-  embedded in either speaker's messages. Request consent to send this snapshot
-  to the selected AI endpoint through the existing connection path.
+- [x] Preview the exact source text and the active connection/model without
+  making a request. The snapshot contains only transcript data and remains
+  frozen while the preview is open.
 
 ###### Step 10E-b: one structured note proposal
 
@@ -1258,6 +1259,10 @@ tasks or events directly from chat and does not modify existing notes.
   actionable items, open questions, and important caveats without inventing
   facts or claiming access to omitted messages or transient attachments.
   Serialize the transcript as data, separately from instructions.
+- [ ] Add an explicit Generate action to the source preview. Require the user
+  to confirm sending the frozen, size-valid snapshot to the displayed endpoint;
+  reject a changed or unavailable active connection before sending. Treat
+  instructions embedded in either speaker's messages as untrusted data.
 - [ ] Parse and validate the proposal locally: exact JSON shape, schema
   version, response size, title/body limits, required text, and no unexpected
   fields. Reuse the active assistant connection, cancellation, progress, and

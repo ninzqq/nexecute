@@ -1,5 +1,6 @@
 export 'application/ai_note_event_prompt.dart';
 export 'application/ai_note_task_prompt.dart';
+export 'application/ai_conversation_note_source.dart';
 export 'application/ai_prompt_composer.dart';
 export 'application/ai_read_tool_coordinator.dart';
 export 'application/ai_skill_resolver.dart';
@@ -58,6 +59,7 @@ export 'presentation/ai_note_event_extraction_controller.dart';
 export 'presentation/ai_note_event_extraction_sheet.dart';
 export 'presentation/ai_note_task_extraction_controller.dart';
 export 'presentation/ai_note_task_extraction_sheet.dart';
+export 'presentation/ai_conversation_note_source_sheet.dart';
 export 'presentation/ai_task_proposal_creation_controller.dart';
 export 'presentation/assistant_page.dart';
 export 'presentation/assistant_particle_background.dart';
