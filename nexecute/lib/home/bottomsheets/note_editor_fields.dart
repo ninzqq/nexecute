@@ -98,6 +98,7 @@ class NoteEditorFields extends StatelessWidget {
               key: const Key('note-description-field'),
               controller: descriptionController,
               textCapitalization: TextCapitalization.sentences,
+              textAlignVertical: TextAlignVertical.top,
               decoration: const InputDecoration(
                 labelText: 'Description',
                 border: OutlineInputBorder(),
