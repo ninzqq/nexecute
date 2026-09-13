@@ -1217,10 +1217,95 @@ and quality-suite version 1.2.0 validated 37 cases in dry-run mode. The live
 Note → Event Ollama run remains intentionally open until an endpoint, model ID,
 and immutable model version or digest are supplied to the quality runner.
 
+##### Step 10E: conversation → reviewed note → existing note actions
+
+**Status:** Planned. Build this after the Step 10D live-model validation. The
+first chat-originated write creates one new plain-text note from the current
+conversation. The user can then run the existing Note → proposed tasks or
+Note → proposed event action on that saved note. This step does not create
+tasks or events directly from chat and does not modify existing notes.
+
+###### Step 10E-a: explicit source and request boundary
+
+- [ ] Add **Create note from conversation** to the Assistant conversation
+  actions, enabled only when the selected conversation has completed user and
+  assistant messages and no generation is in progress.
+- [ ] Build an immutable, ordered snapshot from ordinary completed user and
+  assistant message text. Exclude system/tool messages, streamed reasoning,
+  failed or cancelled responses, transient read-tool results, and application
+  attachments that were not persisted in chat history.
+- [ ] Default to the newest 24 completed messages, beginning at a user turn,
+  consistent with the current chat request window. Show the included message
+  count, first and last message times, and count of older omitted messages.
+  Let the user narrow the source to a contiguous range of completed turns.
+- [ ] Bound the serialized source to 16,000 characters. If the selected range
+  exceeds that cap, require a narrower range before generation; never silently
+  truncate a message or imply that omitted conversation content was included.
+- [ ] Preview the exact source text and the active connection/model before the
+  request. Treat transcript text as untrusted data, including instructions
+  embedded in either speaker's messages. Request consent to send this snapshot
+  to the selected AI endpoint through the existing connection path.
+
+###### Step 10E-b: one structured note proposal
+
+- [ ] Define a versioned, provider-neutral output contract for zero or one
+  proposed note with a title of at most 300 characters and plain-text body of
+  at most 12,000 characters, so a saved note stays eligible for the current
+  Note → proposed tasks workflow. Zero means that the model found no useful
+  note to propose.
+- [ ] Build a dedicated summarization prompt that asks for a faithful,
+  stand-alone note in the conversation's language, preserving decisions,
+  actionable items, open questions, and important caveats without inventing
+  facts or claiming access to omitted messages or transient attachments.
+  Serialize the transcript as data, separately from instructions.
+- [ ] Parse and validate the proposal locally: exact JSON shape, schema
+  version, response size, title/body limits, required text, and no unexpected
+  fields. Reuse the active assistant connection, cancellation, progress, and
+  user-safe error patterns from the dedicated Note → proposed tasks flow.
+- [ ] Keep proposal generation outside ordinary chat history and Firestore.
+  Do not advertise a write tool or let model output call a repository.
+
+###### Step 10E-c: review and confirmed note creation
+
+- [ ] Show the proposed title and body in an editable note review using the
+  existing note-editor conventions. Provide Regenerate, Discard, and Save;
+  clearly show that the note is unsaved until the user confirms.
+- [ ] Revalidate edited values and show the final title and body before the
+  write. A blank or invalid proposal cannot be saved. Keep the original
+  conversation unchanged regardless of the review outcome.
+- [ ] Add a validated, idempotent create-note command with a stable creation
+  ID, frozen reviewed values, creation time, and trusted source conversation
+  and message references. Generate the note ID on the client so retrying the
+  same confirmed command after an uncertain result cannot create duplicates.
+- [ ] Save through `NoteRepository` under the authenticated user. Store only
+  minimal source/provenance metadata needed to identify this AI-created note;
+  never persist the full source transcript twice. Show a success state with an
+  action to open the new note. Retry failures with the exact frozen command,
+  and prevent repeated submission while the save is in flight.
+- [ ] After saving, expose the unchanged Note → proposed tasks and Note →
+  proposed event actions on the new note. Do not automatically run either
+  action or create downstream records.
+
+###### Step 10E-d: verification and rollout
+
+- [ ] Test snapshot ordering and exact preview/request equality, omitted-turn
+  disclosure, bounds, exclusion of transient/failed content, cancellation,
+  provider errors, malformed output, and prompt injection in conversation
+  messages. Cover empty or partially completed conversations.
+- [ ] Test editing, discard, explicit save confirmation, no write before
+  confirmation, duplicate-click prevention, frozen-command retry, and normal
+  note visibility. Add repository-contract and Firestore Emulator coverage for
+  deterministic IDs, one-note creation, provenance, and source preservation.
+- [ ] Extend the bilingual AI quality suite with short and long conversations,
+  decisions, tasks, uncertainties, contradictions, and attempts to induce
+  fabricated or unauthorized content. Validate against the owner's configured
+  model before rollout, and verify the resulting note can enter the existing
+  Note → proposed tasks flow without a special conversion path.
+
 ##### Later Step 10 scopes
 
-- [ ] Consider chat → proposed task, note, or event only after the dedicated
-  Note → Event workflow is reliable.
+- [ ] Consider direct chat → proposed task or event only after the dedicated
+  conversation → reviewed note workflow is reliable.
 - [ ] Add Task → proposed event and Event → proposed follow-up task as separate
   bounded workflows with their own source previews and schemas.
 - [ ] Defer AI-proposed updates, completion, moving, and deletion of existing
