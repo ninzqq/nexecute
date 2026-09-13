@@ -1219,7 +1219,9 @@ and immutable model version or digest are supplied to the quality runner.
 
 ##### Step 10E: conversation → reviewed note → existing note actions
 
-**Status:** Steps 10E-a through 10E-c implemented; Step 10E-d remains.
+**Status:** Steps 10E-a through 10E-c implemented. Step 10E-d's deterministic
+checks and quality cases are implemented; emulator execution and the owner's
+live-model validation remain.
 The preview generates an unsaved note proposal through the active AI
 connection. The user can edit and explicitly confirm it before a new plain-text
 note is saved, then run the existing Note → proposed tasks or Note → proposed
@@ -1299,19 +1301,29 @@ editable, unsaved Step 10E-c review.
 
 ###### Step 10E-d: verification and rollout
 
-- [ ] Test snapshot ordering and exact preview/request equality, omitted-turn
+- [x] Test snapshot ordering and exact preview/request equality, omitted-turn
   disclosure, bounds, exclusion of transient/failed content, cancellation,
   provider errors, malformed output, and prompt injection in conversation
   messages. Cover empty or partially completed conversations.
-- [ ] Test editing, discard, explicit save confirmation, no write before
+- [x] Test editing, discard, explicit save confirmation, no write before
   confirmation, duplicate-click prevention, frozen-command retry, and normal
   note visibility. Add repository-contract and Firestore Emulator coverage for
   deterministic IDs, one-note creation, provenance, and source preservation.
-- [ ] Extend the bilingual AI quality suite with short and long conversations,
+- [x] Extend the bilingual AI quality suite with short and long conversations,
   decisions, tasks, uncertainties, contradictions, and attempts to induce
-  fabricated or unauthorized content. Validate against the owner's configured
-  model before rollout, and verify the resulting note can enter the existing
-  Note → proposed tasks flow without a special conversion path.
+  fabricated or unauthorized content. Verify the resulting note can enter the
+  existing Note → proposed tasks flow without a special conversion path.
+- [ ] Run the new Firestore integration case against local Auth and Firestore
+  emulators, then validate the bilingual cases against the owner's configured
+  model and review note fidelity before rollout.
+
+Verification on 2026-09-13: `flutter analyze` found no issues; the full Flutter
+suite passed 617 tests with one opt-in test skipped; and quality-suite version
+1.5.0 validates 54 synthetic cases in dry-run mode. The repository integration
+case is present but could not run here because Java and an Android emulator are
+unavailable. The local Ollama endpoint at `127.0.0.1:11434` was unavailable, so
+live-model validation still
+needs the owner's reachable endpoint, model ID, and immutable version or digest.
 
 ##### Later Step 10 scopes
 

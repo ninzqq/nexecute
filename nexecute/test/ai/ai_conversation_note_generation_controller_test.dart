@@ -205,6 +205,38 @@ void main() {
     expect(controller.errorMessage, isNull);
   });
 
+  test('shows a provider failure without accepting partial output', () async {
+    final active = profile();
+    final profiles = FakeAiConnectionProfileStore(
+      profiles: [active],
+      activeProfileId: active.id,
+    );
+    addTearDown(profiles.dispose);
+    final repository = FakeAiAssistantRepository(
+      responseEvents: const [
+        AiTextDelta('{"schemaVersion":1,'),
+        AiResponseFailed(
+          error: 'endpoint-unavailable',
+          message: 'The model endpoint is unavailable.',
+          code: 'unreachable',
+          retryable: true,
+        ),
+      ],
+    );
+    final controller = AiConversationNoteGenerationController(
+      assistantRepository: repository,
+      connectionProfileStore: profiles,
+      previewedProfile: active,
+    );
+    addTearDown(controller.dispose);
+
+    await controller.start(source());
+    await _flushEvents();
+    expect(controller.status, AiConversationNoteGenerationStatus.failed);
+    expect(controller.proposal, isNull);
+    expect(controller.errorMessage, 'The model endpoint is unavailable.');
+  });
+
   test('fails safely on malformed and excessive output', () async {
     final active = profile();
     final profiles = FakeAiConnectionProfileStore(

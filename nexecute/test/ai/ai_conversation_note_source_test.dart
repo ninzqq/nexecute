@@ -53,6 +53,12 @@ void main() {
                 'Not finished',
                 status: AiMessageStatus.streaming,
               ),
+              message(
+                7,
+                AiMessageRole.assistant,
+                'Cancelled text',
+                status: AiMessageStatus.cancelled,
+              ),
             ]),
           )!;
 
@@ -84,6 +90,7 @@ void main() {
       });
       expect(source.payload, isNot(contains('Private tool result')));
       expect(source.payload, isNot(contains('Failed text')));
+      expect(source.payload, isNot(contains('Cancelled text')));
     },
   );
 

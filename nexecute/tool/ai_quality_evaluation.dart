@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:nexecute/ai/application/ai_prompt_composer.dart';
+import 'package:nexecute/ai/application/ai_conversation_note_prompt.dart';
+import 'package:nexecute/ai/application/ai_conversation_note_source.dart';
 import 'package:nexecute/ai/application/ai_citation_resolver.dart';
 import 'package:nexecute/ai/application/ai_application_context_read_contract.dart';
 import 'package:nexecute/ai/application/ai_note_event_prompt.dart';
@@ -13,14 +15,17 @@ import 'package:nexecute/ai/domain/ai_chat_request.dart';
 import 'package:nexecute/ai/domain/ai_citation.dart';
 import 'package:nexecute/ai/domain/ai_connection_profile.dart';
 import 'package:nexecute/ai/domain/ai_connection_result.dart';
+import 'package:nexecute/ai/domain/ai_conversation.dart';
 import 'package:nexecute/ai/domain/ai_event_proposal.dart';
 import 'package:nexecute/ai/domain/ai_model_info.dart';
+import 'package:nexecute/ai/domain/ai_note_proposal.dart';
 import 'package:nexecute/ai/domain/ai_protocol.dart';
 import 'package:nexecute/ai/domain/ai_skill_invocation.dart';
 import 'package:nexecute/ai/domain/ai_stream_event.dart';
 import 'package:nexecute/ai/domain/ai_task_proposal.dart';
 import 'package:nexecute/ai/domain/ai_tool.dart';
 import 'package:nexecute/ai/infrastructure/ai_task_proposal_parser.dart';
+import 'package:nexecute/ai/infrastructure/ai_note_proposal_parser.dart';
 import 'package:nexecute/ai/infrastructure/ai_web_search_result_sanitizer.dart';
 import 'package:nexecute/ai/infrastructure/ai_event_proposal_parser.dart';
 import 'package:nexecute/ai/infrastructure/ai_skill_markdown_codec.dart';
@@ -34,6 +39,7 @@ enum AiQualityWorkflow {
   attachedContext,
   noteToTasks,
   noteToEvent,
+  conversationToNote,
   parserFixture,
   toolProtocolFixture,
   citationFixture,
@@ -218,6 +224,12 @@ class AiQualityCase {
           throw const FormatException('hasCompleteSchedule must be a boolean.');
         }
         _validateTextChecks(expectation);
+      case AiQualityWorkflow.conversationToNote:
+        _conversationNoteSourceFrom(input);
+        if (expectation['expectedNote'] is! bool) {
+          throw const FormatException('expectedNote must be a boolean.');
+        }
+        _validateTextChecks(expectation);
       case AiQualityWorkflow.parserFixture:
         _nonEmptyString(input, 'response');
         final expectedCode = _nonEmptyString(expectation, 'parserErrorCode');
@@ -393,6 +405,8 @@ class AiQualityReport {
               AiNoteTaskPromptBuilder.systemInstruction,
           'noteToEventSystemInstruction':
               AiNoteEventPromptBuilder.systemInstruction,
+          'conversationToNoteSystemInstruction':
+              AiConversationNotePromptBuilder.systemInstruction,
         },
       },
       'summary': {'total': results.length, ...counts},
@@ -574,6 +588,50 @@ class AiQualityEvaluator {
         );
       }
       final diagnostics = _eventDiagnostics(evaluationCase, proposal);
+      return _result(
+        evaluationCase,
+        repetition,
+        stopwatch.elapsed,
+        outcome:
+            diagnostics.isEmpty
+                ? AiQualityOutcome.passed
+                : AiQualityOutcome.qualityFailure,
+        output: output,
+        diagnostics: diagnostics,
+        usage: collected.usage,
+      );
+    }
+    if (evaluationCase.workflow == AiQualityWorkflow.conversationToNote) {
+      final AiNoteProposal proposal;
+      try {
+        proposal = AiNoteProposalParser.parse(output);
+      } on AiNoteProposalFormatException catch (error) {
+        return _result(
+          evaluationCase,
+          repetition,
+          stopwatch.elapsed,
+          outcome: AiQualityOutcome.applicationFailure,
+          output: output,
+          failureCode: 'note_proposal_${error.code.name}',
+          diagnostics: [error.message],
+          usage: collected.usage,
+        );
+      }
+      final expectedNote = evaluationCase.expectation['expectedNote'] as bool;
+      final diagnostics = <String>[];
+      if ((proposal.note != null) != expectedNote) {
+        diagnostics.add(
+          expectedNote ? 'Expected one note.' : 'Expected no note.',
+        );
+      }
+      if (proposal.note case final note?) {
+        diagnostics.addAll(
+          _textDiagnostics(
+            evaluationCase.expectation,
+            '${note.title}\n${note.body}',
+          ),
+        );
+      }
       return _result(
         evaluationCase,
         repetition,
@@ -872,6 +930,14 @@ class AiQualityEvaluator {
       systemInstruction = prompt.systemInstruction;
       userMessage = prompt.userMessage;
       applicationContext = null;
+    } else if (evaluationCase.workflow ==
+        AiQualityWorkflow.conversationToNote) {
+      final prompt = AiConversationNotePromptBuilder.build(
+        _conversationNoteSourceFrom(evaluationCase.input),
+      );
+      systemInstruction = prompt.systemInstruction;
+      userMessage = prompt.userMessage;
+      applicationContext = null;
     } else {
       systemInstruction = const AiPromptComposer().compose(
         profilePreferences: profile.systemPrompt,
@@ -1096,6 +1162,58 @@ class _CollectedResponse {
   final bool completed;
   final bool toolCallReceived;
   final AiTokenUsage? usage;
+}
+
+AiConversationNoteSource _conversationNoteSourceFrom(
+  Map<String, Object?> input,
+) {
+  final rawMessages = input['messages'];
+  if (rawMessages is! List || rawMessages.length < 2) {
+    throw const FormatException(
+      'Conversation-to-note input needs at least two messages.',
+    );
+  }
+  final anchor = DateTime.utc(2026, 9, 1, 12);
+  final messages = <AiChatMessage>[];
+  for (var index = 0; index < rawMessages.length; index++) {
+    final item = _object(
+      rawMessages[index],
+      'Conversation messages must be objects.',
+    );
+    _requireExactKeys(item, const {'role', 'content'});
+    final role = _nonEmptyString(item, 'role');
+    if (role != 'user' && role != 'assistant') {
+      throw const FormatException(
+        'Conversation messages must be user or assistant turns.',
+      );
+    }
+    messages.add(
+      AiChatMessage(
+        id: 'quality-message-$index',
+        role: role == 'user' ? AiMessageRole.user : AiMessageRole.assistant,
+        content: _nonEmptyString(item, 'content'),
+        createdAt: anchor.add(Duration(minutes: index)),
+        sequence: index,
+      ),
+    );
+  }
+  final source = AiConversationNoteSource.fromConversation(
+    AiConversation(
+      id: 'quality-conversation',
+      title: 'Synthetic conversation',
+      connectionProfileId: 'quality-evaluation',
+      modelId: 'quality-evaluation',
+      createdAt: anchor,
+      updatedAt: anchor,
+      messages: messages,
+    ),
+  );
+  if (source == null || !source.isWithinLimit) {
+    throw const FormatException(
+      'Conversation-to-note source needs a completed exchange within the size limit.',
+    );
+  }
+  return source;
 }
 
 ({DateTime localDateTime, Duration utcOffset}) _eventReferenceFrom(

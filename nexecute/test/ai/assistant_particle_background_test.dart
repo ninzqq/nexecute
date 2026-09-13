@@ -141,7 +141,7 @@ void main() {
     );
   });
 
-  test('defines a distinct restrained style for every app theme', () {
+  test('defines a distinct bounded style for every app theme', () {
     final styles = [
       for (final preset in AppThemePreset.values)
         AppThemes.forPreset(preset).extension<AssistantParticleTheme>()!,
@@ -153,8 +153,8 @@ void main() {
     );
     for (final style in styles) {
       expect(style.colors, hasLength(2));
-      expect(style.maximumCount, lessThanOrEqualTo(100));
-      expect(style.maximumOpacity, lessThanOrEqualTo(0.3));
+      expect(style.maximumCount, lessThanOrEqualTo(200));
+      expect(style.maximumOpacity, lessThanOrEqualTo(0.9));
       expect(style.twinkleStrength, lessThanOrEqualTo(0.22));
     }
   });

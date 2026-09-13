@@ -1,10 +1,10 @@
 # AI quality evaluation
 
 Nexecute has a versioned, synthetic evaluation suite for general chat,
-explicit attached context, Note → proposed tasks, Note → proposed calendar
-events, strict parser behavior, and read-tool guardrails. It is deliberately
-small enough to run against a local model during development and stable enough
-to reuse when comparing a hosted provider later.
+explicit attached context, conversation → proposed note, Note → proposed tasks,
+Note → proposed calendar events, strict parser behavior, and read-tool
+guardrails. It is deliberately small enough to run against a local model during
+development and stable enough to reuse when comparing a hosted provider later.
 
 The committed corpus is `evaluation/ai_quality_cases.v1.json`. Its case IDs are
 stable within suite version 1. Inputs contain no personal notes, account data,
@@ -18,6 +18,8 @@ endpoint addresses, or credentials. English and Finnish cases cover:
 - unsupported claims about app data or completed actions;
 - questions answered only from explicitly attached, bounded application data;
 - informational text that must not become hallucinated tasks;
+- short and long conversation-to-note proposals, omitted turns, decisions,
+  open work, contradictions, uncertainty, and embedded instructions;
 - malformed structured proposal responses; and
 - malformed, excessive, unknown, and unauthorized read-tool calls.
 
@@ -29,9 +31,9 @@ From the repository root:
 dart run tool/run_ai_quality_evaluation.dart --dry-run
 ```
 
-This parses and lists the cases but makes no network requests. The regular test
-suite also validates the schema, required coverage, bilingual workflows, parser
-fixtures, and failure classification.
+This parses and lists the 54 cases in suite version 1.5.0 but makes no network
+requests. The regular test suite also validates the schema, required coverage,
+bilingual workflows, parser fixtures, and failure classification.
 
 ## Run a model evaluation
 
@@ -86,12 +88,21 @@ The runner sends chat and attached-context cases with Nexecute's current
 production chat system prompt. Attached-context fixtures become the same
 canonical, bounded, untrusted envelope used by the app. Note-to-task and
 note-to-event cases use their production prompt builders and strict proposal
-parsers. Event fixtures provide an explicit reference local time and UTC offset,
-so relative-date expectations remain deterministic across machines and time
+parsers. Conversation-to-note cases build the same bounded, newest-24-message
+snapshot as the Assistant preview, then use the production note prompt and
+strict note parser. Their synthetic message timestamps are fixed, and any
+earlier omitted turns stay out of the request. For a focused live check, use
+`--case conversation-en-short-decision,conversation-fi-short-tasks` before
+running all eight conversation cases. Review the generated note's factual
+fidelity as well as the automatic checks. Event fixtures provide an explicit
+reference local time and UTC offset, so relative-date expectations remain
+deterministic across machines and time
 zones. Tool-protocol fixtures are deterministic and local: they run the
 production coordinator against rejecting fake application reads, so guardrail
 cases never contact the configured endpoint. The runner does not write
-conversations, tasks, notes, events, reminders, or Firestore data.
+conversations, tasks, notes, events, reminders, or Firestore data. A test also
+passes a parsed conversation-note result through the ordinary note-to-tasks
+prompt builder without a special conversion path.
 
 ## Interpret a report
 
@@ -102,7 +113,7 @@ Each result has one mutually exclusive outcome:
 - `transportFailure`: the endpoint was unreachable, timed out, returned an HTTP
   failure, or ended the stream before completion.
 - `applicationFailure`: the endpoint response was malformed/empty, a tool call
-  appeared where text was required, a task or event proposal failed its
+  appeared where text was required, a note, task, or event proposal failed its
   production parser, or an application parser guardrail regressed.
 - `qualityFailure`: transport and application handling succeeded, but the valid
   model output missed an expected concept, included forbidden content, returned

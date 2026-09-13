@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/ai/ai.dart';
@@ -299,6 +301,50 @@ void main() {
     await tester.pumpAndSettle();
     expect(commands, hasLength(2));
     expect(identical(commands.first, commands.last), isTrue);
+    expect(find.byKey(const Key('conversation-note-created')), findsOneWidget);
+  });
+
+  testWidgets('in-flight save prevents another submission', (tester) async {
+    final profiles = FakeAiConnectionProfileStore(
+      profiles: [profile],
+      activeProfileId: profile.id,
+    );
+    final pending = Completer<Quicxec>();
+    final commands = <CreateConversationNoteCommand>[];
+    addTearDown(profiles.dispose);
+    await tester.pumpWidget(
+      app(
+        profiles: profiles,
+        assistant: assistant(),
+        onCreate: (command) {
+          commands.add(command);
+          return pending.future;
+        },
+      ),
+    );
+    await generate(tester);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('conversation-note-save')),
+      150,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byKey(const Key('conversation-note-save')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('conversation-note-confirm-save')));
+    await tester.pump();
+
+    expect(commands, hasLength(1));
+    expect(find.byKey(const Key('conversation-note-save')), findsNothing);
+    expect(find.byKey(const Key('conversation-note-retry-save')), findsNothing);
+    expect(
+      tester
+          .widget<TextButton>(find.byKey(const Key('conversation-note-close')))
+          .onPressed,
+      isNull,
+    );
+    pending.complete(commands.single.toNote());
+    await tester.pumpAndSettle();
+    expect(commands, hasLength(1));
     expect(find.byKey(const Key('conversation-note-created')), findsOneWidget);
   });
 }

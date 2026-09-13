@@ -83,6 +83,13 @@ void main() {
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
     expect(repository.startedRequests, isEmpty);
+    final previewedPayload =
+        tester
+            .widget<SelectableText>(
+              find.byKey(const Key('conversation-note-payload')),
+            )
+            .data;
+    expect(previewedPayload, source.payload);
 
     await tester.scrollUntilVisible(
       find.byKey(const Key('conversation-note-generate')),
@@ -99,6 +106,10 @@ void main() {
     expect(
       repository.startedRequests.single.messages.single.content,
       AiConversationNotePromptBuilder.build(source).userMessage,
+    );
+    expect(
+      repository.startedRequests.single.messages.single.content,
+      endsWith(previewedPayload!),
     );
     expect(find.text('Unsaved note proposal'), findsOneWidget);
     await tester.scrollUntilVisible(

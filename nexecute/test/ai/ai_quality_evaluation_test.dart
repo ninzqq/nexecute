@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/ai/ai.dart';
+import 'package:nexecute/repositories/note_repository.dart';
 
 import '../../tool/ai_quality_evaluation.dart';
 
@@ -61,6 +62,7 @@ void main() {
         AiQualityWorkflow.attachedContext,
         AiQualityWorkflow.noteToTasks,
         AiQualityWorkflow.noteToEvent,
+        AiQualityWorkflow.conversationToNote,
         AiQualityWorkflow.citationFixture,
       ]) {
         final languages =
@@ -102,6 +104,14 @@ void main() {
           'staleDates',
           'conflictingSources',
           'bilingualAttribution',
+          'conversationToNote',
+          'shortConversation',
+          'longConversation',
+          'omittedTurns',
+          'decisions',
+          'uncertainty',
+          'contradictions',
+          'unauthorizedAction',
         }),
       );
     });
@@ -351,6 +361,109 @@ void main() {
         repository.requests[1].messages.single.content,
         contains('Hammaslääkäri huomenna klo 14.00–15.00.'),
       );
+    },
+  );
+
+  test(
+    'conversation-note cases use the production prompt and feed note-to-tasks',
+    () async {
+      final suite = AiQualitySuite.fromJsonString(
+        File('evaluation/ai_quality_cases.v1.json').readAsStringSync(),
+      );
+      final repository = _QueuedRepository(const [
+        [
+          AiTextDelta(
+            '{"schemaVersion":1,"note":{"title":"Pilot launch","body":"Decision: launch October 12. Open tasks: agree the budget and prepare a checklist."}}',
+          ),
+          AiResponseCompleted(),
+        ],
+      ]);
+      final report = await AiQualityEvaluator(repository: repository).run(
+        suite: suite,
+        profile: _profile(),
+        metadata: const AiQualityRunMetadata(
+          modelId: 'model-a',
+          modelVersion: 'v1',
+          repetitions: 1,
+        ),
+        caseIds: const {'conversation-en-short-decision'},
+      );
+
+      expect(report.results.single.outcome, AiQualityOutcome.passed);
+      final request = repository.requests.single;
+      expect(
+        request.systemInstruction,
+        AiConversationNotePromptBuilder.systemInstruction,
+      );
+      expect(request.toolDefinitions, isEmpty);
+      expect(request.applicationContext, isNull);
+      final payload =
+          jsonDecode(request.messages.single.content.split('\n').last)
+              as Map<String, dynamic>;
+      expect((payload['messages'] as List), hasLength(2));
+      expect(
+        (payload['messages'] as List).first['content'],
+        contains('launch the pilot on October 12'),
+      );
+
+      final proposal = AiNoteProposalParser.parse(
+        report.results.single.output!,
+      );
+      final command = CreateConversationNoteCommand(
+        creationId: 'quality-note',
+        sourceConversationId: 'quality-conversation',
+        sourceMessageIds: const ['quality-message-0', 'quality-message-1'],
+        title: proposal.note!.title,
+        body: proposal.note!.body,
+        createdAt: DateTime.utc(2026, 9, 1),
+      );
+      final saved = command.toNote();
+      expect(
+        AiNoteTaskPromptBuilder.build(
+          noteTitle: saved.title,
+          noteContent: saved.contentAsPlainText,
+        ).userMessage,
+        contains('prepare a checklist'),
+      );
+    },
+  );
+
+  test(
+    'conversation-note runner excludes older turns and rejects bad output',
+    () async {
+      final suite = AiQualitySuite.fromJsonString(
+        File('evaluation/ai_quality_cases.v1.json').readAsStringSync(),
+      );
+      final repository = _QueuedRepository(const [
+        [
+          AiTextDelta('{"schemaVersion":1,"note":{"title":"Bad"}}'),
+          AiResponseCompleted(),
+        ],
+      ]);
+      final report = await AiQualityEvaluator(repository: repository).run(
+        suite: suite,
+        profile: _profile(),
+        metadata: const AiQualityRunMetadata(
+          modelId: 'model-a',
+          modelVersion: 'v1',
+          repetitions: 1,
+        ),
+        caseIds: const {'conversation-en-long-omission'},
+      );
+      expect(
+        report.results.single.outcome,
+        AiQualityOutcome.applicationFailure,
+      );
+      expect(report.results.single.failureCode, 'note_proposal_invalidNote');
+      final request = repository.requests.single;
+      expect(
+        request.messages.single.content,
+        isNot(contains('violet pelican')),
+      );
+      final payload =
+          jsonDecode(request.messages.single.content.split('\n').last)
+              as Map<String, dynamic>;
+      expect(payload['messages'], hasLength(24));
     },
   );
 
