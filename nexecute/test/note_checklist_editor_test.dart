@@ -52,6 +52,15 @@ void main() {
     expect(find.text('Milk'), findsOneWidget);
     expect(find.text('Bread'), findsOneWidget);
     expect(find.byType(Checkbox), findsNWidgets(2));
+    final itemFields = find.descendant(
+      of: find.byKey(const Key('note-checklist-editor')),
+      matching: find.byType(TextFormField),
+    );
+    expect(
+      tester.getCenter(itemFields.at(1)).dy -
+          tester.getCenter(itemFields.at(0)).dy,
+      lessThanOrEqualTo(42),
+    );
 
     await tester.tap(find.byKey(const Key('add-checklist-item')));
     await tester.pumpAndSettle();

@@ -76,7 +76,7 @@ class _NoteChecklistEditorState extends State<NoteChecklistEditor> {
 
     return Container(
       key: const Key('note-checklist-editor'),
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
+      padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
       decoration: BoxDecoration(
         color: palette.surfaceRaised,
         border: Border.all(color: palette.outline),
@@ -133,6 +133,7 @@ class _ChecklistEditorRow extends StatelessWidget {
           key: ValueKey('checklist-checkbox-${item.id}'),
           value: item.isChecked,
           visualDensity: VisualDensity.compact,
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
           side: BorderSide(color: palette.primary, width: 1.5),
           onChanged:
@@ -153,7 +154,8 @@ class _ChecklistEditorRow extends StatelessWidget {
               hintText: 'List item',
               border: InputBorder.none,
               filled: false,
-              contentPadding: EdgeInsets.symmetric(vertical: 10),
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(vertical: 4),
             ),
             onChanged: (text) => onChanged(item.copyWith(text: text)),
           ),
@@ -161,6 +163,8 @@ class _ChecklistEditorRow extends StatelessWidget {
         IconButton(
           tooltip: 'Remove checklist item',
           visualDensity: VisualDensity.compact,
+          constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+          padding: EdgeInsets.zero,
           onPressed: onRemoved,
           icon: const Icon(Icons.close_rounded, size: 18),
         ),
