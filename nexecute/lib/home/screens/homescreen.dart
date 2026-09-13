@@ -154,6 +154,58 @@ class _HomeScreenState extends State<HomeScreen> {
                             usesPersistentWorkspace
                                 ? _desktopTabIndex
                                 : tabIndex;
+                        final fullHeightNotesPane =
+                            activeIndex == 2 &&
+                            layoutClass == AppLayoutClass.expanded &&
+                            constraints.maxWidth -
+                                    PersistentMainMenu.compactWidth >=
+                                notesSplitMinContentWidth;
+                        final desktopSearch = DesktopGlobalSearchField(
+                          onPressed:
+                              () => _openSearch(
+                                context,
+                                respectFocusedEditor: false,
+                              ),
+                        );
+                        final desktopCreate =
+                            activeIndex < 3
+                                ? Semantics(
+                                  key: const Key('create-shortcut-semantics'),
+                                  hint: 'Shortcut ${AppShortcutLabels.create}',
+                                  button: true,
+                                  child: FilledButton.icon(
+                                    key: const Key('desktop-create-command'),
+                                    onPressed:
+                                        () => _createItem(context, activeIndex),
+                                    icon: Icon(_fabIcon(activeIndex), size: 18),
+                                    label: Text(_fabLabel(activeIndex)),
+                                  ),
+                                )
+                                : null;
+                        final notesToolbar = SizedBox(
+                          height: 58,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Row(
+                              children: [
+                                Text(
+                                  'Notes',
+                                  key: const Key('desktop-page-title'),
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                ),
+                                const Spacer(),
+                                desktopSearch,
+                                const SizedBox(width: 12),
+                                if (desktopCreate != null)
+                                  FocusTraversalOrder(
+                                    key: const Key('create-focus-order'),
+                                    order: const NumericFocusOrder(3),
+                                    child: desktopCreate,
+                                  ),
+                              ],
+                            ),
+                          ),
+                        );
                         return AdaptiveNavigationShell(
                           selectedIndex: tabIndex,
                           onDestinationSelected:
@@ -177,7 +229,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                           ),
                           persistentMenuWidth: PersistentMainMenu.compactWidth,
-                          body: _desktopTabHost(tab, activeIndex),
+                          body: _desktopTabHost(
+                            tab,
+                            activeIndex,
+                            notesToolbar:
+                                fullHeightNotesPane ? notesToolbar : null,
+                          ),
+                          desktopAppBarInBody: fullHeightNotesPane,
                           floatingActionButton:
                               activeIndex < 3
                                   ? Semantics(
@@ -194,33 +252,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                   )
                                   : null,
-                          desktopToolbarSearch: DesktopGlobalSearchField(
-                            onPressed:
-                                () => _openSearch(
-                                  context,
-                                  respectFocusedEditor: false,
-                                ),
-                          ),
-                          desktopPrimaryAction:
-                              activeIndex < 3
-                                  ? Semantics(
-                                    key: const Key('create-shortcut-semantics'),
-                                    hint:
-                                        'Shortcut ${AppShortcutLabels.create}',
-                                    button: true,
-                                    child: FilledButton.icon(
-                                      key: const Key('desktop-create-command'),
-                                      onPressed:
-                                          () =>
-                                              _createItem(context, activeIndex),
-                                      icon: Icon(
-                                        _fabIcon(activeIndex),
-                                        size: 18,
-                                      ),
-                                      label: Text(_fabLabel(activeIndex)),
-                                    ),
-                                  )
-                                  : null,
+                          desktopToolbarSearch: desktopSearch,
+                          desktopPrimaryAction: desktopCreate,
                         );
                       },
                     ),
@@ -272,13 +305,17 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Widget _desktopTabHost(HomeTabIndex tab, int selectedIndex) => IndexedStack(
+  Widget _desktopTabHost(
+    HomeTabIndex tab,
+    int selectedIndex, {
+    Widget? notesToolbar,
+  }) => IndexedStack(
     key: const Key('desktop-tab-host'),
     index: selectedIndex,
     children: [
       const CalendarPage(),
       const TasksPage(),
-      const Quicxecs(),
+      Quicxecs(wideToolbar: notesToolbar),
       _visitedDesktopTabs.contains(3)
           ? TickerMode(
             key: const Key('desktop-assistant-ticker-mode'),

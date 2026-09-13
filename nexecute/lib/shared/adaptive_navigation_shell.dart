@@ -144,6 +144,7 @@ class AdaptiveNavigationShell extends StatelessWidget {
     this.desktopToolbarSearch,
     this.desktopPrimaryAction,
     this.desktopTitle,
+    this.desktopAppBarInBody = false,
     this.resizeToAvoidBottomInset = true,
   }) : assert(destinations.length >= 2),
        assert(selectedIndex >= 0 && selectedIndex < destinations.length);
@@ -160,6 +161,7 @@ class AdaptiveNavigationShell extends StatelessWidget {
   final Widget? desktopToolbarSearch;
   final Widget? desktopPrimaryAction;
   final String? desktopTitle;
+  final bool desktopAppBarInBody;
   final bool resizeToAvoidBottomInset;
 
   @override
@@ -180,10 +182,12 @@ class AdaptiveNavigationShell extends StatelessWidget {
             child: Scaffold(
               appBar:
                   usesPersistentMenu
-                      ? _desktopAppBar(
-                        context,
-                        compact: layoutClass == AppLayoutClass.medium,
-                      )
+                      ? desktopAppBarInBody
+                          ? null
+                          : _desktopAppBar(
+                            context,
+                            compact: layoutClass == AppLayoutClass.medium,
+                          )
                       : appBar,
               drawer: usesPersistentMenu ? null : drawer,
               resizeToAvoidBottomInset: resizeToAvoidBottomInset,
@@ -281,7 +285,26 @@ class AdaptiveNavigationShell extends StatelessWidget {
       child: Semantics(
         container: true,
         sortKey: const OrdinalSortKey(1),
-        child: SizedBox(width: persistentMenuWidth, child: persistentMenu),
+        child: SizedBox(
+          width: persistentMenuWidth,
+          child:
+              desktopAppBarInBody
+                  ? Column(
+                    children: [
+                      const SizedBox(
+                        height: 58,
+                        child: Center(
+                          child: NexecuteAppIcon(
+                            key: Key('app-shell-icon'),
+                            size: 50,
+                          ),
+                        ),
+                      ),
+                      Expanded(child: persistentMenu!),
+                    ],
+                  )
+                  : persistentMenu,
+        ),
       ),
     );
   }

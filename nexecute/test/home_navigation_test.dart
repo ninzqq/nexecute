@@ -283,7 +283,42 @@ void main() {
 
     expect(editableText.expands, isTrue);
     expect(tester.getSize(description).height, greaterThan(300));
+    expect(
+      editorSurface.top,
+      tester.getRect(find.byKey(const Key('adaptive-navigation-content'))).top,
+    );
     expect(actionBar.bottom, editorSurface.bottom);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('wide note pane fills height beside list-only controls', (
+    tester,
+  ) async {
+    _setViewport(tester, const Size(1200, 900));
+    await _pumpHome(tester);
+    await tester.tap(find.byKey(const Key('all-notes-location')));
+    await tester.pumpAndSettle();
+
+    final pane = tester.getRect(find.byKey(const Key('notes-preview-pane')));
+    final content = tester.getRect(
+      find.byKey(const Key('adaptive-navigation-content')),
+    );
+    expect(pane.top, content.top);
+    expect(pane.bottom, content.bottom);
+    expect(
+      tester
+          .getRect(find.byKey(const Key('desktop-global-search-field')))
+          .right,
+      lessThanOrEqualTo(pane.left),
+    );
+    expect(
+      tester.getRect(find.byKey(const Key('desktop-create-command'))).right,
+      lessThanOrEqualTo(pane.left),
+    );
+    expect(
+      tester.getRect(find.text('All Notes').last).right,
+      lessThan(pane.left),
+    );
     expect(tester.takeException(), isNull);
   });
 

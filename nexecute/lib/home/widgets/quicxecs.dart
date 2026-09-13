@@ -22,7 +22,9 @@ const notesSplitMinContentWidth = 1040.0;
 enum _UnsavedNoteChoice { save, discard, stay }
 
 class Quicxecs extends StatefulWidget {
-  const Quicxecs({super.key});
+  const Quicxecs({super.key, this.wideToolbar});
+
+  final Widget? wideToolbar;
 
   @override
   State<Quicxecs> createState() => _QuicxecsState();
@@ -330,6 +332,7 @@ class _QuicxecsState extends State<Quicxecs> {
     if (controller.location == NotesLocation.folder && selectedFolder == null) {
       return Column(
         children: [
+          if (widget.wideToolbar != null) widget.wideToolbar!,
           _searchBox(),
           Expanded(
             child: Column(
@@ -408,6 +411,7 @@ class _QuicxecsState extends State<Quicxecs> {
 
     return Column(
       children: [
+        if (widget.wideToolbar != null) widget.wideToolbar!,
         _searchBox(),
         Expanded(
           child: ListView(
@@ -506,229 +510,230 @@ class _QuicxecsState extends State<Quicxecs> {
   }) {
     final layoutClass = AppLayoutBreakpoints.fromContext(context);
     final notesController = context.watch<NotesController>();
-    return Column(
-      children: [
-        _searchBox(),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(8, 2, 8, 6),
-          child: Row(
-            children: [
-              if (showBack)
-                IconButton(
-                  tooltip: 'Back to notes',
-                  onPressed: () => _openRoot(context),
-                  icon: const Icon(Icons.arrow_back_rounded),
-                ),
-              Expanded(
-                child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleLarge,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              Text('${notes.length}'),
-              if (folder != null)
-                PopupMenuButton<_FolderAction>(
-                  tooltip: 'Folder actions',
-                  onSelected: (action) {
-                    switch (action) {
-                      case _FolderAction.rename:
-                        _renameFolder(context, folder, folders);
-                        break;
-                      case _FolderAction.delete:
-                        _deleteFolder(
-                          context,
-                          folder,
-                          folderTotalNoteCount ?? notes.length,
-                        );
-                        break;
-                    }
-                  },
-                  itemBuilder:
-                      (_) => const [
-                        PopupMenuItem(
-                          value: _FolderAction.rename,
-                          child: Text('Rename folder'),
-                        ),
-                        PopupMenuItem(
-                          value: _FolderAction.delete,
-                          child: Text('Delete folder'),
-                        ),
-                      ],
-                ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final split =
-                  layoutClass == AppLayoutClass.expanded &&
-                  constraints.maxWidth >= notesSplitMinContentWidth;
-              final selectedNote =
-                  !notesController.isCreatingNote
-                      ? notes
-                          .where(
-                            (note) => note.id == notesController.selectedNoteId,
-                          )
-                          .firstOrNull
-                      : null;
-              final sourceUnavailable =
-                  _editingSourceNote != null &&
-                  _editingSourceNote!.id.isNotEmpty &&
-                  !availableNotes.any(
-                    (note) => note.id == _editingSourceNote!.id,
-                  );
-              final currentSource =
-                  _editingSourceNote == null
-                      ? null
-                      : availableNotes
-                          .where((note) => note.id == _editingSourceNote!.id)
-                          .firstOrNull;
-              final sourceChanged =
-                  currentSource != null &&
-                  currentSource.updatedAt != _editingSourceNote!.updatedAt;
-              if (sourceChanged && !_inlineEditorController.isDirty) {
-                _editingSourceNote = currentSource;
-                _draftGeneration++;
-              }
-              final hasConflictingUpdate =
-                  sourceChanged && _inlineEditorController.isDirty;
-              if (sourceUnavailable &&
-                  _isInlineEditing &&
-                  !_inlineEditorController.isDirty) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (!mounted || !_isInlineEditing) return;
-                  notesController.clearNoteSelection();
-                  setState(() {
-                    _editingNoteId = null;
-                    _editingSourceNote = null;
-                    _draftGeneration++;
-                  });
-                });
-              } else if (!notesController.isCreatingNote &&
-                  notesController.selectedNoteId != null &&
-                  selectedNote == null &&
-                  !_isInlineEditing) {
-                final staleId = notesController.selectedNoteId;
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted &&
-                      notesController.selectedNoteId == staleId &&
-                      !_isInlineEditing) {
-                    notesController.clearNoteSelection();
-                  }
-                });
-              }
-              final list =
-                  notes.isEmpty
-                      ? DataStatePlaceholder(
-                        presentation: DataStatePresentation.empty,
-                        title: emptyTitle,
-                        message: emptyMessage,
-                      )
-                      : Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: LayoutBuilder(
-                          builder:
-                              (context, gridConstraints) =>
-                                  MasonryGridView.count(
-                                    key: const Key('notes-masonry-grid'),
-                                    padding: const EdgeInsets.only(bottom: 96),
-                                    crossAxisCount: layoutClass
-                                        .notesColumnCountForWidth(
-                                          gridConstraints.maxWidth,
-                                          minimumColumns: split ? 2 : null,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final split =
+            layoutClass == AppLayoutClass.expanded &&
+            constraints.maxWidth >= notesSplitMinContentWidth;
+        final selectedNote =
+            !notesController.isCreatingNote
+                ? notes
+                    .where((note) => note.id == notesController.selectedNoteId)
+                    .firstOrNull
+                : null;
+        final sourceUnavailable =
+            _editingSourceNote != null &&
+            _editingSourceNote!.id.isNotEmpty &&
+            !availableNotes.any((note) => note.id == _editingSourceNote!.id);
+        final currentSource =
+            _editingSourceNote == null
+                ? null
+                : availableNotes
+                    .where((note) => note.id == _editingSourceNote!.id)
+                    .firstOrNull;
+        final sourceChanged =
+            currentSource != null &&
+            currentSource.updatedAt != _editingSourceNote!.updatedAt;
+        if (sourceChanged && !_inlineEditorController.isDirty) {
+          _editingSourceNote = currentSource;
+          _draftGeneration++;
+        }
+        final hasConflictingUpdate =
+            sourceChanged && _inlineEditorController.isDirty;
+        if (sourceUnavailable &&
+            _isInlineEditing &&
+            !_inlineEditorController.isDirty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted || !_isInlineEditing) return;
+            notesController.clearNoteSelection();
+            setState(() {
+              _editingNoteId = null;
+              _editingSourceNote = null;
+              _draftGeneration++;
+            });
+          });
+        } else if (!notesController.isCreatingNote &&
+            notesController.selectedNoteId != null &&
+            selectedNote == null &&
+            !_isInlineEditing) {
+          final staleId = notesController.selectedNoteId;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted &&
+                notesController.selectedNoteId == staleId &&
+                !_isInlineEditing) {
+              notesController.clearNoteSelection();
+            }
+          });
+        }
+        final list =
+            notes.isEmpty
+                ? DataStatePlaceholder(
+                  presentation: DataStatePresentation.empty,
+                  title: emptyTitle,
+                  message: emptyMessage,
+                )
+                : Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: LayoutBuilder(
+                    builder:
+                        (context, gridConstraints) => MasonryGridView.count(
+                          key: const Key('notes-masonry-grid'),
+                          padding: const EdgeInsets.only(bottom: 96),
+                          crossAxisCount: layoutClass.notesColumnCountForWidth(
+                            gridConstraints.maxWidth,
+                            minimumColumns: split ? 2 : null,
+                          ),
+                          mainAxisSpacing: 8,
+                          crossAxisSpacing: 8,
+                          itemCount: notes.length,
+                          itemBuilder: (context, index) {
+                            final note = notes[index];
+                            return QuicxecItem(
+                              quicxec: note,
+                              selected:
+                                  split &&
+                                  note.id == notesController.selectedNoteId,
+                              onTap:
+                                  split
+                                      ? () => unawaited(
+                                        notesController.requestSelectNote(
+                                          note.id,
                                         ),
-                                    mainAxisSpacing: 8,
-                                    crossAxisSpacing: 8,
-                                    itemCount: notes.length,
-                                    itemBuilder: (context, index) {
-                                      final note = notes[index];
-                                      return QuicxecItem(
-                                        quicxec: note,
-                                        selected:
-                                            split &&
-                                            note.id ==
-                                                notesController.selectedNoteId,
-                                        onTap:
-                                            split
-                                                ? () => unawaited(
-                                                  notesController
-                                                      .requestSelectNote(
-                                                        note.id,
-                                                      ),
-                                                )
-                                                : null,
-                                        folderName:
-                                            title == 'All Notes' ||
-                                                    title == 'Search results'
-                                                ? _folderName(
-                                                  folders,
-                                                  note.folderId,
-                                                )
-                                                : null,
-                                      );
-                                    },
-                                  ),
-                        ),
-                      );
-              if (!split) {
-                return _isInlineEditing
-                    ? _buildInlineEditor(
-                      notesController,
-                      selectedNote,
-                      sourceUnavailable: sourceUnavailable,
-                      sourceChanged: hasConflictingUpdate,
-                    )
-                    : list;
-              }
-
-              return Row(
-                children: [
-                  Expanded(child: list),
-                  VerticalDivider(width: 1, thickness: 1),
-                  SizedBox(
-                    width: _previewWidth,
-                    child:
-                        _isInlineEditing
-                            ? _buildInlineEditor(
-                              notesController,
-                              selectedNote,
-                              sourceUnavailable: sourceUnavailable,
-                              sourceChanged: hasConflictingUpdate,
-                            )
-                            : _SelectedNotePreview(
-                              note: selectedNote,
+                                      )
+                                      : null,
                               folderName:
-                                  selectedNote == null
-                                      ? null
-                                      : _folderName(
-                                        folders,
-                                        selectedNote.folderId,
-                                      ),
-                              onClose:
-                                  () => unawaited(
-                                    notesController.requestClearNoteSelection(),
-                                  ),
-                              onEdit: () {
-                                if (selectedNote != null) {
-                                  setState(() {
-                                    _editingNoteId = selectedNote.id;
-                                    _editingSourceNote = selectedNote;
-                                  });
-                                }
-                              },
-                            ),
+                                  title == 'All Notes' ||
+                                          title == 'Search results'
+                                      ? _folderName(folders, note.folderId)
+                                      : null,
+                            );
+                          },
+                        ),
                   ),
-                ],
-              );
-            },
-          ),
-        ),
-      ],
+                );
+        final leftPane = Column(
+          children: [
+            if (widget.wideToolbar != null) widget.wideToolbar!,
+            _searchBox(),
+            _notesListHeader(
+              context,
+              title: title,
+              count: notes.length,
+              showBack: showBack,
+              folder: folder,
+              folders: folders,
+              folderTotalNoteCount: folderTotalNoteCount,
+            ),
+            Expanded(
+              child:
+                  !split && _isInlineEditing
+                      ? _buildInlineEditor(
+                        notesController,
+                        selectedNote,
+                        sourceUnavailable: sourceUnavailable,
+                        sourceChanged: hasConflictingUpdate,
+                      )
+                      : list,
+            ),
+          ],
+        );
+        if (!split) return leftPane;
+
+        return Row(
+          children: [
+            Expanded(child: leftPane),
+            const VerticalDivider(width: 1, thickness: 1),
+            SizedBox(
+              width: _previewWidth,
+              child:
+                  _isInlineEditing
+                      ? _buildInlineEditor(
+                        notesController,
+                        selectedNote,
+                        sourceUnavailable: sourceUnavailable,
+                        sourceChanged: hasConflictingUpdate,
+                      )
+                      : _SelectedNotePreview(
+                        note: selectedNote,
+                        folderName:
+                            selectedNote == null
+                                ? null
+                                : _folderName(folders, selectedNote.folderId),
+                        onClose:
+                            () => unawaited(
+                              notesController.requestClearNoteSelection(),
+                            ),
+                        onEdit: () {
+                          if (selectedNote != null) {
+                            setState(() {
+                              _editingNoteId = selectedNote.id;
+                              _editingSourceNote = selectedNote;
+                            });
+                          }
+                        },
+                      ),
+            ),
+          ],
+        );
+      },
     );
   }
+
+  Widget _notesListHeader(
+    BuildContext context, {
+    required String title,
+    required int count,
+    required bool showBack,
+    required List<NoteFolder> folders,
+    NoteFolder? folder,
+    int? folderTotalNoteCount,
+  }) => Padding(
+    padding: const EdgeInsets.fromLTRB(8, 2, 8, 6),
+    child: Row(
+      children: [
+        if (showBack)
+          IconButton(
+            tooltip: 'Back to notes',
+            onPressed: () => _openRoot(context),
+            icon: const Icon(Icons.arrow_back_rounded),
+          ),
+        Expanded(
+          child: Text(
+            title,
+            style: Theme.of(context).textTheme.titleLarge,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        Text('$count'),
+        if (folder != null)
+          PopupMenuButton<_FolderAction>(
+            tooltip: 'Folder actions',
+            onSelected: (action) {
+              switch (action) {
+                case _FolderAction.rename:
+                  _renameFolder(context, folder, folders);
+                  break;
+                case _FolderAction.delete:
+                  _deleteFolder(context, folder, folderTotalNoteCount ?? count);
+                  break;
+              }
+            },
+            itemBuilder:
+                (_) => const [
+                  PopupMenuItem(
+                    value: _FolderAction.rename,
+                    child: Text('Rename folder'),
+                  ),
+                  PopupMenuItem(
+                    value: _FolderAction.delete,
+                    child: Text('Delete folder'),
+                  ),
+                ],
+          ),
+      ],
+    ),
+  );
 
   Widget _searchBox() => SearchBox(
     hintText: 'Search notes',

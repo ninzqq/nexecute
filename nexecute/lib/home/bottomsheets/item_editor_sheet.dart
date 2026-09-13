@@ -551,10 +551,17 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
               }
 
               return Column(
-                mainAxisSize: MainAxisSize.min,
+                mainAxisSize:
+                    widget.inlinePresentation
+                        ? MainAxisSize.max
+                        : MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Flexible(
+                    fit:
+                        widget.inlinePresentation
+                            ? FlexFit.tight
+                            : FlexFit.loose,
                     child: SingleChildScrollView(
                       key: const Key('item-editor-fields-scroll-view'),
                       padding: EdgeInsets.fromLTRB(
