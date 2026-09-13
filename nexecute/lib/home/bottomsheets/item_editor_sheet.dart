@@ -387,8 +387,9 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
         note: widget.quicxec,
         onTypeChanged: onItemTypeChanged,
         onNoteArchived: widget.inlinePresentation ? widget.onArchived : null,
+        compactPresentation: widget.inlinePresentation,
       ),
-      const SizedBox(height: 16),
+      SizedBox(height: widget.inlinePresentation ? 8 : 16),
       TextFormField(
         controller: _titleController,
         textCapitalization: TextCapitalization.sentences,
@@ -404,12 +405,13 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
           return null;
         },
       ),
-      const SizedBox(height: 16),
+      SizedBox(height: widget.inlinePresentation ? 8 : 16),
       if (_type == ItemType.quicxec)
         NoteEditorFields(
           contentType: _noteContentType,
           descriptionController: _descriptionController,
           descriptionHeight: noteDescriptionHeight,
+          compactPresentation: widget.inlinePresentation,
           checklistItems: _checklistItems,
           onContentTypeChanged: _setNoteContentType,
           onChecklistItemChanged: _updateChecklistItem,
@@ -565,9 +567,21 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                     child: SingleChildScrollView(
                       key: const Key('item-editor-fields-scroll-view'),
                       padding: EdgeInsets.fromLTRB(
-                        widget.desktopPresentation ? 24 : 16,
-                        widget.desktopPresentation ? 24 : 16,
-                        widget.desktopPresentation ? 24 : 16,
+                        widget.inlinePresentation
+                            ? 16
+                            : widget.desktopPresentation
+                            ? 24
+                            : 16,
+                        widget.inlinePresentation
+                            ? 12
+                            : widget.desktopPresentation
+                            ? 24
+                            : 16,
+                        widget.inlinePresentation
+                            ? 16
+                            : widget.desktopPresentation
+                            ? 24
+                            : 16,
                         0,
                       ),
                       child: Column(

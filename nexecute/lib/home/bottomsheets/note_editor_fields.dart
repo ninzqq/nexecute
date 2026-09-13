@@ -8,6 +8,7 @@ class NoteEditorFields extends StatelessWidget {
     required this.contentType,
     required this.descriptionController,
     this.descriptionHeight,
+    this.compactPresentation = false,
     required this.checklistItems,
     required this.onContentTypeChanged,
     required this.onChecklistItemChanged,
@@ -18,6 +19,7 @@ class NoteEditorFields extends StatelessWidget {
   final NoteContentType contentType;
   final TextEditingController descriptionController;
   final double? descriptionHeight;
+  final bool compactPresentation;
   final List<NoteChecklistItem> checklistItems;
   final ValueChanged<NoteContentType> onContentTypeChanged;
   final ValueChanged<NoteChecklistItem> onChecklistItemChanged;
@@ -31,10 +33,21 @@ class NoteEditorFields extends StatelessWidget {
       children: [
         LayoutBuilder(
           builder: (context, constraints) {
-            final compact = constraints.maxWidth < 440;
+            final compact = compactPresentation || constraints.maxWidth < 440;
             final selector = SegmentedButton<NoteContentType>(
               key: const Key('note-format-selector'),
               showSelectedIcon: false,
+              style:
+                  compactPresentation
+                      ? const ButtonStyle(
+                        visualDensity: VisualDensity.compact,
+                        minimumSize: WidgetStatePropertyAll(Size(0, 36)),
+                        padding: WidgetStatePropertyAll(
+                          EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      )
+                      : null,
               segments: [
                 ButtonSegment(
                   value: NoteContentType.text,
@@ -55,6 +68,9 @@ class NoteEditorFields extends StatelessWidget {
               'Note format',
               style: Theme.of(context).textTheme.labelLarge,
             );
+            if (compactPresentation) {
+              return Align(alignment: Alignment.centerRight, child: selector);
+            }
             return compact
                 ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,7 +83,7 @@ class NoteEditorFields extends StatelessWidget {
                 : Row(children: [label, const Spacer(), selector]);
           },
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: compactPresentation ? 8 : 12),
         if (contentType == NoteContentType.checklist)
           NoteChecklistEditor(
             items: checklistItems,

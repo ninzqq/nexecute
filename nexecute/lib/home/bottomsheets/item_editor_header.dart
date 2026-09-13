@@ -13,6 +13,7 @@ class ItemEditorHeader extends StatelessWidget {
     this.event,
     this.note,
     this.onNoteArchived,
+    this.compactPresentation = false,
   });
 
   final String title;
@@ -21,13 +22,25 @@ class ItemEditorHeader extends StatelessWidget {
   final Event? event;
   final Quicxec? note;
   final VoidCallback? onNoteArchived;
+  final bool compactPresentation;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final showIcons = constraints.maxWidth >= 440;
+        final showIcons = !compactPresentation && constraints.maxWidth >= 440;
         final selector = SegmentedButton<ItemType>(
+          style:
+              compactPresentation
+                  ? const ButtonStyle(
+                    visualDensity: VisualDensity.compact,
+                    minimumSize: WidgetStatePropertyAll(Size(0, 36)),
+                    padding: WidgetStatePropertyAll(
+                      EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  )
+                  : null,
           segments: [
             ButtonSegment(
               value: ItemType.event,
@@ -48,7 +61,13 @@ class ItemEditorHeader extends StatelessWidget {
         final titleRow = Row(
           children: [
             Expanded(
-              child: Text(title, style: Theme.of(context).textTheme.titleLarge),
+              child: Text(
+                title,
+                style:
+                    compactPresentation
+                        ? Theme.of(context).textTheme.titleMedium
+                        : Theme.of(context).textTheme.titleLarge,
+              ),
             ),
             if (hasExistingItem) ...[
               const SizedBox(width: 8),
@@ -61,7 +80,7 @@ class ItemEditorHeader extends StatelessWidget {
           ],
         );
 
-        if (constraints.maxWidth < 520) {
+        if (!compactPresentation && constraints.maxWidth < 520) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -75,7 +94,7 @@ class ItemEditorHeader extends StatelessWidget {
         return Row(
           children: [
             Expanded(child: titleRow),
-            const SizedBox(width: 20),
+            SizedBox(width: compactPresentation ? 8 : 20),
             selector,
           ],
         );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/home/bottomsheets/item_editor_sheet.dart';
+import 'package:nexecute/home/bottomsheets/item_editor_header.dart';
 import 'package:nexecute/home/widgets/quicxecitem.dart';
 import 'package:nexecute/home/widgets/quicxecs.dart';
 import 'package:nexecute/models/data_state.dart';
@@ -200,6 +201,18 @@ void main() {
     expect(find.byKey(const Key('inline-note-editor')), findsOneWidget);
     expect(find.byType(ItemEditorSheet), findsOneWidget);
     expect(find.byKey(const Key('desktop-item-editor-dialog')), findsNothing);
+    final editor = tester.getRect(find.byKey(const Key('inline-note-editor')));
+    final header = tester.getRect(find.byType(ItemEditorHeader));
+    final format = tester.getRect(
+      find.byKey(const Key('note-format-selector')),
+    );
+    final description = tester.getRect(
+      find.byKey(const Key('note-description-field')),
+    );
+    expect(header.height, lessThanOrEqualTo(48));
+    expect(format.height, lessThanOrEqualTo(40));
+    expect(find.text('Note format'), findsNothing);
+    expect(description.top - editor.top, lessThan(200));
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Title'),
       'Updated note',
