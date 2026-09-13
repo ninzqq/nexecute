@@ -103,6 +103,11 @@ class _FakeNoteRepository implements NoteRepository {
   }
 
   @override
+  Future<Quicxec> createConversationNote(
+    CreateConversationNoteCommand command,
+  ) async => command.toNote();
+
+  @override
   Future<void> updateNote(UpdateNoteCommand command) async {}
 
   @override

@@ -428,6 +428,11 @@ class _NoteRepository implements NoteRepository {
   Future<void> addNote(Quicxec note) async {}
 
   @override
+  Future<Quicxec> createConversationNote(
+    CreateConversationNoteCommand command,
+  ) async => command.toNote();
+
+  @override
   Future<void> deletePermanently(Quicxec note) async {}
 
   @override

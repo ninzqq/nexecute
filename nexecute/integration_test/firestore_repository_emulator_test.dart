@@ -350,4 +350,109 @@ void main() {
       isEmpty,
     );
   });
+
+  testWidgets('conversation note creation is idempotent and keeps its source', (
+    tester,
+  ) async {
+    final user = firestore.collection('users').doc(uid);
+    final notes = FirestoreNoteRepository(
+      authService: authService,
+      firestore: firestore,
+    );
+    final todos = FirestoreTodoRepository(
+      authService: authService,
+      firestore: firestore,
+    );
+    final conversations = FirestoreAiConversationStore(
+      authService: authService,
+      firestore: firestore,
+    );
+    final createdAt = DateTime.utc(2026, 9, 13, 12);
+    final source = AiConversation(
+      id: 'note-source-conversation',
+      title: 'Release planning',
+      connectionProfileId: 'home',
+      modelId: 'local-model',
+      createdAt: createdAt,
+      updatedAt: createdAt,
+    );
+    await conversations.saveConversation(source);
+    await conversations.saveMessage(
+      source.id,
+      AiChatMessage(
+        id: 'source-user',
+        role: AiMessageRole.user,
+        content: 'We need a release checklist.',
+        createdAt: createdAt,
+      ),
+    );
+    await conversations.saveMessage(
+      source.id,
+      AiChatMessage(
+        id: 'source-assistant',
+        role: AiMessageRole.assistant,
+        content: 'Set a date and budget.',
+        createdAt: createdAt.add(const Duration(minutes: 1)),
+      ),
+    );
+    final sourceBefore = await conversations.getConversation(source.id);
+    final command = CreateConversationNoteCommand(
+      creationId: 'emulator-note-1',
+      sourceConversationId: source.id,
+      sourceMessageIds: const ['source-user', 'source-assistant'],
+      title: 'Release checklist',
+      body: 'Set a date and budget.',
+      createdAt: createdAt,
+    );
+
+    final created = await notes.createConversationNote(command);
+    await notes.createConversationNote(command);
+
+    expect(created.id, command.noteId);
+    final document =
+        await user.collection('quicxecs').doc(command.noteId).get();
+    expect(document.exists, isTrue);
+    expect(document.data(), containsPair('title', command.title));
+    expect(document.data(), containsPair('text', command.body));
+    expect(document.data(), containsPair('creationId', command.creationId));
+    expect(
+      document.data(),
+      containsPair('creationSource', 'aiConversationNoteProposal'),
+    );
+    expect(document.data(), containsPair('sourceConversationId', source.id));
+    expect(
+      document.data(),
+      containsPair('sourceMessageIds', ['source-user', 'source-assistant']),
+    );
+    expect(document.data()!.keys, isNot(contains('sourceTranscript')));
+    expect(document.data()!.keys, isNot(contains('messages')));
+    expect((await user.collection('quicxecs').get()).docs, hasLength(1));
+    final notesState = await notes.watchNotes().firstWhere(
+      (state) => state is DataReady<List<Quicxec>>,
+    );
+    final visible = (notesState as DataReady<List<Quicxec>>).value.single;
+    expect(visible.id, command.noteId);
+    expect(visible.contentAsPlainText, command.body);
+    expect(
+      (await conversations.getConversation(
+        source.id,
+      ))!.messages.map((message) => message.content),
+      sourceBefore!.messages.map((message) => message.content),
+    );
+
+    final taskCommand = CreateTodosCommand(
+      creationId: 'from-conversation-note-1',
+      sourceNoteId: visible.id,
+      titles: const ['Set a date'],
+      createdAt: createdAt,
+    );
+    await todos.createTodos(taskCommand);
+    final task =
+        await user.collection('todos').doc(taskCommand.todoIdAt(0)).get();
+    expect(task.data(), containsPair('sourceNoteId', visible.id));
+
+    await task.reference.delete();
+    await notes.deletePermanently(visible);
+    await conversations.deleteConversation(source.id);
+  });
 }

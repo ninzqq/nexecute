@@ -85,26 +85,12 @@ void main() {
     expect(repository.startedRequests, isEmpty);
 
     await tester.scrollUntilVisible(
-      find.byKey(const Key('conversation-note-technical-preview')),
-      150,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(
-      find.byKey(const Key('conversation-note-technical-preview')),
-    );
-    await tester.pumpAndSettle();
-    expect(
-      find.text(AiConversationNotePromptBuilder.systemInstruction),
-      findsOneWidget,
-    );
-    expect(
-      find.text(AiConversationNotePromptBuilder.build(source).userMessage),
-      findsOneWidget,
-    );
-    await tester.scrollUntilVisible(
       find.byKey(const Key('conversation-note-generate')),
       150,
       scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(
+      find.byKey(const Key('conversation-note-generate')),
     );
     await tester.tap(find.byKey(const Key('conversation-note-generate')));
     await tester.pumpAndSettle();
@@ -115,16 +101,29 @@ void main() {
       AiConversationNotePromptBuilder.build(source).userMessage,
     );
     expect(find.text('Unsaved note proposal'), findsOneWidget);
-    expect(find.text('Launch plan'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.byKey(const Key('conversation-note-proposed-body')),
       150,
       scrollable: find.byType(Scrollable).first,
     );
     expect(
-      find.text('Decision: October launch.\nOpen: budget.'),
-      findsOneWidget,
+      tester
+          .widget<TextField>(
+            find.byKey(const Key('conversation-note-proposed-title')),
+          )
+          .controller!
+          .text,
+      'Launch plan',
     );
-    expect(find.text('Save'), findsNothing);
+    expect(
+      tester
+          .widget<TextField>(
+            find.byKey(const Key('conversation-note-proposed-body')),
+          )
+          .controller!
+          .text,
+      'Decision: October launch.\nOpen: budget.',
+    );
+    expect(find.byKey(const Key('conversation-note-save')), findsNothing);
   });
 }

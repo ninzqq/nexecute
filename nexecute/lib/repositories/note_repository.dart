@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/quicxec.dart';
+import 'package:nexecute/repositories/commands/create_conversation_note_command.dart';
 import 'package:nexecute/repositories/commands/update_note_command.dart';
 import 'package:nexecute/repositories/firestore/note_document_mapper.dart';
 import 'package:nexecute/repositories/firestore/schema/app_data_schema.dart';
@@ -10,11 +11,14 @@ import 'package:nexecute/services/firestore_read_diagnostics.dart';
 import 'package:uuid/uuid.dart';
 
 export 'package:nexecute/repositories/commands/update_note_command.dart';
+export 'package:nexecute/repositories/commands/create_conversation_note_command.dart';
 
 abstract interface class NoteRepository {
   Stream<DataState<List<Quicxec>>> watchNotes();
 
   Future<void> addNote(Quicxec note);
+
+  Future<Quicxec> createConversationNote(CreateConversationNoteCommand command);
 
   Future<void> updateNote(UpdateNoteCommand command);
 
@@ -79,6 +83,21 @@ class FirestoreNoteRepository implements NoteRepository {
     data['trashed'] = false;
     data['updatedAt'] = now;
     await _notesCollection().doc(id).set(data);
+  }
+
+  @override
+  Future<Quicxec> createConversationNote(
+    CreateConversationNoteCommand command,
+  ) async {
+    final note = command.toNote();
+    await _notesCollection().doc(command.noteId).set({
+      ...NoteDocumentMapper.toMap(note),
+      'creationId': command.creationId,
+      'creationSource': 'aiConversationNoteProposal',
+      'sourceConversationId': command.sourceConversationId,
+      'sourceMessageIds': command.sourceMessageIds,
+    });
+    return note;
   }
 
   @override

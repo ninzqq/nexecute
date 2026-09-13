@@ -789,6 +789,11 @@ class _FakeNoteRepository implements NoteRepository {
   Future<void> addNote(Quicxec note) async => addedNote = note;
 
   @override
+  Future<Quicxec> createConversationNote(
+    CreateConversationNoteCommand command,
+  ) async => command.toNote();
+
+  @override
   Future<void> updateNote(UpdateNoteCommand command) async =>
       updatedNote = command;
 

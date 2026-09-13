@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/ai/ai.dart';
+import 'package:nexecute/models/data_state.dart';
+import 'package:nexecute/models/quicxec.dart';
+import 'package:nexecute/repositories/note_repository.dart';
 import 'package:nexecute/themes.dart';
 import 'package:nexecute/shared/app_particle_background.dart';
 import 'package:provider/provider.dart';
@@ -1251,6 +1254,7 @@ Widget _app({
       Provider<AiAssistantRepository>.value(value: assistantRepository),
       Provider<AiConnectionProfileStore>.value(value: profileStore),
       Provider<AiConversationStore>.value(value: conversationStore),
+      Provider<NoteRepository>.value(value: _FakeNoteRepository()),
       if (skillStore != null) Provider<AiSkillStore>.value(value: skillStore),
       if (skillPreferencesStore != null)
         Provider<AiSkillPreferencesStore>.value(value: skillPreferencesStore),
@@ -1276,6 +1280,42 @@ Widget _app({
       home: const AssistantPage(),
     ),
   );
+}
+
+class _FakeNoteRepository implements NoteRepository {
+  @override
+  Stream<DataState<List<Quicxec>>> watchNotes() =>
+      Stream.value(const DataEmpty([]));
+
+  @override
+  Future<void> addNote(Quicxec note) async {}
+
+  @override
+  Future<Quicxec> createConversationNote(
+    CreateConversationNoteCommand command,
+  ) async => command.toNote();
+
+  @override
+  Future<void> updateNote(UpdateNoteCommand command) async {}
+
+  @override
+  Future<void> moveNote(String noteId, String? folderId) async {}
+
+  @override
+  Future<void> setChecklistItemChecked(
+    Quicxec note,
+    String itemId,
+    bool isChecked,
+  ) async {}
+
+  @override
+  Future<void> toggleTrashed(Quicxec note) async {}
+
+  @override
+  Future<void> emptyTrash() async {}
+
+  @override
+  Future<void> deletePermanently(Quicxec note) async {}
 }
 
 final class _AvailableWebSearchRepository implements AiWebSearchRepository {

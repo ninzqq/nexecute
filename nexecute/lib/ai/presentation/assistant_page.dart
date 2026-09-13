@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nexecute/ai/ai.dart';
 import 'package:nexecute/domain/calendar/calendar_query_range.dart';
+import 'package:nexecute/home/bottomsheets/item_editor.dart';
+import 'package:nexecute/repositories/note_repository.dart';
 import 'package:nexecute/shared/adaptive_navigation_shell.dart';
 import 'package:nexecute/shared/app_shortcuts.dart';
 import 'package:nexecute/shared/bottom_sheet_safe_area.dart';
@@ -132,11 +134,8 @@ class _AssistantPageState extends State<AssistantPage> {
         onPressed:
             noteSource == null || profile == null
                 ? null
-                : () => showAiConversationNoteSourcePreview(
-                  context,
-                  source: noteSource,
-                  profile: profile,
-                ),
+                : () =>
+                    unawaited(_createNoteFromConversation(noteSource, profile)),
         icon: const Icon(Icons.note_add_outlined),
       ),
       IconButton(
@@ -379,6 +378,20 @@ class _AssistantPageState extends State<AssistantPage> {
         );
       },
     );
+  }
+
+  Future<void> _createNoteFromConversation(
+    AiConversationNoteSource source,
+    AiConnectionProfile profile,
+  ) async {
+    final created = await showAiConversationNoteSourcePreview(
+      context,
+      source: source,
+      profile: profile,
+      onCreate: context.read<NoteRepository>().createConversationNote,
+    );
+    if (created == null || !mounted) return;
+    await showItemEditor(context, quicxec: created, isEditing: true);
   }
 
   void _openSettings() {

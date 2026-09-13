@@ -64,6 +64,7 @@ export 'presentation/ai_note_task_extraction_controller.dart';
 export 'presentation/ai_note_task_extraction_sheet.dart';
 export 'presentation/ai_conversation_note_source_sheet.dart';
 export 'presentation/ai_conversation_note_generation_controller.dart';
+export 'presentation/ai_conversation_note_creation_controller.dart';
 export 'presentation/ai_task_proposal_creation_controller.dart';
 export 'presentation/assistant_page.dart';
 export 'presentation/assistant_particle_background.dart';

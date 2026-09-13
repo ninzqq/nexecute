@@ -1219,13 +1219,13 @@ and immutable model version or digest are supplied to the quality runner.
 
 ##### Step 10E: conversation → reviewed note → existing note actions
 
-**Status:** Steps 10E-a and 10E-b implemented; Steps 10E-c and 10E-d remain.
-The preview can now generate an unsaved note proposal through the active AI
-connection. Live-model validation is still outstanding. The first
-chat-originated write will create one new plain-text note from the current
-conversation. The user can then run the existing Note → proposed tasks or
-Note → proposed event action on that saved note. This step does not create
-tasks or events directly from chat and does not modify existing notes.
+**Status:** Steps 10E-a through 10E-c implemented; Step 10E-d remains.
+The preview generates an unsaved note proposal through the active AI
+connection. The user can edit and explicitly confirm it before a new plain-text
+note is saved, then run the existing Note → proposed tasks or Note → proposed
+event action on that note. Live-model validation is still outstanding. This
+step does not create tasks or events directly from chat or modify existing
+notes.
 
 ###### Step 10E-a: explicit source and request boundary
 
@@ -1270,31 +1270,30 @@ tasks or events directly from chat and does not modify existing notes.
 - [x] Keep proposal generation outside ordinary chat history and Firestore.
   Do not advertise a write tool or let model output call a repository.
 
-The generated title and body are shown as an unsaved, read-only proposal.
 The request uses the exact frozen source and a dedicated instruction, with
 no application tools, chat-history writes, or note writes. A conservative
 context-window check rejects requests that exceed the selected model's
-configured budget without truncation. Editing and confirmed saving remain
-Step 10E-c work.
+configured budget without truncation. The generated title and body enter the
+editable, unsaved Step 10E-c review.
 
 ###### Step 10E-c: review and confirmed note creation
 
-- [ ] Show the proposed title and body in an editable note review using the
+- [x] Show the proposed title and body in an editable note review using the
   existing note-editor conventions. Provide Regenerate, Discard, and Save;
   clearly show that the note is unsaved until the user confirms.
-- [ ] Revalidate edited values and show the final title and body before the
+- [x] Revalidate edited values and show the final title and body before the
   write. A blank or invalid proposal cannot be saved. Keep the original
   conversation unchanged regardless of the review outcome.
-- [ ] Add a validated, idempotent create-note command with a stable creation
+- [x] Add a validated, idempotent create-note command with a stable creation
   ID, frozen reviewed values, creation time, and trusted source conversation
   and message references. Generate the note ID on the client so retrying the
   same confirmed command after an uncertain result cannot create duplicates.
-- [ ] Save through `NoteRepository` under the authenticated user. Store only
+- [x] Save through `NoteRepository` under the authenticated user. Store only
   minimal source/provenance metadata needed to identify this AI-created note;
   never persist the full source transcript twice. Show a success state with an
   action to open the new note. Retry failures with the exact frozen command,
   and prevent repeated submission while the save is in flight.
-- [ ] After saving, expose the unchanged Note → proposed tasks and Note →
+- [x] After saving, expose the unchanged Note → proposed tasks and Note →
   proposed event actions on the new note. Do not automatically run either
   action or create downstream records.
 
