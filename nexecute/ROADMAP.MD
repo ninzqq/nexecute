@@ -1219,11 +1219,11 @@ and immutable model version or digest are supplied to the quality runner.
 
 ##### Step 10E: conversation → reviewed note → existing note actions
 
-**Status:** Step 10E-a complete; Steps 10E-b through 10E-d planned. Step
-10E-a starts with a source-only preview; model generation and writes remain
-gated on the Step 10D live-model validation. The first chat-originated write
-creates one new plain-text note from the current conversation. The user can
-then run the existing Note → proposed tasks or
+**Status:** Steps 10E-a and 10E-b implemented; Steps 10E-c and 10E-d remain.
+The preview can now generate an unsaved note proposal through the active AI
+connection. Live-model validation is still outstanding. The first
+chat-originated write will create one new plain-text note from the current
+conversation. The user can then run the existing Note → proposed tasks or
 Note → proposed event action on that saved note. This step does not create
 tasks or events directly from chat and does not modify existing notes.
 
@@ -1249,26 +1249,33 @@ tasks or events directly from chat and does not modify existing notes.
 
 ###### Step 10E-b: one structured note proposal
 
-- [ ] Define a versioned, provider-neutral output contract for zero or one
+- [x] Define a versioned, provider-neutral output contract for zero or one
   proposed note with a title of at most 300 characters and plain-text body of
   at most 12,000 characters, so a saved note stays eligible for the current
   Note → proposed tasks workflow. Zero means that the model found no useful
   note to propose.
-- [ ] Build a dedicated summarization prompt that asks for a faithful,
+- [x] Build a dedicated summarization prompt that asks for a faithful,
   stand-alone note in the conversation's language, preserving decisions,
   actionable items, open questions, and important caveats without inventing
   facts or claiming access to omitted messages or transient attachments.
   Serialize the transcript as data, separately from instructions.
-- [ ] Add an explicit Generate action to the source preview. Require the user
+- [x] Add an explicit Generate action to the source preview. Require the user
   to confirm sending the frozen, size-valid snapshot to the displayed endpoint;
   reject a changed or unavailable active connection before sending. Treat
   instructions embedded in either speaker's messages as untrusted data.
-- [ ] Parse and validate the proposal locally: exact JSON shape, schema
+- [x] Parse and validate the proposal locally: exact JSON shape, schema
   version, response size, title/body limits, required text, and no unexpected
   fields. Reuse the active assistant connection, cancellation, progress, and
   user-safe error patterns from the dedicated Note → proposed tasks flow.
-- [ ] Keep proposal generation outside ordinary chat history and Firestore.
+- [x] Keep proposal generation outside ordinary chat history and Firestore.
   Do not advertise a write tool or let model output call a repository.
+
+The generated title and body are shown as an unsaved, read-only proposal.
+The request uses the exact frozen source and a dedicated instruction, with
+no application tools, chat-history writes, or note writes. A conservative
+context-window check rejects requests that exceed the selected model's
+configured budget without truncation. Editing and confirmed saving remain
+Step 10E-c work.
 
 ###### Step 10E-c: review and confirmed note creation
 
