@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -31,7 +32,8 @@ class Quicxecs extends StatefulWidget {
 }
 
 class _QuicxecsState extends State<Quicxecs> {
-  static const _previewWidth = 400.0;
+  static const _minimumPreviewWidth = 400.0;
+  static const _maximumNotesListWidth = 920.0;
 
   final _searchController = TextEditingController();
   final _inlineEditorController = ItemEditorController();
@@ -605,10 +607,18 @@ class _QuicxecsState extends State<Quicxecs> {
                         (context, gridConstraints) => MasonryGridView.count(
                           key: const Key('notes-masonry-grid'),
                           padding: const EdgeInsets.only(bottom: 96),
-                          crossAxisCount: layoutClass.notesColumnCountForWidth(
-                            gridConstraints.maxWidth,
-                            minimumColumns: split ? 2 : null,
-                          ),
+                          crossAxisCount:
+                              split
+                                  ? math.min(
+                                    4,
+                                    layoutClass.notesColumnCountForWidth(
+                                      gridConstraints.maxWidth,
+                                      minimumColumns: 2,
+                                    ),
+                                  )
+                                  : layoutClass.notesColumnCountForWidth(
+                                    gridConstraints.maxWidth,
+                                  ),
                           mainAxisSpacing: 8,
                           crossAxisSpacing: 8,
                           itemCount: notes.length,
@@ -665,12 +675,15 @@ class _QuicxecsState extends State<Quicxecs> {
         );
         if (!split) return leftPane;
 
+        final notesListWidth = math.min(
+          _maximumNotesListWidth,
+          constraints.maxWidth - _minimumPreviewWidth - 1,
+        );
         return Row(
           children: [
-            Expanded(child: leftPane),
+            SizedBox(width: notesListWidth, child: leftPane),
             const VerticalDivider(width: 1, thickness: 1),
-            SizedBox(
-              width: _previewWidth,
+            Expanded(
               child:
                   _isInlineEditing
                       ? _buildInlineEditor(

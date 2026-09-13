@@ -72,6 +72,21 @@ void main() {
       tester.getSize(find.byKey(const Key('notes-preview-pane'))).width,
       400,
     );
+
+    tester.view.physicalSize = const Size(1600, 900);
+    await tester.pumpAndSettle();
+    expect(_columnCount(tester), 4);
+    final previewWidthAt1600 =
+        tester.getSize(find.byKey(const Key('notes-preview-pane'))).width;
+    expect(previewWidthAt1600, greaterThan(400));
+
+    tester.view.physicalSize = const Size(2000, 900);
+    await tester.pumpAndSettle();
+    expect(_columnCount(tester), 4);
+    expect(
+      tester.getSize(find.byKey(const Key('notes-preview-pane'))).width,
+      greaterThan(previewWidthAt1600),
+    );
     expect(tester.takeException(), isNull);
   });
 
