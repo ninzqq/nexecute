@@ -2126,6 +2126,49 @@ removed application-wide live event-history stream.
   ~~work across folders. Deleting a folder safely returns its notes to Quick~~
   ~~Notes.~~
 
+### Resizable desktop note pane
+
+**Status:** Planned
+
+Let users resize the Notes preview and inline-editor pane in the existing
+expanded two-pane layout without changing the compact or medium-width flows.
+The preview and editor share one pane, so switching between reading and editing
+must preserve the chosen width.
+
+- [ ] Replace the fixed one-pixel divider between the notes grid and detail pane
+  with a visually subtle horizontal drag handle. Keep a larger invisible hit
+  target and show the platform resize cursor so the interaction is easy to
+  discover and use with a mouse or trackpad.
+- [ ] Track a preferred detail-pane width in Notes state and update it while the
+  divider is dragged. Preserve the current automatic width calculation until
+  the user first resizes the pane.
+- [ ] Clamp the effective width on every layout pass so the detail pane remains
+  at least 400 logical pixels wide and the notes grid retains enough room for
+  its two-column minimum. Keep the unclamped preference when a window is
+  temporarily narrowed so it can be restored when space becomes available.
+- [ ] Apply resizing only when the existing expanded split layout is active
+  (currently at least 1040 logical pixels of Notes content width). Continue to
+  use the existing single-pane editor and modal behavior below that threshold.
+- [ ] Persist the user-selected width locally with `shared_preferences`, restore
+  it on startup, and write it after a drag completes rather than on every pointer
+  update. The preference is device-specific and does not need Firestore sync.
+- [ ] Make the separator keyboard accessible and expose splitter semantics.
+  Arrow keys should adjust the pane in small increments, and a reset action
+  should return it to the responsive automatic width.
+- [ ] Add widget tests for pointer dragging in both directions, preview/editor
+  width continuity, minimum-width clamping, live window resizing, breakpoint
+  transitions, restored preferences, keyboard adjustment, reset behavior, and
+  overflow-free layouts at representative desktop widths.
+
+Acceptance criteria:
+
+- A desktop user can drag the separator to make the note preview or editor wider
+  or narrower, with immediate visual feedback.
+- Neither pane becomes unusably narrow, and narrowing then re-expanding the app
+  window restores the user's preferred width when it fits again.
+- The chosen width survives an application restart on the same device.
+- Phone, tablet, and non-split Notes behavior remains unchanged.
+
 ### Export and data ownership
 
 **Status:** Candidate
