@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -24,13 +25,16 @@ import 'package:provider/provider.dart';
 enum CalendarViewMode { week, month }
 
 class CalendarPage extends StatefulWidget {
-  const CalendarPage({super.key});
+  const CalendarPage({super.key, this.now});
+
+  final DateTime Function()? now;
 
   @override
   State<CalendarPage> createState() => _CalendarPageState();
 }
 
-class _CalendarPageState extends State<CalendarPage> {
+class _CalendarPageState extends State<CalendarPage>
+    with WidgetsBindingObserver {
   static const _initialPage = 120;
   static const _pageCount = _initialPage * 2 + 1;
   static const _recenterThreshold = 20;
@@ -54,12 +58,15 @@ class _CalendarPageState extends State<CalendarPage> {
   double _agendaExpansion = 0;
   bool _isDraggingAgenda = false;
   Event? _selectedEvent;
+  Timer? _dayChangeTimer;
+  late DateTime _today;
 
   @override
   void initState() {
     super.initState();
-    final today = DateTime.now();
-    _pageAnchor = DateTime(today.year, today.month, today.day);
+    WidgetsBinding.instance.addObserver(this);
+    _today = _dateOnly(_now());
+    _pageAnchor = _today;
     _focusedDay = _pageAnchor;
     _selectedDay = _focusedDay;
     _monthPageController = _createPageController();
@@ -67,14 +74,22 @@ class _CalendarPageState extends State<CalendarPage> {
     _weekTimeScrollController = TrackingScrollController(
       initialScrollOffset: weekInitialScrollOffset,
     );
+    _scheduleDayChangeCheck();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _dayChangeTimer?.cancel();
     _monthPageController.dispose();
     _weekPageController.dispose();
     _weekTimeScrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _checkForDayChange();
   }
 
   @override
@@ -428,8 +443,36 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   void _showToday() {
-    final today = DateTime.now();
-    _selectDay(DateTime(today.year, today.month, today.day));
+    _selectDay(_dateOnly(_now()));
+  }
+
+  DateTime _now() => widget.now?.call() ?? DateTime.now();
+
+  DateTime _dateOnly(DateTime date) =>
+      DateTime(date.year, date.month, date.day);
+
+  void _scheduleDayChangeCheck() {
+    _dayChangeTimer?.cancel();
+    final now = _now();
+    final nextDay = DateTime(now.year, now.month, now.day + 1);
+    _dayChangeTimer = Timer(nextDay.difference(now), _checkForDayChange);
+  }
+
+  void _checkForDayChange() {
+    if (!mounted) return;
+
+    final today = _dateOnly(_now());
+    if (!isSameCalendarDay(today, _today)) {
+      final wasFollowingToday = isSameCalendarDay(_selectedDay, _today);
+      _today = today;
+      if (wasFollowingToday) {
+        _selectDay(today);
+      } else {
+        // Rebuild today's visual marker without replacing a deliberate selection.
+        setState(() {});
+      }
+    }
+    _scheduleDayChangeCheck();
   }
 
   void _selectDay(DateTime day) {

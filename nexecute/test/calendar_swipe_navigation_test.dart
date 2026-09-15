@@ -12,6 +12,63 @@ import 'package:provider/provider.dart';
 import 'support/fake_event_repository.dart';
 
 void main() {
+  testWidgets('selected day follows today across midnight', (tester) async {
+    var now = DateTime(2026, 9, 15, 23, 59, 59);
+    final selectedDay = SelectedDay(selectedDay: now);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<EventRepository>.value(value: FakeEventRepository()),
+          ChangeNotifierProvider.value(value: selectedDay),
+        ],
+        child: MaterialApp(
+          theme: AppThemes.forPreset(AppThemePreset.midnight),
+          home: CalendarPage(now: () => now),
+        ),
+      ),
+    );
+
+    now = DateTime(2026, 9, 16, 0, 0, 1);
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+
+    expect(selectedDay.selectedDay, DateTime(2026, 9, 16));
+    expect(
+      tester.widget<Text>(find.byKey(const Key('calendar-period-title'))).data,
+      DateFormat('MMMM yyyy').format(now),
+    );
+  });
+
+  testWidgets('midnight does not replace a deliberate date selection', (
+    tester,
+  ) async {
+    var now = DateTime(2026, 9, 15, 23, 59, 59);
+    final selectedDay = SelectedDay(selectedDay: now);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<EventRepository>.value(value: FakeEventRepository()),
+          ChangeNotifierProvider.value(value: selectedDay),
+        ],
+        child: MaterialApp(
+          theme: AppThemes.forPreset(AppThemePreset.midnight),
+          home: CalendarPage(now: () => now),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('20'));
+    await tester.pumpAndSettle();
+    expect(selectedDay.selectedDay, DateTime(2026, 9, 20));
+
+    now = DateTime(2026, 9, 16, 0, 0, 1);
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(selectedDay.selectedDay, DateTime(2026, 9, 20));
+  });
+
   testWidgets('calendar toolbar uses one row at desktop and phone widths', (
     tester,
   ) async {
