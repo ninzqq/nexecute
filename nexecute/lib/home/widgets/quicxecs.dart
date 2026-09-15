@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart' show DragStartBehavior;
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:nexecute/home/bottomsheets/item_editor_sheet.dart';
 import 'package:nexecute/home/widgets/quicxecitem.dart';
@@ -17,8 +20,9 @@ import 'package:nexecute/shared/adaptive_navigation_shell.dart';
 import 'package:nexecute/shared/app_shortcuts.dart';
 import 'package:nexecute/shared/data_state_placeholder.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-const notesSplitMinContentWidth = 1040.0;
+const notesSplitMinContentWidth = 880.0;
 
 enum _UnsavedNoteChoice { save, discard, stay }
 
@@ -32,17 +36,32 @@ class Quicxecs extends StatefulWidget {
 }
 
 class _QuicxecsState extends State<Quicxecs> {
-  static const _minimumPreviewWidth = 400.0;
+  static const _minimumPreviewWidth = 300.0;
+  static const _minimumNotesListWidth = 456.0;
   static const _maximumNotesListWidth = 920.0;
+  static const _dividerWidth = 12.0;
+  static const _keyboardResizeStep = 24.0;
+  static const _previewWidthPreferenceKey = 'notes_preview_pane_width';
 
   final _searchController = TextEditingController();
   final _inlineEditorController = ItemEditorController();
   final _inlineEditorHostKey = GlobalKey();
+  final _dividerFocusNode = FocusNode(debugLabel: 'Notes pane divider');
   String _searchQuery = '';
   String? _editingNoteId;
   Quicxec? _editingSourceNote;
   int _draftGeneration = 0;
   NotesController? _notesController;
+  double? _preferredPreviewWidth;
+  bool _previewWidthChangedWhileLoading = false;
+  double? _previewResizeStartWidth;
+  double? _previewResizeStartGlobalX;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_restorePreviewWidth());
+  }
 
   @override
   void didChangeDependencies() {
@@ -58,7 +77,81 @@ class _QuicxecsState extends State<Quicxecs> {
   void dispose() {
     _notesController?.setSelectionGuard(null);
     _searchController.dispose();
+    _dividerFocusNode.dispose();
     super.dispose();
+  }
+
+  Future<void> _restorePreviewWidth() async {
+    double? storedWidth;
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      storedWidth = preferences.getDouble(_previewWidthPreferenceKey);
+    } on Exception {
+      return;
+    }
+    if (!mounted ||
+        _previewWidthChangedWhileLoading ||
+        storedWidth == null ||
+        !storedWidth.isFinite ||
+        storedWidth <= 0) {
+      return;
+    }
+    setState(() => _preferredPreviewWidth = storedWidth);
+  }
+
+  Future<void> _persistPreviewWidth() async {
+    final width = _preferredPreviewWidth;
+    if (width == null) return;
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setDouble(_previewWidthPreferenceKey, width);
+    } on Exception {
+      // Resizing remains usable when local preference storage is unavailable.
+    }
+  }
+
+  Future<void> _resetPreviewWidth() async {
+    _previewWidthChangedWhileLoading = true;
+    setState(() => _preferredPreviewWidth = null);
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.remove(_previewWidthPreferenceKey);
+    } on Exception {
+      // The in-memory reset still takes effect for this session.
+    }
+  }
+
+  double _clampPreviewWidth(double width, double availableWidth) {
+    final maximum = math.max(
+      _minimumPreviewWidth,
+      availableWidth - _minimumNotesListWidth - _dividerWidth,
+    );
+    return width.clamp(_minimumPreviewWidth, maximum).toDouble();
+  }
+
+  void _resizePreviewWidth(double width, double availableWidth) {
+    _previewWidthChangedWhileLoading = true;
+    setState(
+      () => _preferredPreviewWidth = _clampPreviewWidth(width, availableWidth),
+    );
+  }
+
+  void _startPreviewResize(double previewWidth, double globalX) {
+    _previewResizeStartWidth = previewWidth;
+    _previewResizeStartGlobalX = globalX;
+  }
+
+  void _updatePreviewResize(double globalX, double availableWidth) {
+    final startWidth = _previewResizeStartWidth;
+    final startGlobalX = _previewResizeStartGlobalX;
+    if (startWidth == null || startGlobalX == null) return;
+    _resizePreviewWidth(startWidth - (globalX - startGlobalX), availableWidth);
+  }
+
+  void _finishPreviewResize() {
+    _previewResizeStartWidth = null;
+    _previewResizeStartGlobalX = null;
+    unawaited(_persistPreviewWidth());
   }
 
   bool get _isInlineEditing {
@@ -675,15 +768,43 @@ class _QuicxecsState extends State<Quicxecs> {
         );
         if (!split) return leftPane;
 
-        final notesListWidth = math.min(
+        final automaticNotesListWidth = math.min(
           _maximumNotesListWidth,
-          constraints.maxWidth - _minimumPreviewWidth - 1,
+          constraints.maxWidth - _minimumPreviewWidth - _dividerWidth,
+        );
+        final automaticPreviewWidth =
+            constraints.maxWidth - automaticNotesListWidth - _dividerWidth;
+        final previewWidth = _clampPreviewWidth(
+          _preferredPreviewWidth ?? automaticPreviewWidth,
+          constraints.maxWidth,
         );
         return Row(
           children: [
-            SizedBox(width: notesListWidth, child: leftPane),
-            const VerticalDivider(width: 1, thickness: 1),
-            Expanded(
+            Expanded(child: leftPane),
+            _NotesPaneDivider(
+              focusNode: _dividerFocusNode,
+              onDragStart:
+                  (globalX) => _startPreviewResize(previewWidth, globalX),
+              onDragUpdate:
+                  (globalX) =>
+                      _updatePreviewResize(globalX, constraints.maxWidth),
+              onDragEnd: _finishPreviewResize,
+              onIncrease:
+                  () => _resizePreviewWidth(
+                    previewWidth + _keyboardResizeStep,
+                    constraints.maxWidth,
+                  ),
+              onDecrease:
+                  () => _resizePreviewWidth(
+                    previewWidth - _keyboardResizeStep,
+                    constraints.maxWidth,
+                  ),
+              onKeyboardResizeEnd: () => unawaited(_persistPreviewWidth()),
+              onReset: () => unawaited(_resetPreviewWidth()),
+              previewWidth: previewWidth,
+            ),
+            SizedBox(
+              width: previewWidth,
               child:
                   _isInlineEditing
                       ? _buildInlineEditor(
@@ -976,6 +1097,125 @@ class _FolderNameDialogState extends State<_FolderNameDialog> {
             child: Text(widget.folder == null ? 'Create' : 'Save'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _NotesPaneDivider extends StatefulWidget {
+  const _NotesPaneDivider({
+    required this.focusNode,
+    required this.onDragStart,
+    required this.onDragUpdate,
+    required this.onDragEnd,
+    required this.onIncrease,
+    required this.onDecrease,
+    required this.onKeyboardResizeEnd,
+    required this.onReset,
+    required this.previewWidth,
+  });
+
+  final FocusNode focusNode;
+  final ValueChanged<double> onDragStart;
+  final ValueChanged<double> onDragUpdate;
+  final VoidCallback onDragEnd;
+  final VoidCallback onIncrease;
+  final VoidCallback onDecrease;
+  final VoidCallback onKeyboardResizeEnd;
+  final VoidCallback onReset;
+  final double previewWidth;
+
+  @override
+  State<_NotesPaneDivider> createState() => _NotesPaneDividerState();
+}
+
+class _NotesPaneDividerState extends State<_NotesPaneDivider> {
+  bool _hovered = false;
+  bool _focused = false;
+
+  KeyEventResult _handleKeyEvent(FocusNode _, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+      widget.onIncrease();
+      widget.onKeyboardResizeEnd();
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+      widget.onDecrease();
+      widget.onKeyboardResizeEnd();
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.home) {
+      widget.onReset();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  void _increase() {
+    widget.onIncrease();
+    widget.onKeyboardResizeEnd();
+  }
+
+  void _decrease() {
+    widget.onDecrease();
+    widget.onKeyboardResizeEnd();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final emphasized = _hovered || _focused;
+    final colorScheme = Theme.of(context).colorScheme;
+    return Semantics(
+      key: const Key('notes-pane-divider'),
+      label: 'Note pane divider',
+      value: '${widget.previewWidth.round()} logical pixels',
+      increasedValue: 'Wider note pane',
+      decreasedValue: 'Narrower note pane',
+      onIncrease: _increase,
+      onDecrease: _decrease,
+      customSemanticsActions: {
+        const CustomSemanticsAction(label: 'Reset note pane width'):
+            widget.onReset,
+      },
+      focusable: true,
+      child: Focus(
+        focusNode: widget.focusNode,
+        onFocusChange: (focused) => setState(() => _focused = focused),
+        onKeyEvent: _handleKeyEvent,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.resizeColumn,
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit: (_) => setState(() => _hovered = false),
+          child: Tooltip(
+            message: 'Drag to resize; double-click or press Home to reset',
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              dragStartBehavior: DragStartBehavior.down,
+              onTapDown: (_) => widget.focusNode.requestFocus(),
+              onDoubleTap: widget.onReset,
+              onHorizontalDragStart:
+                  (details) => widget.onDragStart(details.globalPosition.dx),
+              onHorizontalDragUpdate:
+                  (details) => widget.onDragUpdate(details.globalPosition.dx),
+              onHorizontalDragEnd: (_) => widget.onDragEnd(),
+              onHorizontalDragCancel: widget.onDragEnd,
+              child: SizedBox(
+                width: _QuicxecsState._dividerWidth,
+                child: Center(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 100),
+                    width: emphasized ? 2 : 1,
+                    color:
+                        emphasized
+                            ? colorScheme.primary
+                            : colorScheme.outlineVariant,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

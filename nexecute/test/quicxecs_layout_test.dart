@@ -1,4 +1,7 @@
+import 'dart:ui' show SemanticsAction;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/home/bottomsheets/item_editor_sheet.dart';
@@ -13,8 +16,13 @@ import 'package:nexecute/models/note_folder.dart';
 import 'package:nexecute/models/notes_controller.dart';
 import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
   testWidgets('notes use a two-column masonry layout with variable heights', (
     tester,
   ) async {
@@ -59,10 +67,19 @@ void main() {
     await tester.pumpAndSettle();
     expect(_columnCount(tester), 3);
 
-    tester.view.physicalSize = const Size(1000, 900);
+    tester.view.physicalSize = const Size(850, 900);
     await tester.pumpAndSettle();
     expect(_columnCount(tester), 4);
     expect(find.byKey(const Key('notes-preview-pane')), findsNothing);
+
+    tester.view.physicalSize = const Size(880, 900);
+    await tester.pumpAndSettle();
+    expect(_columnCount(tester), 2);
+    expect(find.byKey(const Key('notes-preview-pane')), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(const Key('notes-preview-pane'))).width,
+      400,
+    );
 
     tester.view.physicalSize = const Size(1200, 900);
     await tester.pumpAndSettle();
@@ -86,6 +103,142 @@ void main() {
     expect(
       tester.getSize(find.byKey(const Key('notes-preview-pane'))).width,
       greaterThan(previewWidthAt1600),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('desktop note pane can be dragged wider and narrower', (
+    tester,
+  ) async {
+    _setViewport(tester, const Size(1400, 900));
+    await tester.pumpWidget(_notesApp(_notes));
+    await tester.pumpAndSettle();
+
+    final pane = find.byKey(const Key('notes-preview-pane'));
+    final divider = find.byKey(const Key('notes-pane-divider'));
+    expect(tester.getSize(pane).width, 468);
+
+    await tester.drag(divider, const Offset(-160, 0));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(pane).width, closeTo(628, 1));
+
+    await tester.drag(divider, const Offset(1000, 0));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(pane).width, 400);
+
+    final preferences = await SharedPreferences.getInstance();
+    expect(preferences.getDouble('notes_preview_pane_width'), 400);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('note pane divider follows batched pointer movement', (
+    tester,
+  ) async {
+    _setViewport(tester, const Size(1400, 900));
+    await tester.pumpWidget(_notesApp(_notes));
+    await tester.pumpAndSettle();
+
+    final divider = find.byKey(const Key('notes-pane-divider'));
+    final initialDividerCenter = tester.getCenter(divider);
+    final gesture = await tester.startGesture(initialDividerCenter);
+    await gesture.moveBy(const Offset(-30, 0));
+    await gesture.moveBy(const Offset(-30, 0));
+    await gesture.moveBy(const Offset(-30, 0));
+    await tester.pump();
+
+    expect(
+      tester.getCenter(divider).dx,
+      closeTo(initialDividerCenter.dx - 90, 1),
+    );
+    expect(
+      tester.getSize(find.byKey(const Key('notes-preview-pane'))).width,
+      closeTo(558, 1),
+    );
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('preferred note pane width survives window constraints', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({'notes_preview_pane_width': 800.0});
+    _setViewport(tester, const Size(1040, 900));
+    await tester.pumpWidget(_notesApp(_notes));
+    await tester.pumpAndSettle();
+
+    final pane = find.byKey(const Key('notes-preview-pane'));
+    expect(tester.getSize(pane).width, 572);
+
+    tester.view.physicalSize = const Size(1600, 900);
+    await tester.pumpAndSettle();
+    expect(tester.getSize(pane).width, 800);
+
+    tester.view.physicalSize = const Size(850, 900);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('notes-pane-divider')), findsNothing);
+
+    tester.view.physicalSize = const Size(1600, 900);
+    await tester.pumpAndSettle();
+    expect(tester.getSize(pane).width, 800);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('note pane divider supports keyboard resizing and reset', (
+    tester,
+  ) async {
+    _setViewport(tester, const Size(1400, 900));
+    await tester.pumpWidget(_notesApp(_notes));
+    await tester.pumpAndSettle();
+
+    final pane = find.byKey(const Key('notes-preview-pane'));
+    final divider = find.byKey(const Key('notes-pane-divider'));
+    final semantics = tester.ensureSemantics();
+    addTearDown(semantics.dispose);
+    final semanticsData = tester.getSemantics(divider).getSemanticsData();
+    expect(semanticsData.label, 'Note pane divider');
+    expect(semanticsData.hasAction(SemanticsAction.increase), isTrue);
+    expect(semanticsData.hasAction(SemanticsAction.decrease), isTrue);
+
+    await tester.tap(divider);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pumpAndSettle();
+    expect(tester.getSize(pane).width, 492);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.home);
+    await tester.pumpAndSettle();
+    expect(tester.getSize(pane).width, 468);
+    final preferences = await SharedPreferences.getInstance();
+    expect(preferences.containsKey('notes_preview_pane_width'), isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('note pane width is shared by preview and inline editor', (
+    tester,
+  ) async {
+    final controller = NotesController()..openAllNotes();
+    addTearDown(controller.dispose);
+    _setViewport(tester, const Size(1400, 900));
+    await tester.pumpWidget(_notesApp(_notes, controller: controller));
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const Key('notes-pane-divider')),
+      const Offset(-120, 0),
+    );
+    await tester.pumpAndSettle();
+    final previewWidth =
+        tester.getSize(find.byKey(const Key('notes-preview-pane'))).width;
+
+    controller.selectNote('long-note');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Edit note'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getSize(find.byKey(const Key('inline-note-editor'))).width,
+      previewWidth,
     );
     expect(tester.takeException(), isNull);
   });
@@ -462,7 +615,7 @@ void main() {
     expect(controller.selectedNoteId, 'long-note');
     expect(find.byKey(const Key('inline-note-editor')), findsOneWidget);
 
-    tester.view.physicalSize = const Size(1000, 900);
+    tester.view.physicalSize = const Size(850, 900);
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('notes-preview-pane')), findsNothing);
     expect(find.byKey(const Key('inline-note-editor')), findsOneWidget);

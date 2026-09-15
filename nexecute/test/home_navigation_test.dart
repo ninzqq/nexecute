@@ -322,6 +322,29 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'minimum-width note split keeps toolbar actions inside list pane',
+    (tester) async {
+      _setViewport(tester, const Size(960, 900));
+      await _pumpHome(tester);
+      await tester.tap(find.byKey(const Key('all-notes-location')));
+      await tester.pumpAndSettle();
+
+      final pane = tester.getRect(find.byKey(const Key('notes-preview-pane')));
+      expect(
+        tester
+            .getRect(find.byKey(const Key('desktop-global-search-field')))
+            .right,
+        lessThanOrEqualTo(pane.left),
+      );
+      expect(
+        tester.getRect(find.byKey(const Key('desktop-create-command'))).right,
+        lessThanOrEqualTo(pane.left),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('wide New note opens an inline note editor', (tester) async {
     _setViewport(tester, const Size(1200, 900));
     await _pumpHome(tester);

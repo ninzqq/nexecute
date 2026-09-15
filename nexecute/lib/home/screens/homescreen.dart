@@ -193,8 +193,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                   key: const Key('desktop-page-title'),
                                   style: Theme.of(context).textTheme.titleLarge,
                                 ),
-                                const Spacer(),
-                                desktopSearch,
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Align(
+                                    alignment: Alignment.centerRight,
+                                    child: desktopSearch,
+                                  ),
+                                ),
                                 const SizedBox(width: 12),
                                 if (desktopCreate != null)
                                   FocusTraversalOrder(
