@@ -247,6 +247,55 @@ void main() {
     await repository.close();
     await updater.close();
   });
+
+  test(
+    'widget query survives Calendar showing and hiding another period',
+    () async {
+      final repository = _PerQueryEventRepository();
+      final updater = _RecordingEventWidgetUpdater();
+      final coordinator = EventWidgetSynchronizationCoordinator(
+        eventRepository: repository,
+        widgetUpdater: updater,
+        themePreset: () => AppThemePreset.midnight,
+        now: () => now,
+      );
+      coordinator.start();
+
+      final otherRange = CalendarQueryRange(
+        startInclusive: DateTime(2027, 1, 1),
+        endExclusive: DateTime(2027, 2, 1),
+      );
+      final calendarSubscription = repository
+          .watchEvents(otherRange)
+          .listen((_) {});
+      expect(repository.activeSubscriptions, 2);
+
+      final firstUpdate = updater.eventChanges.stream.first;
+      repository.add(0, const DataReady<List<Event>>([]));
+      await firstUpdate;
+
+      await calendarSubscription.cancel();
+      expect(repository.activeSubscriptions, 1);
+      final hiddenCalendarUpdate = updater.eventChanges.stream.first;
+      repository.add(0, const DataEmpty<List<Event>>([]));
+      await hiddenCalendarUpdate;
+
+      final widgetRange = CalendarQueryRange(
+        startInclusive: DateTime(2026, 7, 27),
+        endExclusive: DateTime(2026, 9, 7),
+      );
+      expect(
+        repository.watchedRanges.where((range) => range == widgetRange),
+        hasLength(1),
+      );
+      expect(updater.eventUpdates, hasLength(2));
+
+      await coordinator.dispose();
+      expect(repository.activeSubscriptions, 0);
+      await repository.close();
+      await updater.close();
+    },
+  );
 }
 
 class _ControlledEventRepository extends FakeEventRepository {
@@ -262,6 +311,33 @@ class _ControlledEventRepository extends FakeEventRepository {
   Stream<DataState<List<Event>>> watchEvents(CalendarQueryRange range) {
     watchedRanges.add(range);
     return _states.stream;
+  }
+}
+
+class _PerQueryEventRepository extends FakeEventRepository {
+  final controllers = <StreamController<DataState<List<Event>>>>[];
+  var activeSubscriptions = 0;
+
+  void add(int queryIndex, DataState<List<Event>> state) {
+    controllers[queryIndex].add(state);
+  }
+
+  Future<void> close() async {
+    for (final controller in controllers) {
+      await controller.close();
+    }
+  }
+
+  @override
+  Stream<DataState<List<Event>>> watchEvents(CalendarQueryRange range) {
+    watchedRanges.add(range);
+    late final StreamController<DataState<List<Event>>> controller;
+    controller = StreamController<DataState<List<Event>>>.broadcast(
+      onListen: () => activeSubscriptions++,
+      onCancel: () => activeSubscriptions--,
+    );
+    controllers.add(controller);
+    return controller.stream;
   }
 }
 

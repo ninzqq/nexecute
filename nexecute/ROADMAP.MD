@@ -2106,7 +2106,7 @@ removed application-wide live event-history stream.
 
 ### Android month calendar widget
 
-**Status:** Planned
+**Status:** Verification pending
 
 Add a separate **Nexecute Month** home-screen widget while preserving the
 existing week widget. The first version always shows the current month, uses a
@@ -2174,19 +2174,21 @@ initial scope.
 
 #### Task 5: verify data, layout, and regressions
 
-- [ ] Add Dart tests for five- and six-week months, leap February, year
-  boundaries, adjacent-month cells, today highlighting, empty days, overflow,
-  stale-key cleanup, multi-day events, and recurring occurrences.
-- [ ] Add coordinator tests proving that widget updates continue when Calendar
-  is hidden or displaying another period and that only one bounded widget query
-  is active.
-- [ ] Add native renderer coverage where practical for row counts, themes,
-  status states, event caps, and compact-size fallbacks.
-- [ ] Run Flutter analysis and the relevant service, repository, calendar, and
-  platform-composition suites, then build the Android debug APK.
+- [x] ~~Add Dart tests for five- and six-week months, leap February, year~~
+  ~~boundaries, adjacent-month cells, today highlighting, empty days, overflow,~~
+  ~~stale-key cleanup, multi-day events, and recurring occurrences.~~
+- [x] ~~Add coordinator tests proving that widget updates continue when Calendar~~
+  ~~is hidden or displaying another period and that only one bounded widget query~~
+  ~~is active.~~
+- [x] ~~Add native renderer coverage where practical for row counts, themes,~~
+  ~~status states, event caps, and compact-size fallbacks.~~
+- [x] ~~Run Flutter analysis and the relevant service, repository, calendar, and~~
+  ~~platform-composition suites, then build the Android debug APK.~~
 - [ ] Manually verify the week and month widgets on narrow, standard, and tall
   launcher sizes, including resizing, theme changes, sign-out, month rollover,
   empty months, and event overflow.
+  - Pending an Android device or working emulator; the installed Android AVD
+    did not become available to Flutter during automated verification.
 
 Acceptance criteria:
 

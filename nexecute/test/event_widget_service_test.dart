@@ -1,7 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nexecute/domain/calendar/calendar_query_range.dart';
+import 'package:nexecute/domain/calendar/recurring_event_expander.dart';
 import 'package:nexecute/models/event.dart';
+import 'package:nexecute/models/event_recurrence.dart';
 import 'package:nexecute/services/event_widget_service.dart';
 import 'package:nexecute/themes.dart';
 
@@ -113,6 +116,85 @@ void main() {
     expect(writer.values['widget_month_cell_35_event_1'], '');
     expect(writer.refreshCount, 2);
   });
+
+  test('serializes leap February as a five-week grid', () async {
+    final writer = _FakeEventWidgetDataWriter();
+    final service = EventWidgetService(writer: writer);
+
+    await service.updateCurrentCalendar(
+      const [],
+      theme: AppThemePreset.midnight,
+      now: DateTime(2024, 2, 29, 12),
+    );
+
+    expect(writer.values['widget_month_label'], 'February 2024');
+    expect(writer.values['widget_month_row_count'], 5);
+    expect(writer.values['widget_month_cell_count'], 35);
+    expect(writer.values['widget_month_today_date'], '2024-02-29');
+    expect(writer.values['widget_month_cell_0_date'], '2024-01-29');
+    expect(writer.values['widget_month_cell_0_in_month'], isFalse);
+    expect(writer.values['widget_month_cell_31_date'], '2024-02-29');
+    expect(writer.values['widget_month_cell_31_day'], 29);
+    expect(writer.values['widget_month_cell_31_in_month'], isTrue);
+    expect(writer.values['widget_month_cell_31_event_count'], 0);
+    expect(writer.values['widget_month_cell_31_event_0'], '');
+    expect(writer.values['widget_month_cell_34_date'], '2024-03-03');
+    expect(writer.values['widget_month_cell_34_in_month'], isFalse);
+  });
+
+  test(
+    'serializes multi-day and recurring events across a year boundary',
+    () async {
+      final writer = _FakeEventWidgetDataWriter();
+      final service = EventWidgetService(writer: writer);
+      final multiDay = Event(
+        id: 'trip',
+        title: 'Trip',
+        startTime: DateTime(2026, 12, 30),
+        endTime: DateTime(2027, 1, 2, 23, 59),
+        isAllDay: true,
+      );
+      final weekly = Event(
+        id: 'weekly',
+        title: 'Weekly review',
+        startTime: DateTime(2026, 12, 3, 9),
+        endTime: DateTime(2026, 12, 3, 10),
+        recurrence: EventRecurrence.weekly,
+      );
+      final occurrences = expandRecurringEvent(
+        weekly,
+        CalendarQueryRange(
+          startInclusive: DateTime(2026, 11, 30),
+          endExclusive: DateTime(2027, 1, 4),
+        ),
+      );
+
+      await service.updateCurrentCalendar(
+        [multiDay, ...occurrences],
+        theme: AppThemePreset.midnight,
+        now: DateTime(2026, 12, 31, 12),
+      );
+
+      expect(writer.values['widget_month_label'], 'December 2026');
+      expect(writer.values['widget_month_row_count'], 5);
+      expect(writer.values['widget_month_cell_0_date'], '2026-11-30');
+      expect(writer.values['widget_month_cell_0_in_month'], isFalse);
+      expect(writer.values['widget_month_cell_30_date'], '2026-12-30');
+      expect(writer.values['widget_month_cell_30_event_count'], 1);
+      expect(writer.values['widget_month_cell_30_event_0'], 'Trip');
+      expect(writer.values['widget_month_cell_31_date'], '2026-12-31');
+      expect(writer.values['widget_month_cell_31_event_count'], 2);
+      expect(writer.values['widget_month_cell_31_event_0'], 'Trip');
+      expect(writer.values['widget_month_cell_31_event_1'], 'Weekly review');
+      expect(writer.values['widget_month_cell_32_date'], '2027-01-01');
+      expect(writer.values['widget_month_cell_32_in_month'], isFalse);
+      expect(writer.values['widget_month_cell_32_event_count'], 1);
+      expect(writer.values['widget_month_cell_32_event_0'], 'Trip');
+      expect(writer.values['widget_month_cell_33_event_count'], 1);
+      expect(writer.values['widget_month_cell_34_event_count'], 0);
+      expect(occurrences.last.isGeneratedOccurrence, isTrue);
+    },
+  );
 
   test('writes the Cyberpunk Mega identifier for the Android widget', () async {
     final writer = _FakeEventWidgetDataWriter();

@@ -22,19 +22,22 @@ class CalendarMonthWidgetProvider : HomeWidgetProvider() {
             )
             val views = RemoteViews(context.packageName, R.layout.widget_month_layout)
             val options = appWidgetManager.getAppWidgetOptions(widgetId)
-            val visibleEventLabels = eventLabelCapacity(
+            val visibleEventLabels = MonthWidgetRenderPolicy.eventLabelCapacity(
                 options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 250),
             )
 
             applyFrame(views, theme, widgetData)
             applyLaunchAction(context, views, widgetId)
 
-            val rowCount = widgetData
-                .getInt("widget_month_row_count", 6)
-                .coerceIn(5, 6)
-            val cellCount = widgetData
-                .getInt("widget_month_cell_count", rowCount * DAYS_PER_WEEK)
-                .coerceIn(0, MAX_CELL_COUNT)
+            val rowCount = MonthWidgetRenderPolicy.rowCount(
+                widgetData.getInt("widget_month_row_count", 6),
+            )
+            val cellCount = MonthWidgetRenderPolicy.cellCount(
+                widgetData.getInt(
+                    "widget_month_cell_count",
+                    rowCount * MonthWidgetRenderPolicy.DAYS_PER_WEEK,
+                ),
+            )
             val todayDate = widgetData
                 .getString("widget_month_today_date", "")
                 .orEmpty()
@@ -43,8 +46,9 @@ class CalendarMonthWidgetProvider : HomeWidgetProvider() {
             views.removeAllViews(R.id.month_widget_grid)
             for (rowIndex in 0 until rowCount) {
                 val row = RemoteViews(context.packageName, R.layout.widget_month_week_row)
-                for (columnIndex in 0 until DAYS_PER_WEEK) {
-                    val cellIndex = rowIndex * DAYS_PER_WEEK + columnIndex
+                for (columnIndex in 0 until MonthWidgetRenderPolicy.DAYS_PER_WEEK) {
+                    val cellIndex =
+                        rowIndex * MonthWidgetRenderPolicy.DAYS_PER_WEEK + columnIndex
                     val cell = createDayCell(
                         context = context,
                         widgetData = widgetData,
@@ -64,7 +68,7 @@ class CalendarMonthWidgetProvider : HomeWidgetProvider() {
             views.setTextViewText(R.id.month_widget_status, status)
             views.setViewVisibility(
                 R.id.month_widget_status,
-                if (status.isEmpty()) View.GONE else View.VISIBLE,
+                if (MonthWidgetRenderPolicy.showStatus(status)) View.VISIBLE else View.GONE,
             )
             views.setTextViewText(
                 R.id.month_widget_empty_hint,
@@ -75,7 +79,11 @@ class CalendarMonthWidgetProvider : HomeWidgetProvider() {
             )
             views.setViewVisibility(
                 R.id.month_widget_empty_hint,
-                if (totalEvents == 0 && status.isEmpty()) View.VISIBLE else View.GONE,
+                if (MonthWidgetRenderPolicy.showEmpty(totalEvents, status)) {
+                    View.VISIBLE
+                } else {
+                    View.GONE
+                },
             )
 
             appWidgetManager.updateAppWidget(widgetId, views)
@@ -162,7 +170,7 @@ class CalendarMonthWidgetProvider : HomeWidgetProvider() {
         }
 
         val isInMonth = widgetData.getBoolean("${key}_in_month", false)
-        val isToday = date == todayDate
+        val isToday = MonthWidgetRenderPolicy.isToday(date, todayDate)
         val dayTextColor = when {
             isToday -> theme.headerBackground
             isInMonth -> theme.primaryText
@@ -177,7 +185,10 @@ class CalendarMonthWidgetProvider : HomeWidgetProvider() {
         }
 
         val eventCount = widgetData.getInt("${key}_event_count", 0).coerceAtLeast(0)
-        val displayedCount = minOf(eventCount, visibleEventLabels, MAX_EVENT_LABELS)
+        val displayedCount = MonthWidgetRenderPolicy.displayedEventCount(
+            eventCount,
+            visibleEventLabels,
+        )
         views.removeAllViews(R.id.month_day_events)
         for (eventIndex in 0 until displayedCount) {
             val label = widgetData
@@ -199,13 +210,11 @@ class CalendarMonthWidgetProvider : HomeWidgetProvider() {
             views.addView(R.id.month_day_events, event)
         }
 
-        val hiddenCount = eventCount - displayedCount
-        val overflowText = when {
-            eventCount == 0 -> ""
-            visibleEventLabels == 0 -> "• $eventCount"
-            hiddenCount > 0 -> "+$hiddenCount"
-            else -> ""
-        }
+        val overflowText = MonthWidgetRenderPolicy.overflowText(
+            eventCount,
+            displayedCount,
+            visibleEventLabels,
+        )
         views.setTextViewText(R.id.month_day_overflow, overflowText)
         views.setTextColor(
             R.id.month_day_overflow,
@@ -219,22 +228,8 @@ class CalendarMonthWidgetProvider : HomeWidgetProvider() {
         return RenderedDayCell(views, eventCount)
     }
 
-    private fun eventLabelCapacity(heightDp: Int): Int = when {
-        heightDp >= TWO_LABEL_HEIGHT_DP -> 2
-        heightDp >= ONE_LABEL_HEIGHT_DP -> 1
-        else -> 0
-    }
-
     private data class RenderedDayCell(
         val views: RemoteViews,
         val eventCount: Int,
     )
-
-    private companion object {
-        const val DAYS_PER_WEEK = 7
-        const val MAX_CELL_COUNT = 42
-        const val MAX_EVENT_LABELS = 2
-        const val ONE_LABEL_HEIGHT_DP = 230
-        const val TWO_LABEL_HEIGHT_DP = 320
-    }
 }
