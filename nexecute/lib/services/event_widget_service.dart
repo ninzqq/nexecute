@@ -1,4 +1,5 @@
 import 'package:home_widget/home_widget.dart';
+import 'package:nexecute/domain/calendar/gregorian_month_calculator.dart';
 import 'package:nexecute/domain/calendar/iso_week_calculator.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/themes.dart';
@@ -15,7 +16,7 @@ abstract interface class EventWidgetDataWriter {
 }
 
 abstract interface class EventWidgetUpdater {
-  Future<void> updateCurrentWeek(
+  Future<void> updateCurrentCalendar(
     List<Event> events, {
     required AppThemePreset theme,
     DateTime? now,
@@ -30,7 +31,7 @@ class NoopEventWidgetUpdater implements EventWidgetUpdater {
   const NoopEventWidgetUpdater();
 
   @override
-  Future<void> updateCurrentWeek(
+  Future<void> updateCurrentCalendar(
     List<Event> events, {
     required AppThemePreset theme,
     DateTime? now,
@@ -44,7 +45,8 @@ class NoopEventWidgetUpdater implements EventWidgetUpdater {
 }
 
 class HomeWidgetEventDataWriter implements EventWidgetDataWriter {
-  static const androidWidgetName = 'CalendarWidgetProvider';
+  static const androidWeekWidgetName = 'CalendarWidgetProvider';
+  static const androidMonthWidgetName = 'CalendarMonthWidgetProvider';
 
   @override
   Future<void> saveString(String key, String value) {
@@ -62,11 +64,17 @@ class HomeWidgetEventDataWriter implements EventWidgetDataWriter {
   }
 
   @override
-  Future<void> refresh() {
-    return HomeWidget.updateWidget(
-      name: androidWidgetName,
-      androidName: androidWidgetName,
-    );
+  Future<void> refresh() async {
+    await Future.wait([
+      HomeWidget.updateWidget(
+        name: androidWeekWidgetName,
+        androidName: androidWeekWidgetName,
+      ),
+      HomeWidget.updateWidget(
+        name: androidMonthWidgetName,
+        androidName: androidMonthWidgetName,
+      ),
+    ]);
   }
 }
 
@@ -76,18 +84,36 @@ class EventWidgetService implements EventWidgetUpdater {
 
   static const _dayKeys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
   static const _dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  static const _monthLabels = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+  static const monthCellCapacity = 42;
+  static const monthEventLabelCapacity = 2;
 
   final EventWidgetDataWriter _writer;
   final IsoWeekCalculator _weekCalculator = IsoWeekCalculator();
+  final GregorianMonthCalculator _monthCalculator = GregorianMonthCalculator();
 
   @override
-  Future<void> updateCurrentWeek(
+  Future<void> updateCurrentCalendar(
     List<Event> events, {
     required AppThemePreset theme,
     DateTime? now,
   }) async {
     final anchor = now ?? DateTime.now();
     final week = _weekCalculator.fromDate(anchor);
+    final month = _monthCalculator.fromDate(anchor);
     final today = DateTime(anchor.year, anchor.month, anchor.day);
 
     await _writer.saveString('widget_title', 'Nexecute');
@@ -95,6 +121,7 @@ class EventWidgetService implements EventWidgetUpdater {
     await _writer.saveString('widget_theme', theme.name);
     await _writer.saveString('widget_status', '');
     await _writer.saveString('widget_empty_text', 'No events this week');
+    await _writer.saveString('widget_month_empty_text', 'No events this month');
     await _writer.saveBool('show_weekends', true);
 
     final todayKey =
@@ -123,6 +150,50 @@ class EventWidgetService implements EventWidgetUpdater {
       }
     }
 
+    await _writer.saveString(
+      'widget_month_label',
+      '${_monthLabels[month.month - 1]} ${month.year}',
+    );
+    await _writer.saveInt('widget_month_row_count', month.weeks.length);
+    await _writer.saveInt('widget_month_cell_count', month.days.length);
+    await _writer.saveString('widget_month_today_date', _isoDate(today));
+
+    for (var index = 0; index < monthCellCapacity; index++) {
+      final key = 'widget_month_cell_$index';
+      if (index >= month.days.length) {
+        await _writer.saveString('${key}_date', '');
+        await _writer.saveInt('${key}_day', 0);
+        await _writer.saveBool('${key}_in_month', false);
+        await _writer.saveInt('${key}_event_count', 0);
+        for (
+          var eventIndex = 0;
+          eventIndex < monthEventLabelCapacity;
+          eventIndex++
+        ) {
+          await _writer.saveString('${key}_event_$eventIndex', '');
+        }
+        continue;
+      }
+
+      final day = month.days[index].date;
+      final dayEvents = eventsForDay(events, day);
+      await _writer.saveString('${key}_date', _isoDate(day));
+      await _writer.saveInt('${key}_day', day.day);
+      await _writer.saveBool('${key}_in_month', month.contains(day));
+      await _writer.saveInt('${key}_event_count', dayEvents.length);
+      for (
+        var eventIndex = 0;
+        eventIndex < monthEventLabelCapacity;
+        eventIndex++
+      ) {
+        final label =
+            eventIndex < dayEvents.length
+                ? _monthEventLabel(dayEvents[eventIndex])
+                : '';
+        await _writer.saveString('${key}_event_$eventIndex', label);
+      }
+    }
+
     await _writer.refresh();
   }
 
@@ -146,5 +217,17 @@ class EventWidgetService implements EventWidgetUpdater {
     final hour = event.startTime.hour.toString().padLeft(2, '0');
     final minute = event.startTime.minute.toString().padLeft(2, '0');
     return '$hour:$minute $title';
+  }
+
+  String _monthEventLabel(Event event) {
+    final title = event.title.trim();
+    return title.isEmpty ? 'Untitled event' : title;
+  }
+
+  String _isoDate(DateTime date) {
+    final year = date.year.toString().padLeft(4, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '$year-$month-$day';
   }
 }

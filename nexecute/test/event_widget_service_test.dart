@@ -8,7 +8,7 @@ import 'package:nexecute/themes.dart';
 void main() {
   final now = DateTime(2026, 8, 28, 12);
 
-  test('serializes the current week for the Android widget', () async {
+  test('serializes the current week and month for Android widgets', () async {
     final writer = _FakeEventWidgetDataWriter();
     final service = EventWidgetService(writer: writer);
     final events = [
@@ -33,7 +33,7 @@ void main() {
       ),
     ];
 
-    await service.updateCurrentWeek(
+    await service.updateCurrentCalendar(
       events,
       theme: AppThemePreset.forest,
       now: now,
@@ -53,7 +53,65 @@ void main() {
     expect(writer.values['event_wed_count'], 2);
     expect(writer.values['event_wed_0'], '→ Conference');
     expect(writer.values['event_wed_1'], 'Holiday');
+    expect(writer.values['widget_month_label'], 'August 2026');
+    expect(writer.values['widget_month_row_count'], 6);
+    expect(writer.values['widget_month_cell_count'], 42);
+    expect(writer.values['widget_month_today_date'], '2026-08-28');
+    expect(writer.values['widget_month_cell_0_date'], '2026-07-27');
+    expect(writer.values['widget_month_cell_0_day'], 27);
+    expect(writer.values['widget_month_cell_0_in_month'], isFalse);
+    expect(writer.values['widget_month_cell_28_date'], '2026-08-24');
+    expect(writer.values['widget_month_cell_28_in_month'], isTrue);
+    expect(writer.values['widget_month_cell_28_event_count'], 2);
+    expect(writer.values['widget_month_cell_28_event_0'], 'Planning');
+    expect(writer.values['widget_month_cell_28_event_1'], 'Conference');
+    expect(writer.values['widget_month_cell_41_date'], '2026-09-06');
+    expect(writer.values['widget_month_cell_41_in_month'], isFalse);
     expect(writer.refreshCount, 1);
+  });
+
+  test('caps month labels and clears stale cell data', () async {
+    final writer = _FakeEventWidgetDataWriter();
+    final service = EventWidgetService(writer: writer);
+    final events = [
+      for (var index = 0; index < 3; index++)
+        Event(
+          id: 'event-$index',
+          title: 'Event $index',
+          startTime: DateTime(2026, 8, 28, 9 + index),
+          endTime: DateTime(2026, 8, 28, 10 + index),
+        ),
+    ];
+
+    await service.updateCurrentCalendar(
+      events,
+      theme: AppThemePreset.midnight,
+      now: now,
+    );
+
+    expect(writer.values['widget_month_cell_32_event_count'], 3);
+    expect(writer.values['widget_month_cell_32_event_0'], 'Event 0');
+    expect(writer.values['widget_month_cell_32_event_1'], 'Event 1');
+    expect(writer.values, isNot(contains('widget_month_cell_32_event_2')));
+
+    await service.updateCurrentCalendar(
+      const [],
+      theme: AppThemePreset.midnight,
+      now: DateTime(2026, 2, 15),
+    );
+
+    expect(writer.values['widget_month_row_count'], 5);
+    expect(writer.values['widget_month_cell_count'], 35);
+    expect(writer.values['widget_month_cell_32_event_count'], 0);
+    expect(writer.values['widget_month_cell_32_event_0'], '');
+    expect(writer.values['widget_month_cell_32_event_1'], '');
+    expect(writer.values['widget_month_cell_35_date'], '');
+    expect(writer.values['widget_month_cell_35_day'], 0);
+    expect(writer.values['widget_month_cell_35_in_month'], isFalse);
+    expect(writer.values['widget_month_cell_35_event_count'], 0);
+    expect(writer.values['widget_month_cell_35_event_0'], '');
+    expect(writer.values['widget_month_cell_35_event_1'], '');
+    expect(writer.refreshCount, 2);
   });
 
   test('writes the Cyberpunk Mega identifier for the Android widget', () async {

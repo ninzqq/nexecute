@@ -150,7 +150,7 @@ class _RecordingEventWidgetUpdater implements EventWidgetUpdater {
   Future<void> close() => statusChanges.close();
 
   @override
-  Future<void> updateCurrentWeek(
+  Future<void> updateCurrentCalendar(
     List<Event> events, {
     required AppThemePreset theme,
     DateTime? now,

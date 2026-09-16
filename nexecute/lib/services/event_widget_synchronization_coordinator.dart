@@ -68,7 +68,7 @@ final class EventWidgetSynchronizationCoordinator {
       case DataReady<List<Event>>(:final value) ||
           DataEmpty<List<Event>>(:final value):
         _enqueue(
-          () => _widgetUpdater.updateCurrentWeek(
+          () => _widgetUpdater.updateCurrentCalendar(
             value,
             theme: _themePreset(),
             now: _now(),

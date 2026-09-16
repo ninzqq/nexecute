@@ -156,7 +156,7 @@ void main() {
     );
     expect(reminderStatus, EventReminderScheduleStatus.unsupported);
 
-    await services.eventWidgetUpdater.updateCurrentWeek(
+    await services.eventWidgetUpdater.updateCurrentCalendar(
       const [],
       theme: AppThemePreset.neutral,
     );
@@ -244,7 +244,7 @@ class _RecordingReminderScheduler implements EventReminderScheduler {
 
 class _RecordingEventWidgetUpdater implements EventWidgetUpdater {
   @override
-  Future<void> updateCurrentWeek(
+  Future<void> updateCurrentCalendar(
     List<Event> events, {
     required AppThemePreset theme,
     DateTime? now,

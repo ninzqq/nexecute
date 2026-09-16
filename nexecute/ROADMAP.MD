@@ -2132,16 +2132,16 @@ initial scope.
 
 #### Task 2: define and serialize the month widget data contract
 
-- [ ] Generalize `EventWidgetUpdater` so one synchronization pass can write
-  both week and month data while retaining the existing week keys for backward
-  compatibility.
-- [ ] Serialize the month label, row count, current date, and 35-42 indexed day
-  cells. Include each cell's ISO date, day number, in-month state, total event
-  count, and a bounded list of display labels.
-- [ ] Clear or supersede stale cell and event values when moving to a shorter
-  month or when a day's event count decreases.
-- [ ] Refresh both Android providers only after the complete payload and theme
-  have been written.
+- [x] ~~Generalize `EventWidgetUpdater` so one synchronization pass can write~~
+  ~~both week and month data while retaining the existing week keys for~~
+  ~~backward compatibility.~~
+- [x] ~~Serialize the month label, row count, current date, and 35-42 indexed~~
+  ~~day cells. Include each cell's ISO date, day number, in-month state, total~~
+  ~~event count, and a bounded list of display labels.~~
+- [x] ~~Clear or supersede stale cell and event values when moving to a shorter~~
+  ~~month or when a day's event count decreases.~~
+- [x] ~~Refresh both Android providers only after the complete payload and~~
+  ~~theme have been written.~~
 
 #### Task 3: build the native Android month renderer
 
