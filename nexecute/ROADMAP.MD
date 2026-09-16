@@ -2145,18 +2145,18 @@ initial scope.
 
 #### Task 3: build the native Android month renderer
 
-- [ ] Add a dedicated `CalendarMonthWidgetProvider`, receiver registration,
-  widget-picker metadata, and an initial month layout sized for a practical
-  calendar grid.
-- [ ] Add reusable RemoteViews layouts for the month header, weekday header,
-  week rows, day cells, event markers, empty state, and status state.
-- [ ] Render five- and six-row months, dim dates outside the current month,
-  highlight today, cap visible event titles according to available height, and
-  show `+N` for hidden events.
-- [ ] Extract the native theme palette shared by the week and month providers
-  so every existing theme remains visually consistent.
-- [ ] Keep the whole-widget launch action and make compact resized layouts fall
-  back to event markers or counts instead of clipping text.
+- [x] ~~Add a dedicated `CalendarMonthWidgetProvider`, receiver registration,~~
+  ~~widget-picker metadata, and an initial month layout sized for a practical~~
+  ~~calendar grid.~~
+- [x] ~~Add reusable RemoteViews layouts for the month header, weekday header,~~
+  ~~week rows, day cells, event markers, empty state, and status state.~~
+- [x] ~~Render five- and six-row months, dim dates outside the current month,~~
+  ~~highlight today, cap visible event titles according to available height,~~
+  ~~and show `+N` for hidden events.~~
+- [x] ~~Extract the native theme palette shared by the week and month providers~~
+  ~~so every existing theme remains visually consistent.~~
+- [x] ~~Keep the whole-widget launch action and make compact resized layouts~~
+  ~~fall back to event markers or counts instead of clipping text.~~
 
 #### Task 4: complete refresh and lifecycle behavior
 

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/month_event_text"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="1dp"
+    android:ellipsize="end"
+    android:paddingHorizontal="2dp"
+    android:singleLine="true"
+    android:text=""
+    android:textSize="8sp" />

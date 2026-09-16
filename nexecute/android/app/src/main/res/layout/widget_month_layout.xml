@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/month_widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:paddingTop="6dp">
+
+    <include layout="@layout/widget_month_header" />
+
+    <include layout="@layout/widget_month_status" />
+
+    <include layout="@layout/widget_month_empty" />
+
+    <include layout="@layout/widget_month_weekday_header" />
+
+    <LinearLayout
+        android:id="@+id/month_widget_grid"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:paddingTop="1dp" />
+
+</LinearLayout>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/month_widget_weekday_header"
+    android:layout_width="match_parent"
+    android:layout_height="22dp"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+
+    <TextView
+        android:id="@+id/month_weekday_mon"
+        style="@style/MonthWidgetWeekday" android:text="Mon" />
+    <TextView
+        android:id="@+id/month_weekday_tue"
+        style="@style/MonthWidgetWeekday" android:text="Tue" />
+    <TextView
+        android:id="@+id/month_weekday_wed"
+        style="@style/MonthWidgetWeekday" android:text="Wed" />
+    <TextView
+        android:id="@+id/month_weekday_thu"
+        style="@style/MonthWidgetWeekday" android:text="Thu" />
+    <TextView
+        android:id="@+id/month_weekday_fri"
+        style="@style/MonthWidgetWeekday" android:text="Fri" />
+    <TextView
+        android:id="@+id/month_weekday_sat"
+        style="@style/MonthWidgetWeekday" android:text="Sat" />
+    <TextView
+        android:id="@+id/month_weekday_sun"
+        style="@style/MonthWidgetWeekday" android:text="Sun" />
+
+</LinearLayout>

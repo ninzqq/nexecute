@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Nexecute</string>
+    <string name="widget_week_name">Nexecute Week</string>
+    <string name="widget_month_name">Nexecute Month</string>
+</resources>
