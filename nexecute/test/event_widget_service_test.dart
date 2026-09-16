@@ -1,13 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nexecute/domain/calendar/calendar_query_range.dart';
 import 'package:nexecute/models/event.dart';
-import 'package:nexecute/repositories/widget_syncing_event_repository.dart';
 import 'package:nexecute/services/event_widget_service.dart';
 import 'package:nexecute/themes.dart';
-
-import 'support/fake_event_repository.dart';
 
 void main() {
   final now = DateTime(2026, 8, 28, 12);
@@ -60,32 +56,6 @@ void main() {
     expect(writer.refreshCount, 1);
   });
 
-  test('current-week repository streams refresh the widget', () async {
-    final event = Event(
-      id: 'event',
-      title: 'Friday review',
-      startTime: DateTime(2026, 8, 28, 14),
-      endTime: DateTime(2026, 8, 28, 15),
-    );
-    final writer = _FakeEventWidgetDataWriter();
-    final repository = WidgetSyncingEventRepository(
-      delegate: FakeEventRepository(events: [event]),
-      widgetService: EventWidgetService(writer: writer),
-      themePreset: () => AppThemePreset.midnight,
-      now: () => now,
-    );
-    final range = CalendarQueryRange(
-      startInclusive: DateTime(2026, 8, 24),
-      endExclusive: DateTime(2026, 8, 31),
-    );
-
-    final state = await repository.watchEvents(range).single;
-    await writer.refreshed;
-
-    expect(state.valueOrNull, [event]);
-    expect(writer.values['event_fri_0'], '14:00 Friday review');
-  });
-
   test('writes the Cyberpunk Mega identifier for the Android widget', () async {
     final writer = _FakeEventWidgetDataWriter();
     final service = EventWidgetService(writer: writer);
@@ -95,71 +65,6 @@ void main() {
     expect(writer.values['widget_theme'], 'cyberpunkMega');
     expect(writer.refreshCount, 1);
   });
-
-  test(
-    'repository streams outside the current week leave widget data alone',
-    () async {
-      final writer = _FakeEventWidgetDataWriter();
-      final repository = WidgetSyncingEventRepository(
-        delegate: FakeEventRepository(),
-        widgetService: EventWidgetService(writer: writer),
-        themePreset: () => AppThemePreset.midnight,
-        now: () => now,
-      );
-      final range = CalendarQueryRange(
-        startInclusive: DateTime(2026, 9, 7),
-        endExclusive: DateTime(2026, 9, 14),
-      );
-
-      await repository.watchEvents(range).single;
-      await Future<void>.delayed(Duration.zero);
-
-      expect(writer.refreshCount, 0);
-      expect(writer.values, isEmpty);
-    },
-  );
-
-  test(
-    'a synchronous widget failure does not interrupt event streams',
-    () async {
-      final repository = WidgetSyncingEventRepository(
-        delegate: FakeEventRepository(),
-        widgetService: _SynchronouslyThrowingEventWidgetUpdater(),
-        themePreset: () => AppThemePreset.midnight,
-        now: () => now,
-      );
-      final range = CalendarQueryRange(
-        startInclusive: DateTime(2026, 8, 24),
-        endExclusive: DateTime(2026, 8, 31),
-      );
-
-      final state = await repository.watchEvents(range).single;
-      await Future<void>.delayed(Duration.zero);
-
-      expect(state.valueOrNull, isEmpty);
-    },
-  );
-}
-
-class _SynchronouslyThrowingEventWidgetUpdater implements EventWidgetUpdater {
-  @override
-  Future<void> updateCurrentWeek(
-    List<Event> events, {
-    required AppThemePreset theme,
-    DateTime? now,
-  }) {
-    throw StateError('Widget unavailable');
-  }
-
-  @override
-  Future<void> updateStatus(String message) {
-    throw StateError('Widget unavailable');
-  }
-
-  @override
-  Future<void> updateTheme(AppThemePreset theme) {
-    throw StateError('Widget unavailable');
-  }
 }
 
 class _FakeEventWidgetDataWriter implements EventWidgetDataWriter {

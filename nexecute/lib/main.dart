@@ -125,16 +125,21 @@ class NexecuteState extends State<Nexecute> {
               authService: context.read<AuthService>(),
               readDiagnostics: context.read<FirestoreReadDiagnostics>(),
             );
-            EventRepository repository = ReminderSchedulingEventRepository(
+            return ReminderSchedulingEventRepository(
               delegate: firestoreRepository,
               reminderScheduler: context.read<EventReminderScheduler>(),
             );
-            return WidgetSyncingEventRepository(
-              delegate: repository,
-              widgetService: _platformServices.eventWidgetUpdater,
-              themePreset: () => _themeController.preset,
-            );
           },
+        ),
+        Provider<EventWidgetSynchronizationCoordinator>(
+          lazy: false,
+          create:
+              (context) => EventWidgetSynchronizationCoordinator(
+                eventRepository: context.read<EventRepository>(),
+                widgetUpdater: _platformServices.eventWidgetUpdater,
+                themePreset: () => _themeController.preset,
+              )..start(),
+          dispose: (_, coordinator) => unawaited(coordinator.dispose()),
         ),
         Provider<TodoRepository>(
           create:

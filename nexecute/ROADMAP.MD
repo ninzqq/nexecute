@@ -2118,15 +2118,17 @@ initial scope.
 
 #### Task 1: own widget synchronization independently of Calendar UI
 
-- [ ] Replace `WidgetSyncingEventRepository`'s dependence on whichever Calendar
-  range happens to be visible with a lifecycle-owned widget synchronization
-  coordinator.
-- [ ] Give the coordinator one bounded query covering the current month's full
-  five- or six-week grid, including expanded recurring and multi-day events.
-- [ ] Use that result to update both the current-month widget and the existing
-  current-week widget without attaching duplicate event listeners.
-- [ ] Propagate ready, empty, unauthenticated, and failure states without
-  allowing widget failures to interrupt application data streams.
+- [x] ~~Replace `WidgetSyncingEventRepository`'s dependence on whichever~~
+  ~~Calendar range happens to be visible with a lifecycle-owned widget~~
+  ~~synchronization coordinator.~~
+- [x] ~~Give the coordinator one bounded query covering the current month's~~
+  ~~full five- or six-week grid, including expanded recurring and multi-day~~
+  ~~events.~~
+- [x] ~~Pass that complete result to the shared widget updater so the existing~~
+  ~~week serializer can use it now and the month serializer can consume it in~~
+  ~~Task 2, without attaching duplicate widget event listeners.~~
+- [x] ~~Propagate ready, empty, unauthenticated, and failure states without~~
+  ~~allowing widget failures to interrupt application data streams.~~
 
 #### Task 2: define and serialize the month widget data contract
 
@@ -2339,10 +2341,10 @@ cost grow with the user's complete history.
 - [ ] Dispose or suspend expensive screen-owned listeners while their screen is
   inactive. In particular, a desktop Assistant that has been visited must not
   keep its conversation and message listeners active indefinitely while hidden.
-- [ ] Give launcher-widget reconciliation a dedicated current-month-grid event
-  query instead of relying on the larger visible Calendar query being
-  permanently mounted. Use the same bounded result for the existing week
-  widget and the planned month widget described below.
+- [x] ~~Give launcher-widget reconciliation a dedicated current-month-grid~~
+  ~~event query instead of relying on the larger visible Calendar query being~~
+  ~~permanently mounted. The same bounded result feeds the existing week~~
+  ~~serializer and the planned month serializer described above.~~
 - [ ] Introduce a session-scoped application-data snapshot/cache so Assistant
   attachments and read tools reuse already-loaded Notes and Tasks rather than
   opening fresh repository subscriptions for each request.

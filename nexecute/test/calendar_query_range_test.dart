@@ -18,6 +18,26 @@ void main() {
     });
   });
 
+  group('monthGridQueryRange', () {
+    test('covers a five-week month grid without adjacent page buffers', () {
+      final month = GregorianMonthCalculator().fromDate(DateTime(2026, 2, 15));
+
+      final range = monthGridQueryRange(month);
+
+      expect(range.startInclusive, DateTime(2026, 1, 26));
+      expect(range.endExclusive, DateTime(2026, 3, 2));
+    });
+
+    test('covers a six-week month grid without adjacent page buffers', () {
+      final month = GregorianMonthCalculator().fromDate(DateTime(2026, 8, 15));
+
+      final range = monthGridQueryRange(month);
+
+      expect(range.startInclusive, DateTime(2026, 7, 27));
+      expect(range.endExclusive, DateTime(2026, 9, 7));
+    });
+  });
+
   group('weekQueryRange', () {
     test('buffers the visible week with one page in each direction', () {
       final calculator = IsoWeekCalculator();

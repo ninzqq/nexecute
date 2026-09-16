@@ -36,6 +36,13 @@ CalendarQueryRange monthQueryRange(
   );
 }
 
+CalendarQueryRange monthGridQueryRange(CalendarMonth month) {
+  return CalendarQueryRange(
+    startInclusive: month.weeks.first.start,
+    endExclusive: _nextCalendarDay(month.weeks.last.end),
+  );
+}
+
 CalendarQueryRange weekQueryRange(
   CalendarWeek week,
   WeekCalculator calculator,
