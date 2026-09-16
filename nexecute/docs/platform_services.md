@@ -28,6 +28,19 @@ cannot turn a successful Firestore event mutation into a failure, widget update
 errors cannot interrupt event streams or theme changes, and secure-storage
 errors stay within credential-dependent AI actions.
 
+Android launcher widgets use one application-owned current-month-grid event
+subscription rather than depending on the Calendar screen being visible. The
+same bounded snapshot feeds both the week and month widgets. Event and
+authentication changes update that snapshot; theme changes refresh both native
+providers; application resume and a local-midnight timer recompute the current
+day. Crossing a month boundary replaces the bounded query before serializing
+the new week and month together.
+
+This synchronization runs while Nexecute is alive. If Android does not run the
+application for an extended period, the launcher may continue showing cached
+events until the next startup or resume. A headless background Firestore sync
+is a separate future capability rather than part of the current widget path.
+
 macOS no-ops deliberately report reminders as unsupported and ignore widget
 updates. They let Calendar, Tasks, Notes, Tags, authentication, and Firestore
 operate without pretending that Android-only integrations are available.

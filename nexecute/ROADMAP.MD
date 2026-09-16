@@ -2160,17 +2160,17 @@ initial scope.
 
 #### Task 4: complete refresh and lifecycle behavior
 
-- [ ] Synchronize on application startup and resume, event-query changes,
-  authentication changes, theme changes, and a local date rollover while the
-  application is running.
-- [ ] Recompute the current month and week together at a month boundary so the
-  two widgets cannot show different periods.
-- [ ] Preserve the existing failure isolation: unavailable launchers, malformed
-  cached data, or native refresh errors must not break Calendar or event
-  mutations.
-- [ ] Document that cached events may remain stale while the application never
-  runs; evaluate a headless background sync separately if that limitation
-  becomes material.
+- [x] ~~Synchronize on application startup and resume, event-query changes,~~
+  ~~authentication changes, theme changes, and a local date rollover while~~
+  ~~the application is running.~~
+- [x] ~~Recompute the current month and week together at a month boundary so~~
+  ~~the two widgets cannot show different periods.~~
+- [x] ~~Preserve the existing failure isolation: unavailable launchers,~~
+  ~~malformed cached data, or native refresh errors must not break Calendar or~~
+  ~~event mutations.~~
+- [x] ~~Document that cached events may remain stale while the application~~
+  ~~never runs; evaluate a headless background sync separately if that~~
+  ~~limitation becomes material.~~
 
 #### Task 5: verify data, layout, and regressions
 

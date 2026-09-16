@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/domain/calendar/calendar_query_range.dart';
 import 'package:nexecute/models/data_state.dart';
@@ -11,6 +12,7 @@ import 'package:nexecute/themes.dart';
 import 'support/fake_event_repository.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   final now = DateTime(2026, 8, 28, 12);
 
   test('owns one bounded current-month-grid subscription', () async {
@@ -117,10 +119,138 @@ void main() {
     await repository.close();
     await updater.close();
   });
+
+  test('resume reuses cached events and the existing month query', () async {
+    var clock = DateTime(2026, 8, 28, 12);
+    final event = Event(
+      id: 'event',
+      title: 'Planning',
+      startTime: DateTime(2026, 8, 29, 9),
+      endTime: DateTime(2026, 8, 29, 10),
+    );
+    final repository = _ControlledEventRepository();
+    final updater = _RecordingEventWidgetUpdater();
+    final coordinator = EventWidgetSynchronizationCoordinator(
+      eventRepository: repository,
+      widgetUpdater: updater,
+      themePreset: () => AppThemePreset.midnight,
+      now: () => clock,
+    );
+    coordinator.start();
+
+    final initialUpdate = updater.eventChanges.stream.first;
+    repository.add(DataReady<List<Event>>([event]));
+    await initialUpdate;
+
+    clock = DateTime(2026, 8, 29, 8);
+    final resumedUpdate = updater.eventChanges.stream.first;
+    coordinator.didChangeAppLifecycleState(AppLifecycleState.resumed);
+    await resumedUpdate;
+
+    expect(repository.watchedRanges, hasLength(1));
+    expect(updater.eventUpdates, hasLength(2));
+    expect(updater.eventUpdates.last, [event]);
+    expect(updater.updateTimes.last, clock);
+
+    await coordinator.dispose();
+    await repository.close();
+    await updater.close();
+  });
+
+  test(
+    'month rollover replaces the query before updating both periods',
+    () async {
+      var clock = DateTime(2026, 8, 31, 23, 59);
+      final repository = _ControlledEventRepository();
+      final updater = _RecordingEventWidgetUpdater();
+      final coordinator = EventWidgetSynchronizationCoordinator(
+        eventRepository: repository,
+        widgetUpdater: updater,
+        themePreset: () => AppThemePreset.midnight,
+        now: () => clock,
+      );
+      coordinator.start();
+
+      final augustUpdate = updater.eventChanges.stream.first;
+      repository.add(const DataReady<List<Event>>([]));
+      await augustUpdate;
+
+      clock = DateTime(2026, 9, 1);
+      await Future.wait([
+        coordinator.refreshForCurrentDate(),
+        coordinator.refreshForCurrentDate(),
+      ]);
+      expect(repository.watchedRanges, hasLength(2));
+      expect(
+        repository.watchedRanges.last,
+        CalendarQueryRange(
+          startInclusive: DateTime(2026, 8, 31),
+          endExclusive: DateTime(2026, 10, 5),
+        ),
+      );
+
+      final septemberEvent = Event(
+        id: 'september',
+        title: 'September planning',
+        startTime: DateTime(2026, 9, 1, 9),
+        endTime: DateTime(2026, 9, 1, 10),
+      );
+      final septemberUpdate = updater.eventChanges.stream.first;
+      repository.add(DataReady<List<Event>>([septemberEvent]));
+      await septemberUpdate;
+
+      expect(updater.eventUpdates, hasLength(2));
+      expect(updater.eventUpdates.last, [septemberEvent]);
+      expect(updater.updateTimes.last, clock);
+
+      await coordinator.dispose();
+      await repository.close();
+      await updater.close();
+    },
+  );
+
+  test('local midnight refreshes cached data while the app runs', () async {
+    var clock = DateTime(2026, 8, 28, 23, 59, 59);
+    late Duration scheduledDelay;
+    late void Function() runScheduledRefresh;
+    final repository = _ControlledEventRepository();
+    final updater = _RecordingEventWidgetUpdater();
+    final coordinator = EventWidgetSynchronizationCoordinator(
+      eventRepository: repository,
+      widgetUpdater: updater,
+      themePreset: () => AppThemePreset.midnight,
+      now: () => clock,
+      timerFactory: (delay, callback) {
+        scheduledDelay = delay;
+        runScheduledRefresh = callback;
+        return Timer(const Duration(days: 1), callback);
+      },
+    );
+    coordinator.start();
+    expect(scheduledDelay, const Duration(seconds: 2));
+
+    final initialUpdate = updater.eventChanges.stream.first;
+    repository.add(const DataReady<List<Event>>([]));
+    await initialUpdate;
+    expect(updater.eventUpdates, hasLength(1));
+
+    clock = DateTime(2026, 8, 29);
+    final midnightUpdate = updater.eventChanges.stream.first;
+    runScheduledRefresh();
+    await midnightUpdate;
+
+    expect(repository.watchedRanges, hasLength(1));
+    expect(updater.eventUpdates, hasLength(2));
+    expect(updater.updateTimes.last, clock);
+
+    await coordinator.dispose();
+    await repository.close();
+    await updater.close();
+  });
 }
 
 class _ControlledEventRepository extends FakeEventRepository {
-  final _states = StreamController<DataState<List<Event>>>();
+  final _states = StreamController<DataState<List<Event>>>.broadcast();
 
   bool get hasListener => _states.hasListener;
 
@@ -143,11 +273,15 @@ class _RecordingEventWidgetUpdater implements EventWidgetUpdater {
   final themes = <AppThemePreset>[];
   final updateTimes = <DateTime?>[];
   final statusChanges = StreamController<String>.broadcast();
+  final eventChanges = StreamController<List<Event>>.broadcast();
   final _firstEventUpdate = Completer<void>();
 
   Future<void> get firstEventUpdate => _firstEventUpdate.future;
 
-  Future<void> close() => statusChanges.close();
+  Future<void> close() async {
+    await statusChanges.close();
+    await eventChanges.close();
+  }
 
   @override
   Future<void> updateCurrentCalendar(
@@ -156,6 +290,7 @@ class _RecordingEventWidgetUpdater implements EventWidgetUpdater {
     DateTime? now,
   }) async {
     eventUpdates.add(events);
+    eventChanges.add(events);
     themes.add(theme);
     updateTimes.add(now);
     if (!_firstEventUpdate.isCompleted) _firstEventUpdate.complete();
