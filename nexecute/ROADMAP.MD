@@ -2104,6 +2104,101 @@ removed application-wide live event-history stream.
 - Add notification actions for completing or postponing tasks.
 - Consider optional Android system-calendar integration.
 
+### Android month calendar widget
+
+**Status:** Planned
+
+Add a separate **Nexecute Month** home-screen widget while preserving the
+existing week widget. The first version always shows the current month, uses a
+Monday-to-Sunday grid, dims adjacent-month dates, highlights today, and shows
+compact event titles with an overflow count. It opens Nexecute when tapped and
+uses the active Nexecute theme. Previous/next-month controls, per-day deep
+links, and independent background Firestore synchronization are outside this
+initial scope.
+
+#### Task 1: own widget synchronization independently of Calendar UI
+
+- [ ] Replace `WidgetSyncingEventRepository`'s dependence on whichever Calendar
+  range happens to be visible with a lifecycle-owned widget synchronization
+  coordinator.
+- [ ] Give the coordinator one bounded query covering the current month's full
+  five- or six-week grid, including expanded recurring and multi-day events.
+- [ ] Use that result to update both the current-month widget and the existing
+  current-week widget without attaching duplicate event listeners.
+- [ ] Propagate ready, empty, unauthenticated, and failure states without
+  allowing widget failures to interrupt application data streams.
+
+#### Task 2: define and serialize the month widget data contract
+
+- [ ] Generalize `EventWidgetUpdater` so one synchronization pass can write
+  both week and month data while retaining the existing week keys for backward
+  compatibility.
+- [ ] Serialize the month label, row count, current date, and 35-42 indexed day
+  cells. Include each cell's ISO date, day number, in-month state, total event
+  count, and a bounded list of display labels.
+- [ ] Clear or supersede stale cell and event values when moving to a shorter
+  month or when a day's event count decreases.
+- [ ] Refresh both Android providers only after the complete payload and theme
+  have been written.
+
+#### Task 3: build the native Android month renderer
+
+- [ ] Add a dedicated `CalendarMonthWidgetProvider`, receiver registration,
+  widget-picker metadata, and an initial month layout sized for a practical
+  calendar grid.
+- [ ] Add reusable RemoteViews layouts for the month header, weekday header,
+  week rows, day cells, event markers, empty state, and status state.
+- [ ] Render five- and six-row months, dim dates outside the current month,
+  highlight today, cap visible event titles according to available height, and
+  show `+N` for hidden events.
+- [ ] Extract the native theme palette shared by the week and month providers
+  so every existing theme remains visually consistent.
+- [ ] Keep the whole-widget launch action and make compact resized layouts fall
+  back to event markers or counts instead of clipping text.
+
+#### Task 4: complete refresh and lifecycle behavior
+
+- [ ] Synchronize on application startup and resume, event-query changes,
+  authentication changes, theme changes, and a local date rollover while the
+  application is running.
+- [ ] Recompute the current month and week together at a month boundary so the
+  two widgets cannot show different periods.
+- [ ] Preserve the existing failure isolation: unavailable launchers, malformed
+  cached data, or native refresh errors must not break Calendar or event
+  mutations.
+- [ ] Document that cached events may remain stale while the application never
+  runs; evaluate a headless background sync separately if that limitation
+  becomes material.
+
+#### Task 5: verify data, layout, and regressions
+
+- [ ] Add Dart tests for five- and six-week months, leap February, year
+  boundaries, adjacent-month cells, today highlighting, empty days, overflow,
+  stale-key cleanup, multi-day events, and recurring occurrences.
+- [ ] Add coordinator tests proving that widget updates continue when Calendar
+  is hidden or displaying another period and that only one bounded widget query
+  is active.
+- [ ] Add native renderer coverage where practical for row counts, themes,
+  status states, event caps, and compact-size fallbacks.
+- [ ] Run Flutter analysis and the relevant service, repository, calendar, and
+  platform-composition suites, then build the Android debug APK.
+- [ ] Manually verify the week and month widgets on narrow, standard, and tall
+  launcher sizes, including resizing, theme changes, sign-out, month rollover,
+  empty months, and event overflow.
+
+Acceptance criteria:
+
+- The launcher offers separate Nexecute week and month widgets, and existing
+  week-widget installations retain their behavior.
+- The month widget renders the correct current-month grid and event indicators
+  for both five- and six-week months across every supported theme.
+- Widget data stays synchronized without requiring Calendar to be visible and
+  without opening duplicate Firestore listeners.
+- Authentication, query, and native widget failures remain visible in the
+  widget but do not interrupt the application.
+- Resizing never clips the calendar into an unusable state, and tapping either
+  widget opens Nexecute.
+
 ### Calendar usability
 
 **Status:** Completed
@@ -2244,9 +2339,10 @@ cost grow with the user's complete history.
 - [ ] Dispose or suspend expensive screen-owned listeners while their screen is
   inactive. In particular, a desktop Assistant that has been visited must not
   keep its conversation and message listeners active indefinitely while hidden.
-- [ ] Give launcher-widget reconciliation a dedicated current-week event query
-  instead of relying on the larger visible Calendar query being permanently
-  mounted.
+- [ ] Give launcher-widget reconciliation a dedicated current-month-grid event
+  query instead of relying on the larger visible Calendar query being
+  permanently mounted. Use the same bounded result for the existing week
+  widget and the planned month widget described below.
 - [ ] Introduce a session-scoped application-data snapshot/cache so Assistant
   attachments and read tools reuse already-loaded Notes and Tasks rather than
   opening fresh repository subscriptions for each request.
