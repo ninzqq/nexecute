@@ -8,6 +8,14 @@ internal object MonthWidgetRenderPolicy {
     private const val ONE_LABEL_HEIGHT_DP = 230
     private const val TWO_LABEL_HEIGHT_DP = 320
 
+    fun surfaceColors(theme: NexecuteWidgetTheme): MonthWidgetSurfaceColors =
+        MonthWidgetSurfaceColors(
+            headerBackground = lift(theme.headerBackground, 12),
+            gridBackground = lift(theme.gridBackground, 16),
+            cellBackground = lift(theme.columnBackground, 20),
+            eventBackground = lift(theme.gridBackground, 24),
+        )
+
     fun rowCount(value: Int): Int = value.coerceIn(5, 6)
 
     fun cellCount(value: Int): Int = value.coerceIn(0, MAX_CELL_COUNT)
@@ -40,4 +48,19 @@ internal object MonthWidgetRenderPolicy {
 
     fun isToday(date: String, todayDate: String): Boolean =
         date.isNotEmpty() && date == todayDate
+
+    private fun lift(color: Int, amount: Int): Int {
+        val alpha = color ushr 24 and 0xFF
+        val red = ((color ushr 16 and 0xFF) + amount).coerceAtMost(0xFF)
+        val green = ((color ushr 8 and 0xFF) + amount).coerceAtMost(0xFF)
+        val blue = ((color and 0xFF) + amount).coerceAtMost(0xFF)
+        return (alpha shl 24) or (red shl 16) or (green shl 8) or blue
+    }
 }
+
+internal data class MonthWidgetSurfaceColors(
+    val headerBackground: Int,
+    val gridBackground: Int,
+    val cellBackground: Int,
+    val eventBackground: Int,
+)

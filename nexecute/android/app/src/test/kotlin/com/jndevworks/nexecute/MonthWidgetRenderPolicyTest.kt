@@ -55,6 +55,23 @@ class MonthWidgetRenderPolicyTest {
         assertFalse(MonthWidgetRenderPolicy.isToday("2026-08-27", "2026-08-28"))
         assertFalse(MonthWidgetRenderPolicy.isToday("", ""))
     }
+
+    @Test
+    fun `month surfaces are brighter across every theme`() {
+        for (themeId in listOf("midnight", "cyberpunk", "cyberpunkMega", "forest", "neutral")) {
+            val theme = NexecuteWidgetTheme.fromId(themeId)
+            val surfaces = MonthWidgetRenderPolicy.surfaceColors(theme)
+
+            assertTrue(brightness(surfaces.headerBackground) > brightness(theme.headerBackground))
+            assertTrue(brightness(surfaces.gridBackground) > brightness(theme.gridBackground))
+            assertTrue(brightness(surfaces.cellBackground) > brightness(theme.columnBackground))
+            assertTrue(brightness(surfaces.eventBackground) > brightness(theme.gridBackground))
+            assertEquals(0xFF, surfaces.headerBackground ushr 24 and 0xFF)
+        }
+    }
+
+    private fun brightness(color: Int): Int =
+        (color ushr 16 and 0xFF) + (color ushr 8 and 0xFF) + (color and 0xFF)
 }
 
 class NexecuteWidgetThemeTest {

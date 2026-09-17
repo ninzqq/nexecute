@@ -20,13 +20,14 @@ class CalendarMonthWidgetProvider : HomeWidgetProvider() {
             val theme = NexecuteWidgetTheme.fromId(
                 widgetData.getString("widget_theme", "midnight"),
             )
+            val surfaceColors = MonthWidgetRenderPolicy.surfaceColors(theme)
             val views = RemoteViews(context.packageName, R.layout.widget_month_layout)
             val options = appWidgetManager.getAppWidgetOptions(widgetId)
             val visibleEventLabels = MonthWidgetRenderPolicy.eventLabelCapacity(
                 options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 250),
             )
 
-            applyFrame(views, theme, widgetData)
+            applyFrame(views, theme, surfaceColors, widgetData)
             applyLaunchAction(context, views, widgetId)
 
             val rowCount = MonthWidgetRenderPolicy.rowCount(
@@ -53,6 +54,7 @@ class CalendarMonthWidgetProvider : HomeWidgetProvider() {
                         context = context,
                         widgetData = widgetData,
                         theme = theme,
+                        surfaceColors = surfaceColors,
                         cellIndex = cellIndex,
                         cellCount = cellCount,
                         todayDate = todayDate,
@@ -103,14 +105,19 @@ class CalendarMonthWidgetProvider : HomeWidgetProvider() {
     private fun applyFrame(
         views: RemoteViews,
         theme: NexecuteWidgetTheme,
+        surfaceColors: MonthWidgetSurfaceColors,
         widgetData: SharedPreferences,
     ) {
-        views.setInt(R.id.month_widget_root, "setBackgroundColor", theme.headerBackground)
-        views.setInt(R.id.month_widget_header, "setBackgroundColor", theme.headerBackground)
-        views.setInt(R.id.month_widget_status, "setBackgroundColor", theme.gridBackground)
-        views.setInt(R.id.month_widget_empty_hint, "setBackgroundColor", theme.gridBackground)
-        views.setInt(R.id.month_widget_weekday_header, "setBackgroundColor", theme.gridBackground)
-        views.setInt(R.id.month_widget_grid, "setBackgroundColor", theme.gridBackground)
+        views.setInt(R.id.month_widget_root, "setBackgroundColor", surfaceColors.headerBackground)
+        views.setInt(R.id.month_widget_header, "setBackgroundColor", surfaceColors.headerBackground)
+        views.setInt(R.id.month_widget_status, "setBackgroundColor", surfaceColors.gridBackground)
+        views.setInt(R.id.month_widget_empty_hint, "setBackgroundColor", surfaceColors.gridBackground)
+        views.setInt(
+            R.id.month_widget_weekday_header,
+            "setBackgroundColor",
+            surfaceColors.gridBackground,
+        )
+        views.setInt(R.id.month_widget_grid, "setBackgroundColor", surfaceColors.gridBackground)
 
         views.setTextViewText(
             R.id.month_widget_title,
@@ -155,6 +162,7 @@ class CalendarMonthWidgetProvider : HomeWidgetProvider() {
         context: Context,
         widgetData: SharedPreferences,
         theme: NexecuteWidgetTheme,
+        surfaceColors: MonthWidgetSurfaceColors,
         cellIndex: Int,
         cellCount: Int,
         todayDate: String,
@@ -177,7 +185,7 @@ class CalendarMonthWidgetProvider : HomeWidgetProvider() {
             else -> theme.mutedText
         }
         views.setViewVisibility(R.id.month_day_cell, View.VISIBLE)
-        views.setInt(R.id.month_day_cell, "setBackgroundColor", theme.columnBackground)
+        views.setInt(R.id.month_day_cell, "setBackgroundColor", surfaceColors.cellBackground)
         views.setTextViewText(R.id.month_day_number, day.toString())
         views.setTextColor(R.id.month_day_number, dayTextColor)
         if (isToday) {
@@ -205,7 +213,7 @@ class CalendarMonthWidgetProvider : HomeWidgetProvider() {
             event.setInt(
                 R.id.month_event_text,
                 "setBackgroundColor",
-                theme.gridBackground,
+                surfaceColors.eventBackground,
             )
             views.addView(R.id.month_day_events, event)
         }
