@@ -5,7 +5,7 @@
     android:layout_height="wrap_content"
     android:layout_marginBottom="1dp"
     android:ellipsize="end"
-    android:paddingHorizontal="2dp"
+    android:paddingHorizontal="1dp"
     android:singleLine="true"
     android:text=""
-    android:textSize="8sp" />
+    android:textSize="10sp" />

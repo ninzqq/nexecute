@@ -16,7 +16,7 @@
         android:ellipsize="end"
         android:singleLine="true"
         android:text="Nexecute"
-        android:textSize="15sp"
+        android:textSize="16sp"
         android:textStyle="bold" />
 
     <TextView
@@ -27,7 +27,7 @@
         android:ellipsize="end"
         android:singleLine="true"
         android:text=""
-        android:textSize="13sp"
+        android:textSize="14sp"
         android:textStyle="bold" />
 
 </LinearLayout>

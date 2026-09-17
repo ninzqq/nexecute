@@ -6,5 +6,5 @@
     android:gravity="center"
     android:paddingVertical="3dp"
     android:text="No events this month"
-    android:textSize="10sp"
+    android:textSize="11sp"
     android:visibility="gone" />

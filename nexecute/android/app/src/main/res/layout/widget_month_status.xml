@@ -8,5 +8,5 @@
     android:paddingVertical="3dp"
     android:text=""
     android:textColor="#FBBF24"
-    android:textSize="11sp"
+    android:textSize="12sp"
     android:visibility="gone" />
