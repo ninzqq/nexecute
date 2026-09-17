@@ -23,6 +23,31 @@ void main() {
 
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
+  testWidgets('folder tiles use larger names on phones', (tester) async {
+    _setViewport(tester, const Size(390, 844));
+    final controller = NotesController();
+    final now = DateTime(2026, 9, 17);
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      _notesApp(
+        const [],
+        controller: controller,
+        folders: [
+          NoteFolder(
+            id: 'projects',
+            name: 'Projects',
+            createdAt: now,
+            updatedAt: now,
+          ),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<Text>(find.text('Projects')).style?.fontSize, 18);
+  });
+
   testWidgets('notes use a two-column masonry layout with variable heights', (
     tester,
   ) async {
