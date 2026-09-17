@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nexecute/home/widgets/linkified_text.dart';
 import 'package:nexecute/home/widgets/taglistitem.dart';
 import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/tag.dart';
@@ -62,7 +63,7 @@ class NoteCardContent extends StatelessWidget {
             onChanged: onChecklistItemChanged,
           )
         else if (hasText)
-          Text(
+          LinkifiedText(
             note.text,
             style: Theme.of(
               context,
@@ -127,7 +128,7 @@ class _ChecklistPreview extends StatelessWidget {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.only(top: 3),
-                  child: Text(
+                  child: LinkifiedText(
                     item.text,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,

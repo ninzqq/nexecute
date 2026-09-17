@@ -7,6 +7,7 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:nexecute/home/bottomsheets/item_editor_sheet.dart';
+import 'package:nexecute/home/widgets/linkified_text.dart';
 import 'package:nexecute/home/widgets/quicxecitem.dart';
 import 'package:nexecute/home/widgets/searchbox.dart';
 import 'package:nexecute/home/widgets/taglistitem.dart';
@@ -1301,8 +1302,9 @@ class _SelectedNotePreview extends StatelessWidget {
                                     ),
                                     const SizedBox(width: 8),
                                     Expanded(
-                                      child: SelectableText(
+                                      child: LinkifiedText(
                                         item.text,
+                                        selectable: true,
                                         style: Theme.of(
                                           context,
                                         ).textTheme.bodyMedium?.copyWith(
@@ -1317,8 +1319,9 @@ class _SelectedNotePreview extends StatelessWidget {
                                 ),
                               )
                           else
-                            SelectableText(
+                            LinkifiedText(
                               note.text.isEmpty ? 'No content' : note.text,
+                              selectable: true,
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           if (note.tags.isNotEmpty) ...[
