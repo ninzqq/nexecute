@@ -50,45 +50,134 @@ class TasksPage extends StatelessWidget {
     final desktop =
         AppLayoutBreakpoints.fromContext(context) == AppLayoutClass.expanded;
 
-    return ListView(
-      key: const PageStorageKey('tasks-page'),
-      padding:
-          desktop
-              ? const EdgeInsets.fromLTRB(24, 20, 24, 32)
-              : const EdgeInsets.fromLTRB(12, 12, 12, 96),
+    return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
-          child: Text(
-            '${active.length} ${active.length == 1 ? 'task' : 'tasks'} open',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+        Expanded(
+          child: ListView(
+            key: const PageStorageKey('tasks-page'),
+            padding:
+                desktop
+                    ? const EdgeInsets.fromLTRB(24, 20, 24, 12)
+                    : const EdgeInsets.fromLTRB(12, 12, 12, 12),
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
+                child: Text(
+                  '${active.length} ${active.length == 1 ? 'task' : 'tasks'} open',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              if (active.isEmpty)
+                const _EmptyTasks()
+              else
+                for (final todo in active)
+                  _DismissibleTodo(todo: todo, completed: false),
+              const SizedBox(height: 12),
+              if (completed.isNotEmpty)
+                Card(
+                  clipBehavior: Clip.antiAlias,
+                  child: ExpansionTile(
+                    key: const PageStorageKey('completed-tasks'),
+                    initiallyExpanded: false,
+                    leading: const Icon(Icons.check_circle_outline),
+                    title: Text('Completed (${completed.length})'),
+                    children: [
+                      const Divider(height: 1),
+                      for (final todo in completed)
+                        _DismissibleTodo(todo: todo, completed: true),
+                    ],
+                  ),
+                ),
+            ],
           ),
         ),
-        if (active.isEmpty)
-          const _EmptyTasks()
-        else
-          for (final todo in active)
-            _DismissibleTodo(todo: todo, completed: false),
-        const SizedBox(height: 12),
-        if (completed.isNotEmpty)
-          Card(
-            clipBehavior: Clip.antiAlias,
-            child: ExpansionTile(
-              key: const PageStorageKey('completed-tasks'),
-              initiallyExpanded: false,
-              leading: const Icon(Icons.check_circle_outline),
-              title: Text('Completed (${completed.length})'),
-              children: [
-                const Divider(height: 1),
-                for (final todo in completed)
-                  _DismissibleTodo(todo: todo, completed: true),
-              ],
-            ),
-          ),
+        const _QuickAddTask(),
       ],
     );
+  }
+}
+
+class _QuickAddTask extends StatefulWidget {
+  const _QuickAddTask();
+
+  @override
+  State<_QuickAddTask> createState() => _QuickAddTaskState();
+}
+
+class _QuickAddTaskState extends State<_QuickAddTask> {
+  final _controller = TextEditingController();
+  bool _isSaving = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final desktop =
+        AppLayoutBreakpoints.fromContext(context) == AppLayoutClass.expanded;
+
+    return Material(
+      color: Colors.transparent,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding:
+              desktop
+                  ? const EdgeInsets.fromLTRB(24, 8, 24, 20)
+                  : const EdgeInsets.fromLTRB(12, 8, 12, 12),
+          child: TextField(
+            key: const Key('quick-add-task-field'),
+            controller: _controller,
+            readOnly: _isSaving,
+            textCapitalization: TextCapitalization.sentences,
+            textInputAction: TextInputAction.done,
+            decoration: InputDecoration(
+              hintText: 'Add a task…',
+              prefixIcon: const Icon(Icons.add_task_rounded),
+              suffixIcon:
+                  _isSaving
+                      ? const Padding(
+                        padding: EdgeInsets.all(14),
+                        child: SizedBox.square(
+                          dimension: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                      : IconButton(
+                        tooltip: 'Add task',
+                        onPressed: _addTask,
+                        icon: const Icon(Icons.arrow_upward_rounded),
+                      ),
+            ),
+            onSubmitted: (_) => _addTask(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addTask() async {
+    final title = _controller.text.trim();
+    if (_isSaving || title.isEmpty) return;
+
+    setState(() => _isSaving = true);
+    try {
+      await context.read<TodoRepository>().addTodo(title);
+      if (!mounted) return;
+      _controller.clear();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not save task: $error')));
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 }
 

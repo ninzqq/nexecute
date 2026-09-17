@@ -51,8 +51,8 @@ void main() {
       await tester.tap(find.byIcon(Icons.checklist_outlined));
       await tester.pumpAndSettle();
 
-      expect(find.byTooltip('New task'), findsOneWidget);
-      expect(find.text('New task'), findsNothing);
+      expect(find.byTooltip('New task'), findsNothing);
+      expect(find.byKey(const Key('quick-add-task-field')), findsOneWidget);
       expect(find.text('0 tasks open'), findsOneWidget);
 
       await tester.tap(find.byIcon(Icons.calendar_month_outlined));
@@ -224,6 +224,12 @@ void main() {
     expect(find.text('Calendar'), findsOneWidget);
     expect(find.text('Tasks'), findsOneWidget);
     expect(find.text('Notes'), findsWidgets);
+
+    await tester.tap(find.byKey(const ValueKey('desktop-destination-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('desktop-create-command')), findsNothing);
+    expect(find.byKey(const Key('quick-add-task-field')), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('desktop-destination-0')));
     await tester.pumpAndSettle();

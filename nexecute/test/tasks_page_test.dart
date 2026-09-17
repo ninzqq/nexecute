@@ -97,6 +97,35 @@ void main() {
     expect(find.text('Nothing to do'), findsOneWidget);
   });
 
+  testWidgets('adds a task directly from the bottom input', (tester) async {
+    final repository = _FakeTodoRepository();
+    await tester.pumpWidget(appWith(const [], repository: repository));
+
+    final field = find.byKey(const Key('quick-add-task-field'));
+    expect(field, findsOneWidget);
+
+    await tester.enterText(field, '  Plan tomorrow  ');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+
+    expect(repository.addedTitle, 'Plan tomorrow');
+    expect(find.text('Plan tomorrow'), findsNothing);
+  });
+
+  testWidgets('does not add a blank quick task', (tester) async {
+    final repository = _FakeTodoRepository();
+    await tester.pumpWidget(appWith(const [], repository: repository));
+
+    await tester.enterText(
+      find.byKey(const Key('quick-add-task-field')),
+      '   ',
+    );
+    await tester.tap(find.byTooltip('Add task'));
+    await tester.pump();
+
+    expect(repository.addedTitle, isNull);
+  });
+
   testWidgets('renders active tasks as separate card-like items', (
     tester,
   ) async {
@@ -214,6 +243,7 @@ void main() {
 }
 
 class _FakeTodoRepository implements TodoRepository {
+  String? addedTitle;
   TodoItem? completedTodo;
   bool? completedValue;
   TodoItem? updatedTodo;
@@ -224,7 +254,9 @@ class _FakeTodoRepository implements TodoRepository {
       Stream.value(const DataEmpty([]));
 
   @override
-  Future<void> addTodo(String title) async {}
+  Future<void> addTodo(String title) async {
+    addedTitle = title;
+  }
 
   @override
   Future<void> createTodos(CreateTodosCommand command) async {}

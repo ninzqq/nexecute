@@ -168,7 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                         );
                         final desktopCreate =
-                            activeIndex < 3
+                            activeIndex < 3 && activeIndex != 1
                                 ? Semantics(
                                   key: const Key('create-shortcut-semantics'),
                                   hint: 'Shortcut ${AppShortcutLabels.create}',
@@ -242,7 +242,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           desktopAppBarInBody: fullHeightNotesPane,
                           floatingActionButton:
-                              activeIndex < 3
+                              activeIndex < 3 && activeIndex != 1
                                   ? Semantics(
                                     key: const Key('create-shortcut-semantics'),
                                     container: true,
