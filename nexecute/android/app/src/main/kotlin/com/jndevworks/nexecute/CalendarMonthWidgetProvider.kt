@@ -4,9 +4,11 @@ import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.SharedPreferences
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.RemoteViews
+import es.antonborri.home_widget.HomeWidgetBackgroundIntent
 import es.antonborri.home_widget.HomeWidgetProvider
 
 class CalendarMonthWidgetProvider : HomeWidgetProvider() {
@@ -17,6 +19,15 @@ class CalendarMonthWidgetProvider : HomeWidgetProvider() {
         widgetData: SharedPreferences,
     ) {
         for (widgetId in appWidgetIds) {
+            val instancePrefix = "widget_month_instance_$widgetId"
+            val monthPrefix = if (
+                widgetData.getString("${instancePrefix}_anchor", "").isNullOrEmpty()
+            ) {
+                "widget_month"
+            } else {
+                instancePrefix
+            }
+            val monthAnchor = widgetData.getString("${monthPrefix}_anchor", "").orEmpty()
             val theme = NexecuteWidgetTheme.fromId(
                 widgetData.getString("widget_theme", "midnight"),
             )
@@ -27,15 +38,23 @@ class CalendarMonthWidgetProvider : HomeWidgetProvider() {
                 options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 250),
             )
 
-            applyFrame(views, theme, surfaceColors, widgetData)
+            applyFrame(
+                views,
+                theme,
+                surfaceColors,
+                widgetData,
+                monthPrefix,
+                monthAnchor,
+            )
             applyLaunchAction(context, views, widgetId)
+            applyMonthNavigation(context, views, widgetId, monthAnchor)
 
             val rowCount = MonthWidgetRenderPolicy.rowCount(
-                widgetData.getInt("widget_month_row_count", 6),
+                widgetData.getInt("${monthPrefix}_row_count", 6),
             )
             val cellCount = MonthWidgetRenderPolicy.cellCount(
                 widgetData.getInt(
-                    "widget_month_cell_count",
+                    "${monthPrefix}_cell_count",
                     rowCount * MonthWidgetRenderPolicy.DAYS_PER_WEEK,
                 ),
             )
@@ -53,6 +72,7 @@ class CalendarMonthWidgetProvider : HomeWidgetProvider() {
                     val cell = createDayCell(
                         context = context,
                         widgetData = widgetData,
+                        monthPrefix = monthPrefix,
                         theme = theme,
                         surfaceColors = surfaceColors,
                         cellIndex = cellIndex,
@@ -66,7 +86,8 @@ class CalendarMonthWidgetProvider : HomeWidgetProvider() {
                 views.addView(R.id.month_widget_grid, row)
             }
 
-            val status = widgetData.getString("widget_status", "").orEmpty()
+            val status = widgetData.getString("${instancePrefix}_status", null)
+                ?: widgetData.getString("widget_status", "").orEmpty()
             views.setTextViewText(R.id.month_widget_status, status)
             views.setViewVisibility(
                 R.id.month_widget_status,
@@ -102,11 +123,27 @@ class CalendarMonthWidgetProvider : HomeWidgetProvider() {
         super.onUpdate(context, appWidgetManager, intArrayOf(appWidgetId))
     }
 
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+        val widgetData = context.getSharedPreferences(HOME_WIDGET_PREFERENCES, Context.MODE_PRIVATE)
+        val editor = widgetData.edit()
+        val keys = widgetData.all.keys
+        for (widgetId in appWidgetIds) {
+            val prefix = "widget_month_instance_$widgetId"
+            for (key in keys) {
+                if (key.startsWith(prefix)) editor.remove(key)
+            }
+        }
+        editor.apply()
+        super.onDeleted(context, appWidgetIds)
+    }
+
     private fun applyFrame(
         views: RemoteViews,
         theme: NexecuteWidgetTheme,
         surfaceColors: MonthWidgetSurfaceColors,
         widgetData: SharedPreferences,
+        monthPrefix: String,
+        monthAnchor: String,
     ) {
         views.setInt(R.id.month_widget_root, "setBackgroundColor", surfaceColors.headerBackground)
         views.setInt(R.id.month_widget_header, "setBackgroundColor", surfaceColors.headerBackground)
@@ -125,10 +162,26 @@ class CalendarMonthWidgetProvider : HomeWidgetProvider() {
         )
         views.setTextViewText(
             R.id.month_widget_month_label,
-            widgetData.getString("widget_month_label", ""),
+            widgetData.getString("${monthPrefix}_label", ""),
         )
         views.setTextColor(R.id.month_widget_title, theme.primaryText)
         views.setTextColor(R.id.month_widget_month_label, theme.secondaryText)
+        views.setTextColor(R.id.month_widget_previous, theme.primaryText)
+        views.setTextColor(R.id.month_widget_next, theme.primaryText)
+        val navigationVisibility =
+            if (MonthWidgetRenderPolicy.shiftedMonth(monthAnchor, 1) != null) {
+                View.VISIBLE
+            } else {
+                View.INVISIBLE
+            }
+        views.setViewVisibility(
+            R.id.month_widget_previous,
+            navigationVisibility,
+        )
+        views.setViewVisibility(
+            R.id.month_widget_next,
+            navigationVisibility,
+        )
         views.setTextColor(R.id.month_widget_status, theme.secondaryText)
         views.setTextColor(R.id.month_widget_empty_hint, theme.mutedText)
 
@@ -154,13 +207,54 @@ class CalendarMonthWidgetProvider : HomeWidgetProvider() {
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
-            views.setOnClickPendingIntent(R.id.month_widget_root, launchIntent)
+            // Some launchers let a click handler on the root consume taps from
+            // interactive descendants. Keep launch actions on sibling content
+            // so the month navigation buttons always receive their broadcasts.
+            views.setOnClickPendingIntent(R.id.month_widget_title, launchIntent)
+            views.setOnClickPendingIntent(R.id.month_widget_grid, launchIntent)
         }
+    }
+
+    private fun applyMonthNavigation(
+        context: Context,
+        views: RemoteViews,
+        widgetId: Int,
+        monthAnchor: String,
+    ) {
+        MonthWidgetRenderPolicy.shiftedMonth(monthAnchor, -1)?.let { target ->
+            views.setOnClickPendingIntent(
+                R.id.month_widget_previous,
+                navigationIntent(context, widgetId, target),
+            )
+        }
+        MonthWidgetRenderPolicy.shiftedMonth(monthAnchor, 1)?.let { target ->
+            views.setOnClickPendingIntent(
+                R.id.month_widget_next,
+                navigationIntent(context, widgetId, target),
+            )
+        }
+    }
+
+    private fun navigationIntent(
+        context: Context,
+        widgetId: Int,
+        target: String,
+    ): PendingIntent {
+        val yearMonth = target.split('-')
+        val uri = Uri.Builder()
+            .scheme("nexecute")
+            .authority("month-widget")
+            .appendQueryParameter("widgetId", widgetId.toString())
+            .appendQueryParameter("year", yearMonth[0])
+            .appendQueryParameter("month", yearMonth[1])
+            .build()
+        return HomeWidgetBackgroundIntent.getBroadcast(context, uri)
     }
 
     private fun createDayCell(
         context: Context,
         widgetData: SharedPreferences,
+        monthPrefix: String,
         theme: NexecuteWidgetTheme,
         surfaceColors: MonthWidgetSurfaceColors,
         cellIndex: Int,
@@ -169,7 +263,7 @@ class CalendarMonthWidgetProvider : HomeWidgetProvider() {
         visibleEventLabels: Int,
     ): RenderedDayCell {
         val views = RemoteViews(context.packageName, R.layout.widget_month_day)
-        val key = "widget_month_cell_$cellIndex"
+        val key = "${monthPrefix}_cell_$cellIndex"
         val date = widgetData.getString("${key}_date", "").orEmpty()
         val day = widgetData.getInt("${key}_day", 0)
         if (cellIndex >= cellCount || date.isEmpty() || day <= 0) {
@@ -240,4 +334,8 @@ class CalendarMonthWidgetProvider : HomeWidgetProvider() {
         val views: RemoteViews,
         val eventCount: Int,
     )
+
+    private companion object {
+        const val HOME_WIDGET_PREFERENCES = "HomeWidgetPreferences"
+    }
 }

@@ -20,6 +20,14 @@ class MonthWidgetRenderPolicyTest {
     }
 
     @Test
+    fun `month navigation continues across years without a page limit`() {
+        assertEquals("2025-12", MonthWidgetRenderPolicy.shiftedMonth("2026-01", -1))
+        assertEquals("2026-02", MonthWidgetRenderPolicy.shiftedMonth("2026-01", 1))
+        assertEquals("2036-01", MonthWidgetRenderPolicy.shiftedMonth("2026-01", 120))
+        assertEquals(null, MonthWidgetRenderPolicy.shiftedMonth("not-a-month", 1))
+    }
+
+    @Test
     fun `height selects compact one-label and two-label modes`() {
         assertEquals(0, MonthWidgetRenderPolicy.eventLabelCapacity(180))
         assertEquals(0, MonthWidgetRenderPolicy.eventLabelCapacity(229))

@@ -1,5 +1,7 @@
 package com.jndevworks.nexecute
 
+import java.time.YearMonth
+
 internal object MonthWidgetRenderPolicy {
     const val DAYS_PER_WEEK = 7
     const val MAX_CELL_COUNT = 42
@@ -19,6 +21,12 @@ internal object MonthWidgetRenderPolicy {
     fun rowCount(value: Int): Int = value.coerceIn(5, 6)
 
     fun cellCount(value: Int): Int = value.coerceIn(0, MAX_CELL_COUNT)
+
+    fun shiftedMonth(anchor: String, delta: Long): String? = try {
+        YearMonth.parse(anchor).plusMonths(delta).toString()
+    } catch (_: RuntimeException) {
+        null
+    }
 
     fun eventLabelCapacity(heightDp: Int): Int = when {
         heightDp >= TWO_LABEL_HEIGHT_DP -> 2

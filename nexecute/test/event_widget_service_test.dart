@@ -70,6 +70,33 @@ void main() {
     expect(writer.values['widget_month_cell_28_event_1'], 'Conference');
     expect(writer.values['widget_month_cell_41_date'], '2026-09-06');
     expect(writer.values['widget_month_cell_41_in_month'], isFalse);
+    expect(writer.values['widget_month_anchor'], '2026-08');
+    expect(writer.refreshCount, 1);
+  });
+
+  test('serializes an independently navigated widget month', () async {
+    final writer = _FakeEventWidgetDataWriter();
+    final service = EventWidgetService(writer: writer);
+    final event = Event(
+      id: 'future',
+      title: 'Future planning',
+      startTime: DateTime(2036, 1, 15, 9),
+      endTime: DateTime(2036, 1, 15, 10),
+    );
+
+    await service.updateMonthPage(
+      [event],
+      anchor: DateTime(2036, 1),
+      widgetId: 42,
+    );
+
+    expect(writer.values['widget_month_instance_42_anchor'], '2036-01');
+    expect(writer.values['widget_month_instance_42_label'], 'January 2036');
+    expect(writer.values['widget_month_instance_42_status'], '');
+    expect(
+      writer.values['widget_month_instance_42_cell_15_event_0'],
+      'Future planning',
+    );
     expect(writer.refreshCount, 1);
   });
 

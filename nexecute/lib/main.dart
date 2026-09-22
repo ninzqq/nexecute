@@ -30,6 +30,7 @@ Future<void> main() async {
 Future<Nexecute> initializeNexecute() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await registerEventWidgetInteractivity();
   final themeController = await AppThemeController.load();
   final calendarSettingsController = await CalendarSettingsController.load();
   final platformServices = await createDefaultAppPlatformServices();

@@ -1,4 +1,5 @@
 import 'package:home_widget/home_widget.dart';
+import 'package:nexecute/domain/calendar/calendar_month.dart';
 import 'package:nexecute/domain/calendar/gregorian_month_calculator.dart';
 import 'package:nexecute/domain/calendar/iso_week_calculator.dart';
 import 'package:nexecute/models/event.dart';
@@ -150,16 +151,54 @@ class EventWidgetService implements EventWidgetUpdater {
       }
     }
 
-    await _writer.saveString(
-      'widget_month_label',
-      '${_monthLabels[month.month - 1]} ${month.year}',
-    );
-    await _writer.saveInt('widget_month_row_count', month.weeks.length);
-    await _writer.saveInt('widget_month_cell_count', month.days.length);
     await _writer.saveString('widget_month_today_date', _isoDate(today));
 
+    await _writeMonthPage(prefix: 'widget_month', month: month, events: events);
+
+    await _writer.refresh();
+  }
+
+  Future<void> updateMonthPage(
+    List<Event> events, {
+    required DateTime anchor,
+    required int widgetId,
+  }) async {
+    final month = _monthCalculator.fromDate(anchor);
+    final prefix = 'widget_month_instance_$widgetId';
+    await _writer.saveString('${prefix}_status', '');
+    await _writeMonthPage(prefix: prefix, month: month, events: events);
+    await _writer.refresh();
+  }
+
+  Future<void> updateMonthPageStatus({
+    required int widgetId,
+    required String message,
+  }) async {
+    await _writer.saveString(
+      'widget_month_instance_${widgetId}_status',
+      message,
+    );
+    await _writer.refresh();
+  }
+
+  Future<void> _writeMonthPage({
+    required String prefix,
+    required CalendarMonth month,
+    required List<Event> events,
+  }) async {
+    await _writer.saveString(
+      '${prefix}_label',
+      '${_monthLabels[month.month - 1]} ${month.year}',
+    );
+    await _writer.saveString(
+      '${prefix}_anchor',
+      '${month.year.toString().padLeft(4, '0')}-${month.month.toString().padLeft(2, '0')}',
+    );
+    await _writer.saveInt('${prefix}_row_count', month.weeks.length);
+    await _writer.saveInt('${prefix}_cell_count', month.days.length);
+
     for (var index = 0; index < monthCellCapacity; index++) {
-      final key = 'widget_month_cell_$index';
+      final key = '${prefix}_cell_$index';
       if (index >= month.days.length) {
         await _writer.saveString('${key}_date', '');
         await _writer.saveInt('${key}_day', 0);
@@ -193,8 +232,6 @@ class EventWidgetService implements EventWidgetUpdater {
         await _writer.saveString('${key}_event_$eventIndex', label);
       }
     }
-
-    await _writer.refresh();
   }
 
   @override
