@@ -2042,6 +2042,201 @@ Answer behavior must follow these rules:
 - Calendar, Tasks, Notes, memory CRUD, and ordinary search remain usable when
   every AI endpoint and embedding provider is unavailable.
 
+### Google Calendar read-only integration
+
+**Status:** Planned
+
+Allow a user signed into Nexecute with Google to connect the same Google
+account's calendars and display selected Google Calendar events alongside
+native Nexecute events.
+
+Google Calendar remains authoritative. Version 1 is strictly read-only:
+Nexecute cannot create, edit, move, respond to, or delete Google events. Google
+event data and credentials must not be written to Firestore.
+
+#### Version 1 boundaries
+
+- Support Android and macOS.
+- Require the connected Calendar account to match the Google identity used for
+  Nexecute authentication.
+- Let users select which Google calendars are visible.
+- Show Google events only in Calendar month, week, selected-day agenda, and
+  event details.
+- Exclude Google events from unified search, Android widgets, Assistant
+  context/tools, Nexecute reminders, and event mutation workflows.
+- Keep a bounded device-local cache for temporary offline access.
+- Offer **Open in Google Calendar** when Google provides a safe HTTPS event URL.
+- Keep Nexecute Calendar fully usable when Google authorization or the Calendar
+  API is unavailable.
+- Do not request Calendar access during Nexecute sign-in.
+
+#### Phase 1: read-only calendar contracts
+
+- [ ] Introduce a calendar-display model that distinguishes native Nexecute
+  events from external Google events without making external events valid
+  repository mutation inputs.
+- [ ] Include stable namespaced identity, source, calendar name/color,
+  read-only capabilities, external URL, source time zone, and stale-cache
+  status.
+- [ ] Add a provider-neutral external calendar source interface for bounded
+  range reads, refresh state, and per-source failures.
+- [ ] Add a composite Calendar read source that merges Nexecute and Google
+  occurrences while preserving independent source states.
+- [ ] Keep `EventRepository` writes and Firestore serialization limited to
+  native Nexecute events.
+- [ ] Ensure a Google failure cannot replace successfully loaded Nexecute events
+  with a whole-calendar error state.
+- [ ] Define deterministic ordering and duplicate handling for overlapping
+  cache/query ranges.
+
+**Phase 1 gate:** Existing Nexecute events can pass through the new Calendar
+read layer without changing their behavior, persistence, search, reminders,
+widgets, or editing.
+
+#### Phase 2: Google authorization and account connection
+
+- [ ] Enable the Google Calendar API and configure the OAuth consent screen for
+  Android and macOS.
+- [ ] Request only `calendar.calendarlist.readonly` and
+  `calendar.events.readonly`.
+- [ ] Add a dedicated Google Calendar authorization service separate from
+  Firebase authentication.
+- [ ] Restore or select the Google provider account only after the user chooses
+  **Connect Google Calendar**.
+- [ ] Compare the stable Google provider identity with the Firebase Google
+  identity and reject mismatched accounts with actionable guidance.
+- [ ] Represent disconnected, checking, authorizing, connected, expired,
+  denied, unsupported, and failed states explicitly.
+- [ ] Obtain current access tokens through Google Sign-In when needed without
+  storing access tokens in Firestore, shared preferences, logs, or diagnostics.
+- [ ] Handle token expiration and one safe reauthorization attempt without
+  retrying arbitrary requests indefinitely.
+- [ ] Make Calendar disconnection independent from Nexecute logout.
+- [ ] Clear in-memory authorization and isolate or remove cached Calendar data
+  on disconnect, logout, or account change.
+- [ ] Document that disconnecting Nexecute's integration does not necessarily
+  revoke the Google account's OAuth grant.
+
+**Phase 2 gate:** A Google-authenticated user can explicitly connect and
+disconnect matching Calendar access without affecting Firebase login or any
+core Nexecute feature.
+
+#### Phase 3: calendar selection, retrieval, and local cache
+
+- [ ] Fetch the account's calendar list with pagination and display calendar
+  names, colors, access roles, and selection state.
+- [ ] Store selected calendar identifiers and non-secret connection metadata
+  locally per Nexecute user and Google identity.
+- [ ] Do not automatically enable newly discovered calendars after the user has
+  established an explicit selection.
+- [ ] Fetch only the bounded range required by the visible Calendar pages and
+  their existing swipe buffer.
+- [ ] Use Google-expanded recurring instances so exceptions, moved
+  occurrences, cancellations, and unsupported recurrence rules retain Google
+  semantics.
+- [ ] Handle paginated responses, rate limits, authorization failures,
+  malformed responses, and partial calendar failures.
+- [ ] Normalize RFC 3339 times, source time zones, daylight-saving transitions,
+  and Google's exclusive all-day end date into Nexecute display semantics.
+- [ ] Give each Google occurrence a stable namespaced identity based on account,
+  calendar, event, and occurrence identity.
+- [ ] Exclude cancelled instances and retain only fields the current user is
+  permitted to see.
+- [ ] Persist successful bounded range snapshots in application-private device
+  storage using atomic replacement.
+- [ ] Bound cache size and age with deterministic eviction while retaining
+  recently viewed ranges for offline use.
+- [ ] Mark cached results visibly stale when refresh fails rather than
+  presenting them as current.
+- [ ] Clear obsolete events after calendar deselection, account changes,
+  authoritative refreshes, or event cancellation.
+- [ ] Keep Calendar API payloads, personal calendar identifiers, event content,
+  and tokens out of diagnostics.
+
+**Phase 3 gate:** Selected calendars provide bounded, paginated, correctly
+normalized event occurrences, with recent successful results available offline
+and no Google data copied to Firestore.
+
+#### Phase 4: Calendar and settings interface
+
+- [ ] Add a Google Calendar section under Calendar settings with connection
+  status, connected account, Connect, Retry, Manage calendars, Refresh, and
+  Disconnect actions.
+- [ ] Show selected calendars with accessible color indicators and explicit
+  enabled state.
+- [ ] Merge Google occurrences into month, week, and selected-day agenda views.
+- [ ] Give Google events a restrained source treatment using their calendar
+  color without reducing title readability or theme contrast.
+- [ ] Show the source calendar and read-only status in event details.
+- [ ] Hide Nexecute Edit and Delete actions for Google events.
+- [ ] Add **Open in Google Calendar** only for validated public HTTPS URLs and
+  launch it externally.
+- [ ] Prevent every creation, update, deletion, reminder, conversion, and
+  repository command path from accepting a Google event.
+- [ ] Show source-specific authorization, offline, stale-cache, and rate-limit
+  states without obscuring native Nexecute events.
+- [ ] Preserve selected date, Calendar view mode, scroll position, and range
+  state while connection or refresh state changes.
+
+**Phase 4 gate:** Native and Google events appear together clearly, while every
+Google event remains visibly and technically read-only.
+
+#### Phase 5: lifecycle and verification
+
+- [ ] Test authorization success, cancellation, denial, expiration, revocation,
+  account mismatch, reconnect, disconnect, logout, and restored Firebase
+  sessions.
+- [ ] Test calendar-list and event pagination, empty calendars, partial
+  failures, rate limits, malformed responses, and cache fallback.
+- [ ] Test timed events, all-day events, multi-day spans, source time zones, DST
+  boundaries, recurrence, exceptions, moved instances, and cancellations.
+- [ ] Test stable identities, overlapping range deduplication, selection
+  changes, stale-data removal, cache bounds, and account isolation.
+- [ ] Add widget tests for settings, selection, source styling, read-only
+  details, external links, stale state, every theme, and compact/expanded
+  layouts.
+- [ ] Verify that Google events never enter Firestore, Nexecute reminders,
+  widgets, search, Assistant context, logs, or mutation commands.
+- [ ] Verify that Google API, authorization, and cache failures cannot prevent
+  Nexecute startup or native Calendar use.
+- [ ] Perform native acceptance testing on Android and macOS with primary,
+  shared, recurring, all-day, and read-only calendars.
+- [ ] Record tested Flutter, Google Sign-In, Calendar API, Android, and macOS
+  versions without committing tokens, account identifiers, or event content.
+
+#### Future candidates
+
+- [ ] Copy a Google event into Nexecute through an explicit editable preview and
+  confirmation.
+- [ ] Add Google events to search, widgets, or Assistant context as separately
+  reviewed opt-in scopes.
+- [ ] Add background refresh only after token lifecycle, battery use, quotas,
+  and stale-data behavior are measured.
+- [ ] Consider RSVP or event editing only as a separate write-access feature
+  with new OAuth scopes and explicit confirmation.
+- [ ] Support a different Calendar account from the Nexecute login account.
+- [ ] Support non-Google device calendars or additional calendar providers.
+
+#### Google Calendar integration acceptance criteria
+
+- Selected Google calendars appear alongside Nexecute events on Android and
+  macOS.
+- Google events display correctly in month, week, agenda, and detail views.
+- Google events cannot be edited or deleted through Nexecute.
+- The user can identify each event's source and open Google events externally.
+- Calendar authorization is optional and independent from Nexecute
+  authentication.
+- A Google outage or expired grant does not hide or break native Nexecute
+  events.
+- Recently synchronized ranges remain available offline and are marked stale
+  when appropriate.
+- Account switching, logout, disconnect, and calendar deselection do not expose
+  another account's cached data.
+- No Google credential or event content is stored in Firestore or emitted to
+  diagnostics.
+- Existing Nexecute event editing, recurrence, reminders, widgets, search, and
+  AI behavior remains unchanged.
+
 ### Today dashboard and universal quick capture
 
 **Status:** Deferred
@@ -2102,7 +2297,8 @@ removed application-wide live event-history stream.
 - Add launcher shortcuts for quick task, note, and event creation.
 - Accept shared text from other Android applications as a new note.
 - Add notification actions for completing or postponing tasks.
-- Consider optional Android system-calendar integration.
+- Consider optional non-Google Android system-calendar integration separately
+  from the planned Google Calendar API integration.
 
 ### Android month calendar widget
 
