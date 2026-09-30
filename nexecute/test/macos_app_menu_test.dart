@@ -12,6 +12,7 @@ import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/models/tag.dart' as models;
 import 'package:nexecute/models/todo_item.dart';
+import 'package:nexecute/repositories/calendar_read_source.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/shared/drawer.dart';
 import 'package:nexecute/themes.dart';
@@ -140,6 +141,12 @@ Future<void> _pumpHome(WidgetTester tester) {
         ChangeNotifierProvider(create: (_) => SelectedDay()),
         ChangeNotifierProvider(create: (_) => NotesController()),
         Provider<EventRepository>.value(value: FakeEventRepository()),
+        Provider<CalendarReadSource>(
+          create:
+              (context) => CompositeCalendarReadSource(
+                nativeEventRepository: context.read<EventRepository>(),
+              ),
+        ),
         Provider<DataState<List<TodoItem>>>.value(value: const DataEmpty([])),
         Provider<DataState<List<Quicxec>>>.value(value: const DataEmpty([])),
         Provider<DataState<List<NoteFolder>>>.value(value: const DataEmpty([])),

@@ -1,3 +1,4 @@
+import 'package:nexecute/domain/calendar/calendar_display_event.dart';
 import 'package:nexecute/models/event.dart';
 
 List<Event> eventsForDay(Iterable<Event> events, DateTime day) {
@@ -9,6 +10,22 @@ List<Event> eventsForDay(Iterable<Event> events, DateTime day) {
           return !normalizedDay.isBefore(start) && !normalizedDay.isAfter(end);
         }).toList()
         ..sort((first, second) => first.startTime.compareTo(second.startTime));
+
+  return result;
+}
+
+List<CalendarDisplayEvent> calendarEventsForDay(
+  Iterable<CalendarDisplayEvent> events,
+  DateTime day,
+) {
+  final normalizedDay = dateOnly(day);
+  final result =
+      events.where((event) {
+          final start = dateOnly(event.startTime);
+          final end = dateOnly(event.endTime);
+          return !normalizedDay.isBefore(start) && !normalizedDay.isAfter(end);
+        }).toList()
+        ..sort(compareCalendarDisplayEvents);
 
   return result;
 }

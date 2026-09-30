@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
 import 'package:nexecute/domain/calendar/iso_week_calculator.dart';
 import 'package:nexecute/models/selected_day.dart';
+import 'package:nexecute/repositories/calendar_read_source.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/themes.dart';
 import 'package:nexecute/ui/calendar/calendar.dart';
@@ -20,6 +21,12 @@ void main() {
       MultiProvider(
         providers: [
           Provider<EventRepository>.value(value: FakeEventRepository()),
+          Provider<CalendarReadSource>(
+            create:
+                (context) => CompositeCalendarReadSource(
+                  nativeEventRepository: context.read<EventRepository>(),
+                ),
+          ),
           ChangeNotifierProvider.value(value: selectedDay),
         ],
         child: MaterialApp(
@@ -50,6 +57,12 @@ void main() {
       MultiProvider(
         providers: [
           Provider<EventRepository>.value(value: FakeEventRepository()),
+          Provider<CalendarReadSource>(
+            create:
+                (context) => CompositeCalendarReadSource(
+                  nativeEventRepository: context.read<EventRepository>(),
+                ),
+          ),
           ChangeNotifierProvider.value(value: selectedDay),
         ],
         child: MaterialApp(
@@ -81,6 +94,12 @@ void main() {
       MultiProvider(
         providers: [
           Provider<EventRepository>.value(value: FakeEventRepository()),
+          Provider<CalendarReadSource>(
+            create:
+                (context) => CompositeCalendarReadSource(
+                  nativeEventRepository: context.read<EventRepository>(),
+                ),
+          ),
           ChangeNotifierProvider(create: (_) => SelectedDay()),
         ],
         child: MaterialApp(
@@ -156,6 +175,12 @@ void main() {
       MultiProvider(
         providers: [
           Provider<EventRepository>.value(value: FakeEventRepository()),
+          Provider<CalendarReadSource>(
+            create:
+                (context) => CompositeCalendarReadSource(
+                  nativeEventRepository: context.read<EventRepository>(),
+                ),
+          ),
           ChangeNotifierProvider(create: (_) => SelectedDay()),
         ],
         child: MaterialApp(
@@ -201,6 +226,12 @@ void main() {
       MultiProvider(
         providers: [
           Provider<EventRepository>.value(value: eventRepository),
+          Provider<CalendarReadSource>(
+            create:
+                (context) => CompositeCalendarReadSource(
+                  nativeEventRepository: context.read<EventRepository>(),
+                ),
+          ),
           ChangeNotifierProvider(create: (_) => SelectedDay()),
         ],
         child: MaterialApp(

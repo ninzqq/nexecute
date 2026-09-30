@@ -14,6 +14,7 @@ import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/models/tag.dart' as models;
 import 'package:nexecute/models/todo_item.dart';
+import 'package:nexecute/repositories/calendar_read_source.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/shared/adaptive_navigation_shell.dart';
 import 'package:nexecute/shared/app_brand_icon.dart';
@@ -615,6 +616,12 @@ Future<void> _pumpHome(
         ChangeNotifierProvider(create: (_) => AppThemeController()),
         ChangeNotifierProvider(create: (_) => CalendarSettingsController()),
         Provider<EventRepository>.value(value: FakeEventRepository()),
+        Provider<CalendarReadSource>(
+          create:
+              (context) => CompositeCalendarReadSource(
+                nativeEventRepository: context.read<EventRepository>(),
+              ),
+        ),
         Provider<AuthService>(
           create:
               (_) => AuthService(

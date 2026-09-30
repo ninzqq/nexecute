@@ -2044,7 +2044,7 @@ Answer behavior must follow these rules:
 
 ### Google Calendar read-only integration
 
-**Status:** Planned
+**Status:** 🚧 In progress — Phase 1 complete; Google authorization is next
 
 Allow a user signed into Nexecute with Google to connect the same Google
 account's calendars and display selected Google Calendar events alongside
@@ -2072,26 +2072,36 @@ event data and credentials must not be written to Firestore.
 
 #### Phase 1: read-only calendar contracts
 
-- [ ] Introduce a calendar-display model that distinguishes native Nexecute
+- [x] Introduce a calendar-display model that distinguishes native Nexecute
   events from external Google events without making external events valid
   repository mutation inputs.
-- [ ] Include stable namespaced identity, source, calendar name/color,
+- [x] Include stable namespaced identity, source, calendar name/color,
   read-only capabilities, external URL, source time zone, and stale-cache
   status.
-- [ ] Add a provider-neutral external calendar source interface for bounded
+- [x] Add a provider-neutral external calendar source interface for bounded
   range reads, refresh state, and per-source failures.
-- [ ] Add a composite Calendar read source that merges Nexecute and Google
+- [x] Add a composite Calendar read source that merges Nexecute and Google
   occurrences while preserving independent source states.
-- [ ] Keep `EventRepository` writes and Firestore serialization limited to
+- [x] Keep `EventRepository` writes and Firestore serialization limited to
   native Nexecute events.
-- [ ] Ensure a Google failure cannot replace successfully loaded Nexecute events
+- [x] Ensure a Google failure cannot replace successfully loaded Nexecute events
   with a whole-calendar error state.
-- [ ] Define deterministic ordering and duplicate handling for overlapping
+- [x] Define deterministic ordering and duplicate handling for overlapping
   cache/query ranges.
 
 **Phase 1 gate:** Existing Nexecute events can pass through the new Calendar
 read layer without changing their behavior, persistence, search, reminders,
 widgets, or editing.
+
+**Phase 1 complete:** Calendar presentation now consumes a source-aware display
+model and `CalendarReadSource`, while `EventRepository` remains the only native
+write boundary used by Firestore, search, reminders, widgets, and AI context.
+The composite source independently tracks source state, filters bounded ranges,
+deduplicates stable identities, prefers fresh data over stale cache entries, and
+uses deterministic cross-source ordering. External display events cannot expose
+native mutation capabilities, and their details render without Edit or Delete.
+Static analysis and the focused model, source, Calendar interaction, navigation,
+week-view, settings, and macOS menu tests pass.
 
 #### Phase 2: Google authorization and account connection
 

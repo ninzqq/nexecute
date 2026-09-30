@@ -132,6 +132,12 @@ class NexecuteState extends State<Nexecute> {
             );
           },
         ),
+        Provider<CalendarReadSource>(
+          create:
+              (context) => CompositeCalendarReadSource(
+                nativeEventRepository: context.read<EventRepository>(),
+              ),
+        ),
         Provider<EventWidgetSynchronizationCoordinator>(
           lazy: false,
           create:

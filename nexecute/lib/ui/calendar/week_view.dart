@@ -3,8 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:nexecute/domain/calendar/calendar_day.dart';
+import 'package:nexecute/domain/calendar/calendar_display_event.dart';
 import 'package:nexecute/domain/calendar/calendar_week.dart';
-import 'package:nexecute/models/event.dart';
 import 'package:nexecute/themes.dart';
 import 'package:nexecute/ui/calendar/day_column.dart';
 import 'package:nexecute/ui/calendar/event_date_utils.dart';
@@ -25,17 +25,17 @@ class WeekView extends StatelessWidget {
   });
 
   final CalendarWeek week;
-  final List<Event> events;
+  final List<CalendarDisplayEvent> events;
   final DateTime selectedDay;
   final ValueChanged<DateTime> onDaySelected;
-  final ValueChanged<Event> onEventSelected;
+  final ValueChanged<CalendarDisplayEvent> onEventSelected;
   final ScrollController timeScrollController;
 
   @override
   Widget build(BuildContext context) {
     final allDayEvents = [
       for (final day in week.days)
-        eventsForDay(
+        calendarEventsForDay(
           events,
           day.date,
         ).where((event) => event.isAllDay).toList(),
@@ -85,7 +85,7 @@ class WeekView extends StatelessWidget {
                         Expanded(
                           child: DayColumn(
                             day: day,
-                            events: eventsForDay(events, day.date),
+                            events: calendarEventsForDay(events, day.date),
                             isSelected: isSameCalendarDay(
                               day.date,
                               selectedDay,
@@ -216,9 +216,9 @@ class _AllDayEventsRow extends StatelessWidget {
   });
 
   final List<CalendarDay> days;
-  final List<List<Event>> eventsByDay;
+  final List<List<CalendarDisplayEvent>> eventsByDay;
   final ValueChanged<DateTime> onDaySelected;
-  final ValueChanged<Event> onEventSelected;
+  final ValueChanged<CalendarDisplayEvent> onEventSelected;
 
   @override
   Widget build(BuildContext context) {

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/calendar/bottomsheets/event_details.dart';
+import 'package:nexecute/domain/calendar/calendar_display_event.dart';
+import 'package:nexecute/domain/calendar/calendar_query_range.dart';
 import 'package:nexecute/home/bottomsheets/item_editor_sheet.dart';
 import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/event.dart';
@@ -9,6 +11,7 @@ import 'package:nexecute/models/event_reminder.dart';
 import 'package:nexecute/models/event_recurrence.dart';
 import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/models/tag.dart' as models;
+import 'package:nexecute/repositories/calendar_read_source.dart';
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/themes.dart';
 import 'package:nexecute/ui/calendar/calendar.dart';
@@ -48,6 +51,12 @@ void main() {
         providers: [
           Provider<EventRepository>.value(
             value: FakeEventRepository(events: events),
+          ),
+          Provider<CalendarReadSource>(
+            create:
+                (context) => CompositeCalendarReadSource(
+                  nativeEventRepository: context.read<EventRepository>(),
+                ),
           ),
           ChangeNotifierProvider(create: (_) => SelectedDay()),
         ],
@@ -118,6 +127,12 @@ void main() {
       MultiProvider(
         providers: [
           Provider<EventRepository>.value(value: repository),
+          Provider<CalendarReadSource>(
+            create:
+                (context) => CompositeCalendarReadSource(
+                  nativeEventRepository: context.read<EventRepository>(),
+                ),
+          ),
           Provider<DataState<models.Tags>>.value(
             value: DataEmpty(models.Tags()),
           ),
@@ -211,6 +226,12 @@ void main() {
         providers: [
           Provider<EventRepository>.value(
             value: FakeEventRepository(events: [event]),
+          ),
+          Provider<CalendarReadSource>(
+            create:
+                (context) => CompositeCalendarReadSource(
+                  nativeEventRepository: context.read<EventRepository>(),
+                ),
           ),
           Provider<DataState<models.Tags>>.value(
             value: DataEmpty(models.Tags()),
@@ -411,6 +432,12 @@ void main() {
               state: DataFailure(StateError('Firestore unavailable')),
             ),
           ),
+          Provider<CalendarReadSource>(
+            create:
+                (context) => CompositeCalendarReadSource(
+                  nativeEventRepository: context.read<EventRepository>(),
+                ),
+          ),
           ChangeNotifierProvider(create: (_) => SelectedDay()),
         ],
         child: MaterialApp(
@@ -424,4 +451,85 @@ void main() {
     expect(find.text('Could not load events'), findsOneWidget);
     expect(find.text('No events for this day'), findsNothing);
   });
+
+  testWidgets('external calendar events open without mutation actions', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final now = DateTime.now();
+    const google = CalendarEventSource('google', displayName: 'Google');
+    final event = CalendarDisplayEvent(
+      identity: const CalendarEventIdentity(
+        source: google,
+        sourceScopedId: 'google-event',
+      ),
+      title: 'Google planning',
+      description: 'Read-only external event',
+      startTime: DateTime(now.year, now.month, now.day, 14),
+      endTime: DateTime(now.year, now.month, now.day, 15),
+      isAllDay: false,
+      calendarName: 'Work',
+      capabilities: CalendarEventCapabilities.readOnly,
+    );
+    final snapshot = CalendarReadSnapshot(
+      events: [event],
+      sources: {
+        CalendarEventSource.nexecute: CalendarSourceSnapshot(
+          source: CalendarEventSource.nexecute,
+          events: const [],
+          loadState: CalendarSourceLoadState.failed,
+          failure: CalendarSourceFailure(StateError('Firestore unavailable')),
+        ),
+        google: CalendarSourceSnapshot(
+          source: google,
+          events: [event],
+          loadState: CalendarSourceLoadState.ready,
+        ),
+      },
+    );
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<EventRepository>.value(value: FakeEventRepository()),
+          Provider<CalendarReadSource>.value(
+            value: _FixedCalendarReadSource(snapshot),
+          ),
+          ChangeNotifierProvider(create: (_) => SelectedDay()),
+        ],
+        child: MaterialApp(
+          theme: AppThemes.forPreset(AppThemePreset.midnight),
+          home: const CalendarPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey('agenda-event-google:google-event')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('event-details-title')), findsOneWidget);
+    expect(find.text('Read-only external event'), findsOneWidget);
+    expect(find.byKey(const Key('event-details-edit-action')), findsNothing);
+    expect(find.byKey(const Key('event-details-delete-action')), findsNothing);
+  });
+}
+
+final class _FixedCalendarReadSource implements CalendarReadSource {
+  const _FixedCalendarReadSource(this.snapshot);
+
+  final CalendarReadSnapshot snapshot;
+
+  @override
+  Future<void> refresh(CalendarQueryRange range) async {}
+
+  @override
+  Stream<CalendarReadSnapshot> watchEvents(CalendarQueryRange range) =>
+      Stream.value(snapshot);
 }

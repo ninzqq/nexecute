@@ -3,8 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:nexecute/domain/calendar/calendar_day.dart';
+import 'package:nexecute/domain/calendar/calendar_display_event.dart';
 import 'package:nexecute/domain/calendar/calendar_month.dart';
-import 'package:nexecute/models/event.dart';
 import 'package:nexecute/themes.dart';
 import 'package:nexecute/ui/calendar/event_date_utils.dart';
 
@@ -49,9 +49,9 @@ class MonthView extends StatelessWidget {
   final CalendarMonth month;
   final bool showWeekNumbers;
   final DateTime selectedDay;
-  final List<Event> events;
+  final List<CalendarDisplayEvent> events;
   final ValueChanged<DateTime> onDaySelected;
-  final ValueChanged<Event> onEventSelected;
+  final ValueChanged<CalendarDisplayEvent> onEventSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -95,7 +95,7 @@ class MonthView extends StatelessWidget {
                           Expanded(
                             child: _MonthDayCell(
                               day: day,
-                              events: eventsForDay(events, day.date),
+                              events: calendarEventsForDay(events, day.date),
                               isInMonth: month.contains(day.date),
                               isSelected: isSameCalendarDay(
                                 day.date,
@@ -215,12 +215,12 @@ class _MonthDayCell extends StatelessWidget {
   });
 
   final CalendarDay day;
-  final List<Event> events;
+  final List<CalendarDisplayEvent> events;
   final bool isInMonth;
   final bool isSelected;
   final bool isToday;
   final VoidCallback onTap;
-  final ValueChanged<Event> onEventSelected;
+  final ValueChanged<CalendarDisplayEvent> onEventSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -336,7 +336,7 @@ class _MonthDayCell extends StatelessWidget {
 class _EventMarker extends StatelessWidget {
   const _EventMarker({required this.event, required this.onTap});
 
-  final Event event;
+  final CalendarDisplayEvent event;
   final VoidCallback onTap;
 
   @override

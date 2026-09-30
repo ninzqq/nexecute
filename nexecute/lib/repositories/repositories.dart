@@ -1,3 +1,4 @@
+export 'calendar_read_source.dart';
 export 'event_repository.dart';
 export 'note_repository.dart';
 export 'note_folder_repository.dart';

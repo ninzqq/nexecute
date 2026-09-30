@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:nexecute/domain/calendar/calendar_day.dart';
-import 'package:nexecute/models/event.dart';
+import 'package:nexecute/domain/calendar/calendar_display_event.dart';
 import 'package:nexecute/themes.dart';
 import 'package:nexecute/ui/calendar/event_date_utils.dart';
 
@@ -22,10 +22,10 @@ class DayColumn extends StatelessWidget {
   });
 
   final CalendarDay day;
-  final List<Event> events;
+  final List<CalendarDisplayEvent> events;
   final bool isSelected;
   final VoidCallback onSelected;
-  final ValueChanged<Event> onEventSelected;
+  final ValueChanged<CalendarDisplayEvent> onEventSelected;
   final double hourHeight;
 
   @override
@@ -115,7 +115,7 @@ class _WeekEventCard extends StatelessWidget {
     required this.onTap,
   });
 
-  final Event event;
+  final CalendarDisplayEvent event;
   final DateTime day;
   final VoidCallback onTap;
 
@@ -131,7 +131,7 @@ class _WeekEventCard extends StatelessWidget {
       label: '${event.title}, $timeLabel',
       child: Material(
         key: ValueKey(
-          'week-event-${event.id}-${day.year}-${day.month}-${day.day}',
+          'week-event-${event.nativeEvent?.id ?? event.identity}-${day.year}-${day.month}-${day.day}',
         ),
         color: palette.primary.withValues(alpha: 0.28),
         borderRadius: BorderRadius.circular(4),
@@ -204,7 +204,7 @@ class _TimedEventSegment {
     required this.endMinute,
   });
 
-  final Event event;
+  final CalendarDisplayEvent event;
   final double startMinute;
   final double endMinute;
 }
@@ -218,7 +218,7 @@ class _WeekEventPlacement {
     required this.laneCount,
   });
 
-  final Event event;
+  final CalendarDisplayEvent event;
   final double top;
   final double height;
   final int lane;
@@ -226,7 +226,7 @@ class _WeekEventPlacement {
 }
 
 List<_WeekEventPlacement> _placeTimedEvents(
-  Iterable<Event> events,
+  Iterable<CalendarDisplayEvent> events,
   DateTime day, {
   required double hourHeight,
   required double gridHeight,

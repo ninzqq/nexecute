@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:nexecute/domain/calendar/calendar_display_event.dart';
 import 'package:nexecute/home/bottomsheets/item_editor.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/event_reminder.dart';
@@ -26,6 +27,95 @@ Future<void> showEventDetails(BuildContext context, Event event) {
         (_) =>
             BottomSheetSafeArea(child: EventDetailsBottomSheet(event: event)),
   );
+}
+
+Future<void> showCalendarEventDetails(
+  BuildContext context,
+  CalendarDisplayEvent event,
+) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    isDismissible: true,
+    enableDrag: true,
+    useSafeArea: true,
+    showDragHandle: true,
+    constraints: adaptiveSheetConstraints(context),
+    builder:
+        (_) => BottomSheetSafeArea(
+          child: SingleChildScrollView(
+            child: CalendarEventDetailsPanel(event: event),
+          ),
+        ),
+  );
+}
+
+class CalendarEventDetailsPanel extends StatelessWidget {
+  const CalendarEventDetailsPanel({
+    super.key,
+    required this.event,
+    this.onClose,
+    this.onDeleted,
+  });
+
+  final CalendarDisplayEvent event;
+  final VoidCallback? onClose;
+  final VoidCallback? onDeleted;
+
+  @override
+  Widget build(BuildContext context) {
+    final nativeEvent = event.nativeEvent;
+    if (nativeEvent != null &&
+        event.capabilities.canEdit &&
+        event.capabilities.canDelete) {
+      return EventDetailsPanel(
+        event: nativeEvent,
+        onClose: onClose,
+        onDeleted: onDeleted,
+      );
+    }
+
+    return Center(
+      child: ConstrainedBox(
+        key: const Key('event-details-content'),
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(18, onClose == null ? 4 : 18, 18, 18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _EventDetailsHeader(title: event.title, onClose: onClose),
+              const SizedBox(height: 16),
+              _EventScheduleCard(
+                date: _calendarDateLabel(event.startTime, event.endTime),
+                time: _calendarTimeLabel(event),
+              ),
+              if (event.description.trim().isNotEmpty) ...[
+                const SizedBox(height: 20),
+                const _SectionHeading(
+                  icon: Icons.notes_rounded,
+                  label: 'Description',
+                ),
+                const SizedBox(height: 10),
+                _DescriptionCard(description: event.description.trim()),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _calendarTimeLabel(CalendarDisplayEvent event) {
+  if (event.isAllDay) return 'All day';
+  return '${DateFormat('HH:mm').format(event.startTime)}–${DateFormat('HH:mm').format(event.endTime)}';
+}
+
+String _calendarDateLabel(DateTime startTime, DateTime endTime) {
+  final start = DateFormat('EEEE, d MMMM yyyy').format(startTime);
+  final end = DateFormat('EEEE, d MMMM yyyy').format(endTime);
+  return start == end ? start : '$start – $end';
 }
 
 class EventDetailsBottomSheet extends StatelessWidget {
@@ -62,7 +152,7 @@ class EventDetailsPanel extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _EventDetailsHeader(event: event, onClose: onClose),
+              _EventDetailsHeader(title: event.title, onClose: onClose),
               const SizedBox(height: 16),
               _EventScheduleCard(
                 date: _dateLabel(),
@@ -146,9 +236,9 @@ class EventDetailsPanel extends StatelessWidget {
 }
 
 class _EventDetailsHeader extends StatelessWidget {
-  const _EventDetailsHeader({required this.event, this.onClose});
+  const _EventDetailsHeader({required this.title, this.onClose});
 
-  final Event event;
+  final String title;
   final VoidCallback? onClose;
 
   @override
@@ -173,7 +263,7 @@ class _EventDetailsHeader extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.only(top: 5),
             child: Text(
-              event.title,
+              title,
               key: const Key('event-details-title'),
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w700,

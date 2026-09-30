@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:nexecute/models/event.dart';
+import 'package:nexecute/domain/calendar/calendar_display_event.dart';
 import 'package:nexecute/themes.dart';
 import 'package:nexecute/ui/calendar/event_date_utils.dart';
 
@@ -25,12 +25,12 @@ class SelectedDayAgenda extends StatelessWidget {
   });
 
   final DateTime day;
-  final List<Event> events;
+  final List<CalendarDisplayEvent> events;
   final bool isExpanded;
   final VoidCallback? onToggleExpanded;
   final ValueChanged<double>? onResize;
   final ValueChanged<double>? onResizeEnd;
-  final ValueChanged<Event> onEventSelected;
+  final ValueChanged<CalendarDisplayEvent> onEventSelected;
   final bool reserveFloatingActionButtonSpace;
 
   @override
@@ -82,7 +82,9 @@ class SelectedDayAgenda extends StatelessWidget {
                     color: palette.surfaceRaised,
                     borderRadius: BorderRadius.circular(8),
                     child: InkWell(
-                      key: ValueKey('agenda-event-${event.id}'),
+                      key: ValueKey(
+                        'agenda-event-${event.nativeEvent?.id ?? event.identity}',
+                      ),
                       borderRadius: BorderRadius.circular(8),
                       onTap: () => onEventSelected(event),
                       child: Padding(
@@ -133,7 +135,7 @@ class SelectedDayAgenda extends StatelessWidget {
     );
   }
 
-  String _timeLabel(Event event, DateTime selectedDay) {
+  String _timeLabel(CalendarDisplayEvent event, DateTime selectedDay) {
     if (event.isAllDay) return 'All day';
     if (!isSameCalendarDay(event.startTime, selectedDay)) return 'Continues';
     return DateFormat('HH:mm').format(event.startTime);

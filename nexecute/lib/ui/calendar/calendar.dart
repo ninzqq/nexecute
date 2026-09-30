@@ -3,15 +3,14 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:nexecute/domain/calendar/calendar_display_event.dart';
 import 'package:nexecute/domain/calendar/calendar_query_range.dart';
 import 'package:nexecute/domain/calendar/gregorian_month_calculator.dart';
 import 'package:nexecute/domain/calendar/iso_week_calculator.dart';
-import 'package:nexecute/models/data_state.dart';
-import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/calendar_settings_controller.dart';
 import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/calendar/bottomsheets/event_details.dart';
-import 'package:nexecute/repositories/event_repository.dart';
+import 'package:nexecute/repositories/calendar_read_source.dart';
 import 'package:nexecute/shared/adaptive_navigation_shell.dart';
 import 'package:nexecute/shared/app_shortcuts.dart';
 import 'package:nexecute/shared/data_state_placeholder.dart';
@@ -52,12 +51,12 @@ class _CalendarPageState extends State<CalendarPage>
   int _monthPage = _initialPage;
   int _weekPage = _initialPage;
   int _pageControllerGeneration = 0;
-  EventRepository? _eventRepository;
+  CalendarReadSource? _calendarReadSource;
   CalendarQueryRange? _eventRange;
-  Stream<DataState<List<Event>>>? _eventsStream;
+  Stream<CalendarReadSnapshot>? _eventsStream;
   double _agendaExpansion = 0;
   bool _isDraggingAgenda = false;
-  Event? _selectedEvent;
+  CalendarDisplayEvent? _selectedEvent;
   Timer? _dayChangeTimer;
   late DateTime _today;
 
@@ -95,35 +94,51 @@ class _CalendarPageState extends State<CalendarPage>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final repository = context.read<EventRepository>();
-    if (identical(repository, _eventRepository)) return;
+    final readSource = context.read<CalendarReadSource>();
+    if (identical(readSource, _calendarReadSource)) return;
 
-    _eventRepository = repository;
+    _calendarReadSource = readSource;
     _refreshEventStream(force: true);
   }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<DataState<List<Event>>>(
+    return StreamBuilder<CalendarReadSnapshot>(
       stream: _eventsStream,
-      initialData: const DataLoading<List<Event>>(),
+      initialData: CalendarReadSnapshot(
+        events: const [],
+        sources: {
+          CalendarEventSource.nexecute: CalendarSourceSnapshot.loading(
+            CalendarEventSource.nexecute,
+          ),
+        },
+      ),
       builder: (context, snapshot) {
         final state =
             snapshot.hasError
-                ? DataFailure<List<Event>>(snapshot.error!)
-                : snapshot.data ?? const DataLoading<List<Event>>();
+                ? CalendarReadSnapshot(
+                  events: const [],
+                  sources: {
+                    CalendarEventSource.nexecute: CalendarSourceSnapshot.failed(
+                      CalendarEventSource.nexecute,
+                      snapshot.error!,
+                      snapshot.stackTrace,
+                    ),
+                  },
+                )
+                : snapshot.data!;
         return _buildCalendar(context, state);
       },
     );
   }
 
-  Widget _buildCalendar(BuildContext context, DataState<List<Event>> state) {
-    final events = state.valueOrNull ?? const <Event>[];
+  Widget _buildCalendar(BuildContext context, CalendarReadSnapshot state) {
+    final events = state.events;
     final calendarSettings = context.watch<CalendarSettingsController?>();
     final showWeekNumbers = calendarSettings?.showWeekNumbers ?? true;
     final week = _weekCalculator.fromDate(_weekDateForPage(_weekPage));
     final month = _monthCalculator.fromDate(_monthDateForPage(_monthPage));
-    final selectedEvents = eventsForDay(events, _selectedDay);
+    final selectedEvents = calendarEventsForDay(events, _selectedDay);
     final selectedEvent = _matchingEvent(events, _selectedEvent);
 
     return FocusTraversalGroup(
@@ -151,9 +166,7 @@ class _CalendarPageState extends State<CalendarPage>
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final layoutClass = AppLayoutBreakpoints.fromContext(context);
-                  final hasAgenda =
-                      state is DataReady<List<Event>> ||
-                      state is DataEmpty<List<Event>>;
+                  final hasAgenda = _hasUsableCalendarData(state);
                   if (layoutClass.usesCalendarSidePane) {
                     final agendaWidth = math.min(
                       360.0,
@@ -255,7 +268,7 @@ class _CalendarPageState extends State<CalendarPage>
   }
 
   Widget _calendarPager({
-    required List<Event> events,
+    required List<CalendarDisplayEvent> events,
     required bool showWeekNumbers,
   }) {
     return KeyedSubtree(
@@ -317,33 +330,16 @@ class _CalendarPageState extends State<CalendarPage>
   }
 
   Widget _agendaForState(
-    DataState<List<Event>> state,
-    List<Event> selectedEvents, {
+    CalendarReadSnapshot state,
+    List<CalendarDisplayEvent> selectedEvents, {
     required bool isExpanded,
     VoidCallback? onToggleExpanded,
     ValueChanged<double>? onResize,
     ValueChanged<double>? onResizeEnd,
     bool reserveFloatingActionButtonSpace = true,
   }) {
-    return switch (state) {
-      DataLoading<List<Event>>() => const DataStatePlaceholder(
-        presentation: DataStatePresentation.loading,
-        title: 'Loading events…',
-        message: '',
-        compact: true,
-      ),
-      DataUnauthenticated<List<Event>>() => const DataStatePlaceholder(
-        presentation: DataStatePresentation.unauthenticated,
-        title: 'Sign in to access events',
-        message: '',
-        compact: true,
-      ),
-      DataFailure<List<Event>>() => const DataStatePlaceholder(
-        presentation: DataStatePresentation.failure,
-        title: 'Could not load events',
-        compact: true,
-      ),
-      DataEmpty<List<Event>>() || DataReady<List<Event>>() => SelectedDayAgenda(
+    if (_hasUsableCalendarData(state)) {
+      return SelectedDayAgenda(
         day: _selectedDay,
         events: selectedEvents,
         isExpanded: isExpanded,
@@ -352,9 +348,39 @@ class _CalendarPageState extends State<CalendarPage>
         onResizeEnd: onResizeEnd,
         onEventSelected: _openEvent,
         reserveFloatingActionButtonSpace: reserveFloatingActionButtonSpace,
+      );
+    }
+
+    return switch (state.native.loadState) {
+      CalendarSourceLoadState.loading => const DataStatePlaceholder(
+        presentation: DataStatePresentation.loading,
+        title: 'Loading events…',
+        message: '',
+        compact: true,
       ),
+      CalendarSourceLoadState.unauthenticated => const DataStatePlaceholder(
+        presentation: DataStatePresentation.unauthenticated,
+        title: 'Sign in to access events',
+        message: '',
+        compact: true,
+      ),
+      CalendarSourceLoadState.failed => const DataStatePlaceholder(
+        presentation: DataStatePresentation.failure,
+        title: 'Could not load events',
+        compact: true,
+      ),
+      CalendarSourceLoadState.empty || CalendarSourceLoadState.ready =>
+        throw StateError('Usable native state was handled above'),
     };
   }
+
+  bool _hasUsableCalendarData(CalendarReadSnapshot state) =>
+      state.sources.values.any(
+        (source) =>
+            source.events.isNotEmpty ||
+            source.loadState == CalendarSourceLoadState.ready ||
+            source.loadState == CalendarSourceLoadState.empty,
+      );
 
   double _expandedAgendaHeight({
     required double availableHeight,
@@ -565,8 +591,8 @@ class _CalendarPageState extends State<CalendarPage>
   }
 
   void _refreshEventStream({bool force = false}) {
-    final repository = _eventRepository;
-    if (repository == null) return;
+    final readSource = _calendarReadSource;
+    if (readSource == null) return;
 
     final range = switch (_viewMode) {
       CalendarViewMode.month => monthQueryRange(
@@ -581,7 +607,7 @@ class _CalendarPageState extends State<CalendarPage>
     if (!force && range == _eventRange) return;
 
     _eventRange = range;
-    _eventsStream = repository.watchEvents(range);
+    _eventsStream = readSource.watchEvents(range);
   }
 
   void _animateActivePageToDate(DateTime date) {
@@ -635,24 +661,28 @@ class _CalendarPageState extends State<CalendarPage>
     return _initialPage + targetUtc.difference(anchorUtc).inDays ~/ 7;
   }
 
-  void _openEvent(Event event) {
+  void _openEvent(CalendarDisplayEvent event) {
     if (AppLayoutBreakpoints.fromContext(context).usesCalendarSidePane) {
       setState(() => _selectedEvent = event);
     } else {
-      showEventDetails(context, event);
+      final nativeEvent = event.nativeEvent;
+      if (nativeEvent != null &&
+          event.capabilities.canEdit &&
+          event.capabilities.canDelete) {
+        showEventDetails(context, nativeEvent);
+      } else {
+        showCalendarEventDetails(context, event);
+      }
     }
   }
 
-  Event? _matchingEvent(List<Event> events, Event? selectedEvent) {
+  CalendarDisplayEvent? _matchingEvent(
+    List<CalendarDisplayEvent> events,
+    CalendarDisplayEvent? selectedEvent,
+  ) {
     if (selectedEvent == null) return null;
     for (final event in events) {
-      if (event.id == selectedEvent.id &&
-          event.startTime == selectedEvent.startTime) {
-        return event;
-      }
-    }
-    for (final event in events) {
-      if (event.id == selectedEvent.id) return event;
+      if (event.identity == selectedEvent.identity) return event;
     }
     return null;
   }
@@ -664,7 +694,7 @@ class _CalendarEventDetailsOverlay extends StatelessWidget {
     required this.onClose,
   });
 
-  final Event event;
+  final CalendarDisplayEvent event;
   final VoidCallback onClose;
 
   @override
@@ -701,7 +731,7 @@ class _CalendarEventDetailsOverlay extends StatelessWidget {
                       ),
                     ),
                     child: SingleChildScrollView(
-                      child: EventDetailsPanel(
+                      child: CalendarEventDetailsPanel(
                         event: event,
                         onClose: onClose,
                         onDeleted: onClose,

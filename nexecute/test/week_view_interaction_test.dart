@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/domain/calendar/calendar_day.dart';
+import 'package:nexecute/domain/calendar/calendar_display_event.dart';
 import 'package:nexecute/domain/calendar/iso_week_calculator.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/themes.dart';
@@ -51,7 +52,7 @@ void main() {
       endTime: DateTime(2026, 8, 25, 10),
     );
     var daySelections = 0;
-    Event? selectedEvent;
+    CalendarDisplayEvent? selectedEvent;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -62,7 +63,7 @@ void main() {
               width: 120,
               child: DayColumn(
                 day: CalendarDay(date: date),
-                events: [event],
+                events: [CalendarDisplayEvent.native(event)],
                 isSelected: false,
                 onSelected: () => daySelections++,
                 onEventSelected: (value) => selectedEvent = value,
@@ -76,7 +77,7 @@ void main() {
     await tester.tap(find.text('Planning'));
     await tester.pump();
 
-    expect(selectedEvent, same(event));
+    expect(selectedEvent?.nativeEvent, same(event));
     expect(daySelections, 0);
   });
 
@@ -100,7 +101,7 @@ void main() {
               width: 120,
               child: DayColumn(
                 day: CalendarDay(date: date),
-                events: [event],
+                events: [CalendarDisplayEvent.native(event)],
                 isSelected: false,
                 onSelected: () {},
                 onEventSelected: (_) {},
@@ -144,7 +145,7 @@ void main() {
         home: Scaffold(
           body: WeekView(
             week: IsoWeekCalculator().fromDate(date),
-            events: [event],
+            events: [CalendarDisplayEvent.native(event)],
             selectedDay: date,
             onDaySelected: (_) {},
             onEventSelected: (_) {},
@@ -199,7 +200,7 @@ void main() {
         home: Scaffold(
           body: WeekView(
             week: IsoWeekCalculator().fromDate(date),
-            events: [event],
+            events: [CalendarDisplayEvent.native(event)],
             selectedDay: date,
             onDaySelected: (_) {},
             onEventSelected: (_) {},
@@ -292,7 +293,10 @@ void main() {
             child: SingleChildScrollView(
               child: DayColumn(
                 day: CalendarDay(date: date),
-                events: [firstEvent, secondEvent],
+                events: [
+                  CalendarDisplayEvent.native(firstEvent),
+                  CalendarDisplayEvent.native(secondEvent),
+                ],
                 isSelected: false,
                 onSelected: () {},
                 onEventSelected: (_) {},
@@ -342,7 +346,7 @@ void main() {
           body: SingleChildScrollView(
             child: DayColumn(
               day: CalendarDay(date: date),
-              events: [event],
+              events: [CalendarDisplayEvent.native(event)],
               isSelected: false,
               onSelected: () {},
               onEventSelected: (_) {},
@@ -370,7 +374,7 @@ void main() {
       endTime: DateTime(2026, 8, 25, 10),
     );
     DateTime? selectedDay;
-    Event? selectedEvent;
+    CalendarDisplayEvent? selectedEvent;
     final timeScrollController = ScrollController(
       initialScrollOffset: weekInitialScrollOffset,
     );
@@ -382,7 +386,7 @@ void main() {
         home: Scaffold(
           body: WeekView(
             week: IsoWeekCalculator().fromDate(eventDate),
-            events: [event],
+            events: [CalendarDisplayEvent.native(event)],
             selectedDay: DateTime(2026, 8, 24),
             onDaySelected: (value) => selectedDay = value,
             onEventSelected: (value) => selectedEvent = value,
@@ -396,6 +400,6 @@ void main() {
     await tester.pump();
 
     expect(selectedDay, eventDate);
-    expect(selectedEvent, same(event));
+    expect(selectedEvent?.nativeEvent, same(event));
   });
 }
