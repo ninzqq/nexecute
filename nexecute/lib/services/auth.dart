@@ -14,6 +14,8 @@ final class GoogleAuthTokens {
 abstract interface class FirebaseAuthClient {
   Stream<User?> authStateChanges();
 
+  Stream<User?> userChanges();
+
   User? get currentUser;
 
   Future<void> signInAnonymously();
@@ -36,6 +38,9 @@ final class DefaultFirebaseAuthClient implements FirebaseAuthClient {
 
   @override
   Stream<User?> authStateChanges() => _firebaseAuth.authStateChanges();
+
+  @override
+  Stream<User?> userChanges() => _firebaseAuth.userChanges();
 
   @override
   User? get currentUser => _firebaseAuth.currentUser;
@@ -98,6 +103,7 @@ class AuthService {
   final GoogleAuthClient _googleAuth;
 
   Stream<User?> get userStream => _firebaseAuth.authStateChanges();
+  Stream<User?> get identityStream => _firebaseAuth.userChanges();
   User? get user => _firebaseAuth.currentUser;
 
   Stream<DataState<User>> watchAuthentication() async* {

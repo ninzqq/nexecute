@@ -2044,7 +2044,8 @@ Answer behavior must follow these rules:
 
 ### Google Calendar read-only integration
 
-**Status:** 🚧 In progress — Phase 1 complete; Google authorization is next
+**Status:** 🚧 In progress - Phases 1-2 implemented; Google Cloud and native
+authorization verification remain before the Phase 2 gate is complete
 
 Allow a user signed into Nexecute with Google to connect the same Google
 account's calendars and display selected Google Calendar events alongside
@@ -2107,29 +2108,39 @@ week-view, settings, and macOS menu tests pass.
 
 - [ ] Enable the Google Calendar API and configure the OAuth consent screen for
   Android and macOS.
-- [ ] Request only `calendar.calendarlist.readonly` and
+- [x] Request only `calendar.calendarlist.readonly` and
   `calendar.events.readonly`.
-- [ ] Add a dedicated Google Calendar authorization service separate from
+- [x] Add a dedicated Google Calendar authorization service separate from
   Firebase authentication.
-- [ ] Restore or select the Google provider account only after the user chooses
+- [x] Restore or select the Google provider account only after the user chooses
   **Connect Google Calendar**.
-- [ ] Compare the stable Google provider identity with the Firebase Google
+- [x] Compare the stable Google provider identity with the Firebase Google
   identity and reject mismatched accounts with actionable guidance.
-- [ ] Represent disconnected, checking, authorizing, connected, expired,
+- [x] Represent disconnected, checking, authorizing, connected, expired,
   denied, unsupported, and failed states explicitly.
-- [ ] Obtain current access tokens through Google Sign-In when needed without
+- [x] Obtain current access tokens through Google Sign-In when needed without
   storing access tokens in Firestore, shared preferences, logs, or diagnostics.
-- [ ] Handle token expiration and one safe reauthorization attempt without
+- [x] Handle token expiration and one safe reauthorization attempt without
   retrying arbitrary requests indefinitely.
-- [ ] Make Calendar disconnection independent from Nexecute logout.
-- [ ] Clear in-memory authorization and isolate or remove cached Calendar data
+- [x] Make Calendar disconnection independent from Nexecute logout.
+- [x] Clear in-memory authorization and isolate or remove cached Calendar data
   on disconnect, logout, or account change.
-- [ ] Document that disconnecting Nexecute's integration does not necessarily
+- [x] Document that disconnecting Nexecute's integration does not necessarily
   revoke the Google account's OAuth grant.
 
 **Phase 2 gate:** A Google-authenticated user can explicitly connect and
 disconnect matching Calendar access without affecting Firebase login or any
 core Nexecute feature.
+
+**Phase 2 implementation complete:** Android and macOS use a dedicated,
+explicitly invoked authorization boundary over the app-scoped Google Sign-In
+session. It enforces Firebase Google provider-UID equality, requests only the
+two read-only scopes, obtains non-persisted account-bound tokens, permits one
+safe token recovery, invalidates stale asynchronous work, and isolates cache
+lifecycle by Firebase and Google identity. Deterministic authorization and auth
+regression tests pass. Google Calendar API/consent configuration and signed
+Android/macOS acceptance remain external gate items; see
+`docs/google_calendar_authorization.md`.
 
 #### Phase 3: calendar selection, retrieval, and local cache
 

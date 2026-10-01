@@ -3,6 +3,7 @@ import 'package:nexecute/services/auth.dart';
 
 class FakeFirebaseAuthClient implements FirebaseAuthClient {
   Stream<User?> authenticationStream = const Stream.empty();
+  Stream<User?>? identityChangesStream;
   User? currentUserValue;
   Future<void> Function()? onAnonymousSignIn;
   Future<void> Function(GoogleAuthTokens tokens)? onGoogleSignIn;
@@ -15,6 +16,9 @@ class FakeFirebaseAuthClient implements FirebaseAuthClient {
 
   @override
   Stream<User?> authStateChanges() => authenticationStream;
+
+  @override
+  Stream<User?> userChanges() => identityChangesStream ?? authenticationStream;
 
   @override
   User? get currentUser => currentUserValue;

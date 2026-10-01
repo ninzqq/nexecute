@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:nexecute/ai/ai.dart';
 import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/models/app_theme_controller.dart';
@@ -47,11 +48,13 @@ class Nexecute extends StatefulWidget {
     this.themeController,
     this.calendarSettingsController,
     this.platformServices,
+    this.googleSignIn,
   });
 
   final AppThemeController? themeController;
   final CalendarSettingsController? calendarSettingsController;
   final AppPlatformServices? platformServices;
+  final GoogleSignIn? googleSignIn;
 
   // Create the initialization Future outside of `build`:
   @override
@@ -65,6 +68,7 @@ class NexecuteState extends State<Nexecute> {
   late final bool _ownsCalendarSettingsController;
   late final AppPlatformServices _platformServices;
   late final FirestoreReadDiagnostics _firestoreReadDiagnostics;
+  late final GoogleSignIn _googleSignIn;
 
   @override
   void initState() {
@@ -77,6 +81,7 @@ class NexecuteState extends State<Nexecute> {
     _platformServices =
         widget.platformServices ?? AppPlatformServices.unsupported;
     _firestoreReadDiagnostics = FirestoreReadDiagnostics.debug();
+    _googleSignIn = widget.googleSignIn ?? GoogleSignIn();
     _themeController.addListener(_updateEventWidgetTheme);
   }
 
@@ -94,7 +99,23 @@ class NexecuteState extends State<Nexecute> {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        Provider<AuthService>(create: (_) => AuthService()),
+        Provider<AuthService>(
+          create: (_) => AuthService(googleSignIn: _googleSignIn),
+        ),
+        Provider<GoogleCalendarCacheLifecycle>.value(
+          value: const NoopGoogleCalendarCacheLifecycle(),
+        ),
+        Provider<GoogleCalendarAuthorizationService>(
+          lazy: false,
+          create:
+              (context) => createGoogleCalendarAuthorizationService(
+                platform: _platformServices.platform,
+                authService: context.read<AuthService>(),
+                client: DefaultGoogleCalendarAuthClient(_googleSignIn),
+                cacheLifecycle: context.read<GoogleCalendarCacheLifecycle>(),
+              ),
+          dispose: (_, service) => unawaited(service.dispose()),
+        ),
         Provider<FirestoreReadDiagnostics>.value(
           value: _firestoreReadDiagnostics,
         ),

@@ -6,6 +6,7 @@ export 'event_widget_service.dart';
 export 'event_widget_interactivity.dart';
 export 'event_widget_synchronization_coordinator.dart';
 export 'firestore_read_diagnostics.dart';
+export 'google_calendar_authorization.dart';
 export 'item_conversion_service.dart';
 export 'macos_event_reminder_planner.dart';
 export 'macos_event_reminder_scheduler.dart';
