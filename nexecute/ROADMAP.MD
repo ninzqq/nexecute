@@ -2044,8 +2044,8 @@ Answer behavior must follow these rules:
 
 ### Google Calendar read-only integration
 
-**Status:** 🚧 In progress - Phases 1-2 implemented; Google Cloud and native
-authorization verification remain before the Phase 2 gate is complete
+**Status:** 🚧 In progress - Phases 1-3 implemented; Google Cloud, interface,
+and native verification work remain
 
 Allow a user signed into Nexecute with Google to connect the same Google
 account's calendars and display selected Google Calendar events alongside
@@ -2144,39 +2144,50 @@ Android/macOS acceptance remain external gate items; see
 
 #### Phase 3: calendar selection, retrieval, and local cache
 
-- [ ] Fetch the account's calendar list with pagination and display calendar
+- [x] Fetch the account's calendar list with pagination and display calendar
   names, colors, access roles, and selection state.
-- [ ] Store selected calendar identifiers and non-secret connection metadata
+- [x] Store selected calendar identifiers and non-secret connection metadata
   locally per Nexecute user and Google identity.
-- [ ] Do not automatically enable newly discovered calendars after the user has
+- [x] Do not automatically enable newly discovered calendars after the user has
   established an explicit selection.
-- [ ] Fetch only the bounded range required by the visible Calendar pages and
+- [x] Fetch only the bounded range required by the visible Calendar pages and
   their existing swipe buffer.
-- [ ] Use Google-expanded recurring instances so exceptions, moved
+- [x] Use Google-expanded recurring instances so exceptions, moved
   occurrences, cancellations, and unsupported recurrence rules retain Google
   semantics.
-- [ ] Handle paginated responses, rate limits, authorization failures,
+- [x] Handle paginated responses, rate limits, authorization failures,
   malformed responses, and partial calendar failures.
-- [ ] Normalize RFC 3339 times, source time zones, daylight-saving transitions,
+- [x] Normalize RFC 3339 times, source time zones, daylight-saving transitions,
   and Google's exclusive all-day end date into Nexecute display semantics.
-- [ ] Give each Google occurrence a stable namespaced identity based on account,
+- [x] Give each Google occurrence a stable namespaced identity based on account,
   calendar, event, and occurrence identity.
-- [ ] Exclude cancelled instances and retain only fields the current user is
+- [x] Exclude cancelled instances and retain only fields the current user is
   permitted to see.
-- [ ] Persist successful bounded range snapshots in application-private device
+- [x] Persist successful bounded range snapshots in application-private device
   storage using atomic replacement.
-- [ ] Bound cache size and age with deterministic eviction while retaining
+- [x] Bound cache size and age with deterministic eviction while retaining
   recently viewed ranges for offline use.
-- [ ] Mark cached results visibly stale when refresh fails rather than
+- [x] Mark cached results visibly stale when refresh fails rather than
   presenting them as current.
-- [ ] Clear obsolete events after calendar deselection, account changes,
+- [x] Clear obsolete events after calendar deselection, account changes,
   authoritative refreshes, or event cancellation.
-- [ ] Keep Calendar API payloads, personal calendar identifiers, event content,
+- [x] Keep Calendar API payloads, personal calendar identifiers, event content,
   and tokens out of diagnostics.
 
 **Phase 3 gate:** Selected calendars provide bounded, paginated, correctly
 normalized event occurrences, with recent successful results available offline
 and no Google data copied to Firestore.
+
+**Phase 3 implementation complete:** The long-lived Google source now paginates
+calendar and event reads, uses Google's expanded recurrence instances, isolates
+partial calendar failures, normalizes timed and all-day values, and merges
+results through the source-aware Calendar layer. Selection metadata and bounded
+range snapshots are stored per Firebase/Google owner in strict versioned local
+files with atomic replacement, deterministic eviction, overlap-aware stale-data
+suppression, and account cleanup. Cached fallback events carry explicit stale
+state. API, authorization, source, cache, and native-source regression tests
+pass; see `docs/google_calendar_data_sync.md`. Phase 4 owns the catalog controls
+and visible source treatment, while signed live API acceptance remains Phase 5.
 
 #### Phase 4: Calendar and settings interface
 

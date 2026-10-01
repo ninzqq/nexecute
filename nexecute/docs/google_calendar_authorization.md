@@ -52,8 +52,8 @@ remove Nexecute from the third-party access section of their Google Account.
 
 Firebase logout, Firebase account replacement, Google provider unlinking, and a
 Google account change also invalidate Calendar authorization and invoke
-account-scoped cache cleanup. The cache implementation is introduced in Phase 3;
-Phase 2 supplies the lifecycle boundary and a no-op implementation.
+account-scoped cache cleanup. Phase 3 supplies the persistent implementation;
+normal application shutdown retains its bounded offline snapshots.
 
 ## Native verification
 

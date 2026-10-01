@@ -102,8 +102,12 @@ class NexecuteState extends State<Nexecute> {
         Provider<AuthService>(
           create: (_) => AuthService(googleSignIn: _googleSignIn),
         ),
-        Provider<GoogleCalendarCacheLifecycle>.value(
-          value: const NoopGoogleCalendarCacheLifecycle(),
+        Provider<GoogleCalendarLocalStore>(
+          create: (_) => createGoogleCalendarLocalStore(),
+          dispose: (_, store) => unawaited(store.dispose()),
+        ),
+        Provider<GoogleCalendarCacheLifecycle>(
+          create: (context) => context.read<GoogleCalendarLocalStore>(),
         ),
         Provider<GoogleCalendarAuthorizationService>(
           lazy: false,
@@ -115,6 +119,16 @@ class NexecuteState extends State<Nexecute> {
                 cacheLifecycle: context.read<GoogleCalendarCacheLifecycle>(),
               ),
           dispose: (_, service) => unawaited(service.dispose()),
+        ),
+        Provider<GoogleCalendarSource>(
+          create:
+              (context) => GoogleCalendarSource(
+                authorization:
+                    context.read<GoogleCalendarAuthorizationService>(),
+                api: HttpGoogleCalendarApi(),
+                store: context.read<GoogleCalendarLocalStore>(),
+              ),
+          dispose: (_, source) => unawaited(source.dispose()),
         ),
         Provider<FirestoreReadDiagnostics>.value(
           value: _firestoreReadDiagnostics,
@@ -157,6 +171,7 @@ class NexecuteState extends State<Nexecute> {
           create:
               (context) => CompositeCalendarReadSource(
                 nativeEventRepository: context.read<EventRepository>(),
+                externalSources: [context.read<GoogleCalendarSource>()],
               ),
         ),
         Provider<EventWidgetSynchronizationCoordinator>(

@@ -253,12 +253,12 @@ void main() {
     final rejectedToken = await service.accessToken();
     provider.tokenResult = 'recovered-token';
 
-    expect(
-      (await service.refreshAccessTokenAfterUnauthorized(rejectedToken)).value,
-      'recovered-token',
+    final recoveredToken = await service.refreshAccessTokenAfterUnauthorized(
+      rejectedToken,
     );
+    expect(recoveredToken.value, 'recovered-token');
     await expectLater(
-      service.refreshAccessTokenAfterUnauthorized(rejectedToken),
+      service.refreshAccessTokenAfterUnauthorized(recoveredToken),
       throwsA(
         isA<GoogleCalendarAuthorizationException>().having(
           (error) => error.issue,
@@ -269,6 +269,77 @@ void main() {
     );
     expect(provider.clearAuthCacheCount, 1);
     expect(service.state.status, GoogleCalendarAuthorizationStatus.expired);
+  });
+
+  test('concurrent rejections share one token recovery', () async {
+    await connect();
+    final firstRejected = await service.accessToken();
+    final secondRejected = await service.accessToken();
+    final releaseRecovery = Completer<void>();
+    provider.onClearAuthCache = () => releaseRecovery.future;
+    provider.tokenResult = 'recovered-token';
+
+    final firstRecovery = service.refreshAccessTokenAfterUnauthorized(
+      firstRejected,
+    );
+    final secondRecovery = service.refreshAccessTokenAfterUnauthorized(
+      secondRejected,
+    );
+    expect(provider.clearAuthCacheCount, 1);
+
+    releaseRecovery.complete();
+    final recovered = await Future.wait([firstRecovery, secondRecovery]);
+
+    expect(recovered.map((token) => token.value), [
+      'recovered-token',
+      'recovered-token',
+    ]);
+    expect(provider.clearAuthCacheCount, 1);
+    expect(service.state.status, GoogleCalendarAuthorizationStatus.connected);
+  });
+
+  test('a later rotated token receives its own bounded recovery', () async {
+    await connect();
+    final original = await service.accessToken();
+    provider.tokenResult = 'first-recovery';
+    await service.refreshAccessTokenAfterUnauthorized(original);
+    provider.tokenResult = 'provider-rotated-token';
+    final rotated = await service.accessToken();
+    provider.tokenResult = 'second-recovery';
+
+    final recovered = await service.refreshAccessTokenAfterUnauthorized(
+      rotated,
+    );
+
+    expect(recovered.value, 'second-recovery');
+    expect(provider.clearAuthCacheCount, 2);
+    expect(service.state.status, GoogleCalendarAuthorizationStatus.connected);
+  });
+
+  test('failed old-token recovery cannot expire a rotated token', () async {
+    await connect();
+    final rejected = await service.accessToken();
+    final releaseRecovery = Completer<void>();
+    provider.onClearAuthCache = () => releaseRecovery.future;
+
+    final recovery = service.refreshAccessTokenAfterUnauthorized(rejected);
+    provider.tokenResult = 'provider-rotated-token';
+    final rotated = await service.accessToken();
+    releaseRecovery.completeError(StateError('sanitized provider failure'));
+
+    final result = await recovery;
+
+    expect(rotated.value, 'provider-rotated-token');
+    expect(result.value, 'provider-rotated-token');
+    expect(service.state.status, GoogleCalendarAuthorizationStatus.connected);
+  });
+
+  test('dispose retains persistent account cache', () async {
+    await connect();
+
+    await service.dispose();
+
+    expect(cache.clearedOwners, isEmpty);
   });
 
   test(
@@ -526,6 +597,27 @@ void main() {
 
     expect(service.state.status, GoogleCalendarAuthorizationStatus.connected);
     expect(provider.clearAuthCacheCount, 0);
+  });
+
+  test('pending old recovery cannot return a reconnected token', () async {
+    await connect();
+    final oldToken = await service.accessToken();
+    final releaseRecovery = Completer<void>();
+    provider.onClearAuthCache = () => releaseRecovery.future;
+    final recovery = service.refreshAccessTokenAfterUnauthorized(oldToken);
+    final expectation = expectLater(
+      recovery,
+      throwsA(isA<GoogleCalendarAuthorizationException>()),
+    );
+
+    await service.disconnect();
+    provider.silentResult = account;
+    await service.connect();
+    await service.accessToken();
+    releaseRecovery.complete();
+
+    await expectation;
+    expect(service.state.status, GoogleCalendarAuthorizationStatus.connected);
   });
 
   test('unlinking the Firebase Google provider clears authorization', () async {

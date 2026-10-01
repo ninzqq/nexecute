@@ -1,5 +1,8 @@
 export 'calendar_read_source.dart';
 export 'event_repository.dart';
+export 'google_calendar_local_store_factory.dart';
+export 'google_calendar_local_store.dart';
+export 'google_calendar_source.dart';
 export 'note_repository.dart';
 export 'note_folder_repository.dart';
 export 'reminder_scheduling_event_repository.dart';

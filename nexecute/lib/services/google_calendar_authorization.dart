@@ -79,10 +79,19 @@ final class GoogleCalendarAuthorizationException implements Exception {
 }
 
 final class GoogleCalendarAccessToken {
-  const GoogleCalendarAccessToken._(this.value, this._authorizationId);
+  const GoogleCalendarAccessToken(this.value)
+    : _authorizationId = -1,
+      _tokenGeneration = -1;
+
+  const GoogleCalendarAccessToken._connected(
+    this.value,
+    this._authorizationId,
+    this._tokenGeneration,
+  );
 
   final String value;
   final int _authorizationId;
+  final int _tokenGeneration;
 
   @override
   String toString() => 'GoogleCalendarAccessToken(<redacted>)';
@@ -201,6 +210,8 @@ final class DefaultGoogleCalendarAuthClient
 abstract interface class GoogleCalendarAuthorizationService {
   GoogleCalendarAuthorizationState get state;
 
+  GoogleCalendarCacheOwner? get cacheOwner;
+
   Stream<GoogleCalendarAuthorizationState> get states;
 
   Future<void> connect();
@@ -259,11 +270,18 @@ final class GoogleCalendarAuthorization
   bool _clearShouldSignOut = false;
   int _generation = 0;
   int? _authorizationId;
-  bool _hasAttemptedRecovery = false;
+  int _tokenGeneration = 0;
+  int _recoveredTokenGeneration = -1;
+  String? _lastAccessToken;
+  Future<GoogleCalendarAccessToken>? _recoveryOperation;
+  int? _recoveryTokenGeneration;
   bool _disposed = false;
 
   @override
   GoogleCalendarAuthorizationState get state => _state;
+
+  @override
+  GoogleCalendarCacheOwner? get cacheOwner => _cacheOwner;
 
   @override
   Stream<GoogleCalendarAuthorizationState> get states =>
@@ -392,7 +410,9 @@ final class GoogleCalendarAuthorization
         googleAccountId: account.id,
       );
       _authorizationId = generation;
-      _hasAttemptedRecovery = false;
+      _tokenGeneration = 0;
+      _recoveredTokenGeneration = -1;
+      _lastAccessToken = token;
       _emitIfCurrent(
         generation,
         GoogleCalendarAuthorizationState(
@@ -440,7 +460,7 @@ final class GoogleCalendarAuthorization
         );
       }
       if (_isUsableToken(token)) {
-        return GoogleCalendarAccessToken._(token!, authorizationId);
+        return _tokenHandle(token!, authorizationId);
       }
       await _expireAuthorization(authorizationId, account);
       throw const GoogleCalendarAuthorizationException(
@@ -478,13 +498,50 @@ final class GoogleCalendarAuthorization
         GoogleCalendarAuthorizationIssue.accessTokenUnavailable,
       );
     }
-    if (_hasAttemptedRecovery) {
+    if (rejectedToken._tokenGeneration < _tokenGeneration) {
+      return accessToken();
+    }
+    final activeRecovery = _recoveryOperation;
+    if (activeRecovery != null) {
+      if (_recoveryTokenGeneration == rejectedToken._tokenGeneration) {
+        return activeRecovery;
+      }
+      try {
+        await activeRecovery;
+      } catch (_) {
+        // Re-evaluate the rejected generation against the current token below.
+      }
+      return refreshAccessTokenAfterUnauthorized(rejectedToken);
+    }
+    if (rejectedToken._tokenGeneration == _recoveredTokenGeneration) {
       await _expireAuthorization(authorizationId, account);
       throw const GoogleCalendarAuthorizationException(
         GoogleCalendarAuthorizationIssue.accessTokenUnavailable,
       );
     }
-    _hasAttemptedRecovery = true;
+    late final Future<GoogleCalendarAccessToken> operation;
+    operation = _recoverAccessToken(
+      authorizationId,
+      owner,
+      account,
+      rejectedToken._tokenGeneration,
+    ).whenComplete(() {
+      if (identical(_recoveryOperation, operation)) {
+        _recoveryOperation = null;
+        _recoveryTokenGeneration = null;
+      }
+    });
+    _recoveryOperation = operation;
+    _recoveryTokenGeneration = rejectedToken._tokenGeneration;
+    return operation;
+  }
+
+  Future<GoogleCalendarAccessToken> _recoverAccessToken(
+    int authorizationId,
+    GoogleCalendarCacheOwner owner,
+    GoogleCalendarAccountIdentity account,
+    int rejectedTokenGeneration,
+  ) async {
     try {
       await _client.clearAuthCache();
       if (!_authorizationIsCurrent(authorizationId, owner, account)) {
@@ -495,11 +552,19 @@ final class GoogleCalendarAuthorization
       final token = await _client.accessToken();
       if (_authorizationIsCurrent(authorizationId, owner, account) &&
           _isUsableToken(token)) {
-        return GoogleCalendarAccessToken._(token!, authorizationId);
+        final handle = _tokenHandle(token!, authorizationId);
+        _recoveredTokenGeneration = handle._tokenGeneration;
+        return handle;
       }
     } catch (_) {
       // Expiration below is intentionally provider-neutral and token-free.
     }
+    if (!_authorizationIsCurrent(authorizationId, owner, account)) {
+      throw const GoogleCalendarAuthorizationException(
+        GoogleCalendarAuthorizationIssue.accessTokenUnavailable,
+      );
+    }
+    if (_tokenGeneration != rejectedTokenGeneration) return accessToken();
     await _expireAuthorization(authorizationId, account);
     throw const GoogleCalendarAuthorizationException(
       GoogleCalendarAuthorizationIssue.accessTokenUnavailable,
@@ -509,7 +574,13 @@ final class GoogleCalendarAuthorization
   @override
   Future<void> markAuthorizationExpired(
     GoogleCalendarAccessToken rejectedToken,
-  ) => _expireAuthorization(rejectedToken._authorizationId, _state.account);
+  ) async {
+    if (rejectedToken._authorizationId != _authorizationId ||
+        rejectedToken._tokenGeneration != _tokenGeneration) {
+      return;
+    }
+    await _expireAuthorization(rejectedToken._authorizationId, _state.account);
+  }
 
   @override
   Future<void> disconnect() {
@@ -526,16 +597,13 @@ final class GoogleCalendarAuthorization
     await _authSubscription.cancel();
     await _googleSubscription.cancel();
     await _clearOperation;
-    final owner = _cacheOwner;
     _cacheOwner = null;
     _authorizationId = null;
-    if (owner != null) {
-      try {
-        await _cacheLifecycle.clearForAccount(owner);
-      } catch (_) {
-        // Disposal remains safe when optional cache cleanup fails.
-      }
-    }
+    _recoveryOperation = null;
+    _recoveryTokenGeneration = null;
+    _lastAccessToken = null;
+    _tokenGeneration = 0;
+    _recoveredTokenGeneration = -1;
     _state = GoogleCalendarAuthorizationState.disconnected;
     await _stateController.close();
   }
@@ -602,7 +670,11 @@ final class GoogleCalendarAuthorization
     final owner = _cacheOwner;
     _cacheOwner = null;
     _authorizationId = null;
-    _hasAttemptedRecovery = false;
+    _recoveryOperation = null;
+    _recoveryTokenGeneration = null;
+    _tokenGeneration = 0;
+    _recoveredTokenGeneration = -1;
+    _lastAccessToken = null;
     _emit(GoogleCalendarAuthorizationState.disconnected);
     if (owner != null) {
       try {
@@ -765,6 +837,18 @@ final class GoogleCalendarAuthorization
     return authorizationId;
   }
 
+  GoogleCalendarAccessToken _tokenHandle(String token, int authorizationId) {
+    if (_lastAccessToken != token) {
+      _lastAccessToken = token;
+      _tokenGeneration += 1;
+    }
+    return GoogleCalendarAccessToken._connected(
+      token,
+      authorizationId,
+      _tokenGeneration,
+    );
+  }
+
   bool _isUsableToken(String? token) =>
       token != null && token.trim().isNotEmpty;
 
@@ -782,6 +866,9 @@ final class UnsupportedGoogleCalendarAuthorization
   @override
   GoogleCalendarAuthorizationState get state =>
       GoogleCalendarAuthorizationState.unsupported;
+
+  @override
+  GoogleCalendarCacheOwner? get cacheOwner => null;
 
   @override
   Stream<GoogleCalendarAuthorizationState> get states =>
