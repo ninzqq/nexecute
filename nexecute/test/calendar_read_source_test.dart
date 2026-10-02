@@ -294,6 +294,47 @@ void main() {
     expect(snapshot.native.loadState, CalendarSourceLoadState.ready);
   });
 
+  test(
+    'rejects native mutation targets emitted by an external source',
+    () async {
+      const externalSource = CalendarEventSource(
+        'external',
+        displayName: 'External',
+      );
+      final source = CompositeCalendarReadSource(
+        nativeEventRepository: FakeEventRepository(
+          events: [_nativeEvent('native')],
+        ),
+        externalSources: [
+          _FakeExternalCalendarSource(
+            source: externalSource,
+            snapshots: Stream.value(
+              CalendarSourceSnapshot(
+                source: externalSource,
+                events: [CalendarDisplayEvent.native(_nativeEvent('forged'))],
+                loadState: CalendarSourceLoadState.ready,
+              ),
+            ),
+          ),
+        ],
+      );
+
+      final snapshot = await source.watchEvents(range).last;
+
+      expect(snapshot.events.map((event) => event.identity.sourceScopedId), [
+        'native',
+      ]);
+      expect(
+        snapshot.sources[externalSource]?.loadState,
+        CalendarSourceLoadState.failed,
+      );
+      expect(
+        snapshot.sources[externalSource]?.failure?.error,
+        isA<StateError>(),
+      );
+    },
+  );
+
   test('refresh isolates failures and still refreshes every source', () async {
     const failingSource = CalendarEventSource(
       'failing',

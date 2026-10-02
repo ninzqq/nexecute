@@ -1,3 +1,5 @@
+import 'dart:ui' show SemanticsAction;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexecute/domain/calendar/calendar_day.dart';
@@ -80,6 +82,115 @@ void main() {
     expect(selectedEvent?.nativeEvent, same(event));
     expect(daySelections, 0);
   });
+
+  testWidgets(
+    'external timed event semantics include source access and cache',
+    (tester) async {
+      final date = DateTime(2026, 8, 25);
+      const google = CalendarEventSource(
+        'google',
+        displayName: 'Google Calendar',
+      );
+      final event = CalendarDisplayEvent(
+        identity: const CalendarEventIdentity(
+          source: google,
+          sourceScopedId: 'timed',
+        ),
+        title: 'Planning',
+        startTime: DateTime(2026, 8, 25, 1),
+        endTime: DateTime(2026, 8, 25, 2),
+        isAllDay: false,
+        calendarName: 'Work',
+        isStale: true,
+        capabilities: CalendarEventCapabilities.readOnly,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppThemes.forPreset(AppThemePreset.midnight),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: SizedBox(
+                width: 120,
+                child: DayColumn(
+                  day: CalendarDay(date: date),
+                  events: [event],
+                  isSelected: false,
+                  onSelected: () {},
+                  onEventSelected: (_) {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final semantics = tester.getSemantics(
+        find.bySemanticsLabel('Planning, 01:00, Work, Read-only, Saved copy'),
+      );
+      expect(
+        semantics.getSemanticsData().hasAction(SemanticsAction.tap),
+        isTrue,
+      );
+    },
+  );
+
+  testWidgets(
+    'external all-day semantics include source and read-only access',
+    (tester) async {
+      final date = DateTime(2026, 8, 25);
+      const google = CalendarEventSource(
+        'google',
+        displayName: 'Google Calendar',
+      );
+      final event = CalendarDisplayEvent(
+        identity: const CalendarEventIdentity(
+          source: google,
+          sourceScopedId: 'all-day',
+        ),
+        title: 'Holiday',
+        startTime: date,
+        endTime: date.add(const Duration(days: 1)),
+        isAllDay: true,
+        calendarName: 'Personal',
+        capabilities: CalendarEventCapabilities.readOnly,
+      );
+      final controller = ScrollController();
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppThemes.forPreset(AppThemePreset.midnight),
+          home: Scaffold(
+            body: SizedBox(
+              width: 800,
+              height: 500,
+              child: WeekView(
+                week: IsoWeekCalculator().fromDate(date),
+                events: [event],
+                selectedDay: date,
+                onDaySelected: (_) {},
+                onEventSelected: (_) {},
+                timeScrollController: controller,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        find.bySemanticsLabel('Holiday, All day, Personal, Read-only'),
+        findsWidgets,
+      );
+      final semantics = tester.getSemantics(
+        find.bySemanticsLabel('Holiday, All day, Personal, Read-only').first,
+      );
+      expect(
+        semantics.getSemanticsData().hasAction(SemanticsAction.tap),
+        isTrue,
+      );
+    },
+  );
 
   testWidgets('event cards fill the available day-column width', (
     tester,

@@ -176,6 +176,16 @@ final class CompositeCalendarReadSource implements CalendarReadSource {
               '${snapshot.source.id}',
             );
           }
+          for (final event in snapshot.events) {
+            if (event.source != source.source ||
+                event.nativeEvent != null ||
+                event.capabilities.canEdit ||
+                event.capabilities.canDelete) {
+              throw StateError(
+                'External calendar source emitted an invalid event',
+              );
+            }
+          }
           return snapshot;
         })
         .onErrorReturnWith(

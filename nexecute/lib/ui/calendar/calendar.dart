@@ -11,6 +11,7 @@ import 'package:nexecute/models/calendar_settings_controller.dart';
 import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/calendar/bottomsheets/event_details.dart';
 import 'package:nexecute/repositories/calendar_read_source.dart';
+import 'package:nexecute/repositories/google_calendar_source.dart';
 import 'package:nexecute/shared/adaptive_navigation_shell.dart';
 import 'package:nexecute/shared/app_shortcuts.dart';
 import 'package:nexecute/shared/data_state_placeholder.dart';
@@ -140,6 +141,7 @@ class _CalendarPageState extends State<CalendarPage>
     final month = _monthCalculator.fromDate(_monthDateForPage(_monthPage));
     final selectedEvents = calendarEventsForDay(events, _selectedDay);
     final selectedEvent = _matchingEvent(events, _selectedEvent);
+    final googleState = state.sources[GoogleCalendarSource.google];
 
     return FocusTraversalGroup(
       child: Material(
@@ -161,6 +163,11 @@ class _CalendarPageState extends State<CalendarPage>
               onNext: _showNext,
               onToday: _showToday,
             ),
+            if (googleState != null)
+              _GoogleCalendarStatusBar(
+                snapshot: googleState,
+                onRefresh: _refreshCurrentRange,
+              ),
             const Divider(height: 1),
             Expanded(
               child: LayoutBuilder(
@@ -610,6 +617,13 @@ class _CalendarPageState extends State<CalendarPage>
     _eventsStream = readSource.watchEvents(range);
   }
 
+  void _refreshCurrentRange() {
+    final source = _calendarReadSource;
+    final range = _eventRange;
+    if (source == null || range == null) return;
+    unawaited(source.refresh(range));
+  }
+
   void _animateActivePageToDate(DateTime date) {
     final targetPage =
         _viewMode == CalendarViewMode.month
@@ -666,9 +680,7 @@ class _CalendarPageState extends State<CalendarPage>
       setState(() => _selectedEvent = event);
     } else {
       final nativeEvent = event.nativeEvent;
-      if (nativeEvent != null &&
-          event.capabilities.canEdit &&
-          event.capabilities.canDelete) {
+      if (nativeEvent != null && event.canMutateNatively) {
         showEventDetails(context, nativeEvent);
       } else {
         showCalendarEventDetails(context, event);
@@ -745,6 +757,111 @@ class _CalendarEventDetailsOverlay extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _GoogleCalendarStatusBar extends StatelessWidget {
+  const _GoogleCalendarStatusBar({
+    required this.snapshot,
+    required this.onRefresh,
+  });
+
+  final CalendarSourceSnapshot snapshot;
+  final VoidCallback onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final stale = snapshot.events.any((event) => event.isStale);
+    final refreshing =
+        snapshot.refreshState == CalendarSourceRefreshState.refreshing;
+    final message = _message(stale: stale, refreshing: refreshing);
+    if (message == null) return const SizedBox.shrink();
+    final palette = context.appPalette;
+    final failed = snapshot.loadState == CalendarSourceLoadState.failed;
+
+    return Semantics(
+      liveRegion: true,
+      child: ColoredBox(
+        key: const Key('google-calendar-status-bar'),
+        color: (failed
+                ? Theme.of(context).colorScheme.error
+                : palette.secondary)
+            .withValues(alpha: 0.10),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 5, 6, 5),
+          child: Row(
+            children: [
+              if (refreshing)
+                const SizedBox.square(
+                  dimension: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
+                Icon(
+                  stale ? Icons.cloud_off_outlined : Icons.info_outline_rounded,
+                  size: 17,
+                  color: failed ? Theme.of(context).colorScheme.error : null,
+                ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  message,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+              if (!refreshing)
+                IconButton(
+                  key: const Key('google-calendar-view-refresh'),
+                  tooltip: 'Refresh Google Calendar',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: onRefresh,
+                  icon: const Icon(Icons.refresh_rounded, size: 19),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String? _message({required bool stale, required bool refreshing}) {
+    if (refreshing) {
+      return stale
+          ? 'Refreshing Google Calendar; saved events remain visible.'
+          : 'Refreshing Google Calendar...';
+    }
+    if (snapshot.loadState == CalendarSourceLoadState.failed) {
+      final error = snapshot.failure?.error;
+      if (error is GoogleCalendarSourceException) {
+        return switch (error.kind) {
+          GoogleCalendarSourceFailureKind.authorization =>
+            'Google Calendar access needs to be renewed in Settings.',
+          GoogleCalendarSourceFailureKind.rateLimited =>
+            stale
+                ? 'Google Calendar is temporarily rate limited. Saved events remain visible.'
+                : 'Google Calendar is temporarily rate limited.',
+          GoogleCalendarSourceFailureKind.network =>
+            stale
+                ? 'Google Calendar is offline. Saved events remain visible.'
+                : 'Google Calendar is offline.',
+          GoogleCalendarSourceFailureKind.localStore =>
+            'Saved Google Calendar events are unavailable.',
+          GoogleCalendarSourceFailureKind.calendarList ||
+          GoogleCalendarSourceFailureKind.events ||
+          GoogleCalendarSourceFailureKind.malformedResponse =>
+            stale
+                ? 'Google Calendar could not refresh. Saved events remain visible.'
+                : 'Google Calendar could not refresh.',
+        };
+      }
+      return stale
+          ? 'Google Calendar could not refresh. Saved events remain visible.'
+          : 'Google Calendar could not refresh.';
+    }
+    if (stale) return 'Showing saved Google Calendar events.';
+    return null;
   }
 }
 

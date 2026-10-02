@@ -6,6 +6,7 @@ import 'package:nexecute/domain/calendar/calendar_day.dart';
 import 'package:nexecute/domain/calendar/calendar_display_event.dart';
 import 'package:nexecute/domain/calendar/calendar_week.dart';
 import 'package:nexecute/themes.dart';
+import 'package:nexecute/ui/calendar/calendar_event_style.dart';
 import 'package:nexecute/ui/calendar/day_column.dart';
 import 'package:nexecute/ui/calendar/event_date_utils.dart';
 
@@ -257,27 +258,53 @@ class _AllDayEventsRow extends StatelessWidget {
                         for (final event in eventsByDay[index])
                           Padding(
                             padding: const EdgeInsets.only(bottom: 2),
-                            child: Material(
-                              color: palette.primary.withValues(alpha: 0.28),
-                              borderRadius: BorderRadius.circular(3),
-                              clipBehavior: Clip.antiAlias,
-                              child: InkWell(
-                                onTap: () {
-                                  onDaySelected(days[index].date);
-                                  onEventSelected(event);
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.all(3),
-                                  child: Text(
-                                    event.title,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.labelSmall?.copyWith(
-                                      color: palette.onSurface,
-                                      fontSize: 9,
-                                      height: 1.05,
+                            child: Semantics(
+                              button: true,
+                              label: calendarEventAccessibilityLabel(
+                                event,
+                                'All day',
+                              ),
+                              excludeSemantics: true,
+                              onTap: () {
+                                onDaySelected(days[index].date);
+                                onEventSelected(event);
+                              },
+                              child: Material(
+                                color: calendarEventBackground(context, event),
+                                borderRadius: BorderRadius.circular(3),
+                                clipBehavior: Clip.antiAlias,
+                                child: InkWell(
+                                  onTap: () {
+                                    onDaySelected(days[index].date);
+                                    onEventSelected(event);
+                                  },
+                                  child: Container(
+                                    key: ValueKey(
+                                      'week-all-day-accent-${event.identity}',
+                                    ),
+                                    padding: const EdgeInsets.all(3),
+                                    decoration: BoxDecoration(
+                                      border: Border(
+                                        left: BorderSide(
+                                          color: calendarEventAccent(
+                                            context,
+                                            event,
+                                          ),
+                                          width: 2,
+                                        ),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      event.title,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.labelSmall?.copyWith(
+                                        color: palette.onSurface,
+                                        fontSize: 9,
+                                        height: 1.05,
+                                      ),
                                     ),
                                   ),
                                 ),

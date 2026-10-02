@@ -6,6 +6,7 @@ import 'package:nexecute/domain/calendar/calendar_day.dart';
 import 'package:nexecute/domain/calendar/calendar_display_event.dart';
 import 'package:nexecute/domain/calendar/calendar_month.dart';
 import 'package:nexecute/themes.dart';
+import 'package:nexecute/ui/calendar/calendar_event_style.dart';
 import 'package:nexecute/ui/calendar/event_date_utils.dart';
 
 const _eventMarkerHeight = 17.0;
@@ -342,23 +343,38 @@ class _EventMarker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.appPalette;
-    return SizedBox(
-      height: _eventMarkerHeight,
-      child: Material(
-        color: palette.primary.withValues(alpha: 0.22),
-        borderRadius: BorderRadius.circular(3),
-        child: InkWell(
+    final accent = calendarEventAccent(context, event);
+    final schedule =
+        event.isAllDay
+            ? 'All day'
+            : DateFormat('HH:mm').format(event.startTime);
+    return Semantics(
+      button: true,
+      label: calendarEventAccessibilityLabel(event, schedule),
+      excludeSemantics: true,
+      onTap: onTap,
+      child: SizedBox(
+        height: _eventMarkerHeight,
+        child: Material(
+          color: calendarEventBackground(context, event),
           borderRadius: BorderRadius.circular(3),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
-            child: Text(
-              event.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: palette.onSurface,
-                fontSize: 9,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(3),
+            onTap: onTap,
+            child: Container(
+              key: ValueKey('month-event-accent-${event.identity}'),
+              padding: const EdgeInsets.fromLTRB(4, 2, 3, 2),
+              decoration: BoxDecoration(
+                border: Border(left: BorderSide(color: accent, width: 2)),
+              ),
+              child: Text(
+                event.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: palette.onSurface,
+                  fontSize: 9,
+                ),
               ),
             ),
           ),

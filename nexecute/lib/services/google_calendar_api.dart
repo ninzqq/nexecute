@@ -4,6 +4,7 @@ enum GoogleCalendarApiFailureKind {
   unauthorized,
   forbidden,
   rateLimited,
+  network,
   transient,
   malformedResponse,
 }

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:nexecute/domain/calendar/calendar_day.dart';
 import 'package:nexecute/domain/calendar/calendar_display_event.dart';
 import 'package:nexecute/themes.dart';
+import 'package:nexecute/ui/calendar/calendar_event_style.dart';
 import 'package:nexecute/ui/calendar/event_date_utils.dart';
 
 const weekHourHeight = 56.0;
@@ -122,18 +123,21 @@ class _WeekEventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.appPalette;
+    final accent = calendarEventAccent(context, event);
     final startsToday = isSameCalendarDay(event.startTime, day);
     final timeLabel =
         startsToday ? DateFormat('HH:mm').format(event.startTime) : 'Continues';
 
     return Semantics(
       button: true,
-      label: '${event.title}, $timeLabel',
+      label: calendarEventAccessibilityLabel(event, timeLabel),
+      excludeSemantics: true,
+      onTap: onTap,
       child: Material(
         key: ValueKey(
           'week-event-${event.nativeEvent?.id ?? event.identity}-${day.year}-${day.month}-${day.day}',
         ),
-        color: palette.primary.withValues(alpha: 0.28),
+        color: calendarEventBackground(context, event),
         borderRadius: BorderRadius.circular(4),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -148,9 +152,7 @@ class _WeekEventCard extends StatelessWidget {
                         ? const EdgeInsets.fromLTRB(4, 3, 2, 2)
                         : EdgeInsets.zero,
                 decoration: BoxDecoration(
-                  border: Border(
-                    left: BorderSide(color: palette.primary, width: 2),
-                  ),
+                  border: Border(left: BorderSide(color: accent, width: 2)),
                 ),
                 child:
                     showTitle

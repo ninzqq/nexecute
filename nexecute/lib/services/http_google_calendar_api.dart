@@ -182,7 +182,7 @@ final class HttpGoogleCalendarApi implements GoogleCalendarApiGateway {
           continue;
         }
         throw const GoogleCalendarApiException(
-          GoogleCalendarApiFailureKind.transient,
+          GoogleCalendarApiFailureKind.network,
         );
       }
 

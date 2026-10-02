@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:nexecute/domain/calendar/calendar_display_event.dart';
 import 'package:nexecute/domain/calendar/calendar_query_range.dart';
+import 'package:nexecute/domain/calendar/google_calendar_event_url.dart';
 import 'package:nexecute/repositories/calendar_read_source.dart';
 import 'package:nexecute/repositories/google_calendar_local_store.dart';
 import 'package:nexecute/services/google_calendar_api.dart';
@@ -19,6 +20,8 @@ enum GoogleCalendarSourceFailureKind {
   events,
   localStore,
   malformedResponse,
+  rateLimited,
+  network,
 }
 
 final class GoogleCalendarSourceException implements Exception {
@@ -603,12 +606,7 @@ final class GoogleCalendarSource implements ExternalCalendarSource {
     return _EventRefreshResult(
       local: local,
       successfulCalendarIds: successful,
-      failure:
-          failures.isEmpty
-              ? null
-              : const GoogleCalendarSourceException(
-                GoogleCalendarSourceFailureKind.events,
-              ),
+      failure: failures.isEmpty ? null : _eventFailure(failures),
     );
   }
 
@@ -677,7 +675,7 @@ final class GoogleCalendarSource implements ExternalCalendarSource {
             calendarName: calendar?.name ?? source.displayName,
             calendarColorValue: calendar?.colorValue,
             sourceTimeZone: event.sourceTimeZone ?? calendar?.timeZone,
-            externalUrl: _httpsUri(event.externalUrl),
+            externalUrl: safeGoogleCalendarEventUrl(event.externalUrl),
           ),
         );
         if (byIdentity.length > _maxEventsPerCalendarRange) {
@@ -816,7 +814,7 @@ final class GoogleCalendarSource implements ExternalCalendarSource {
     required bool isStale,
     String? calendarTimeZone,
   }) {
-    final externalUrl = _httpsUri(event.externalUrl);
+    final externalUrl = safeGoogleCalendarEventUrl(event.externalUrl);
     return CalendarDisplayEvent(
       identity: CalendarEventIdentity(
         source: source,
@@ -844,6 +842,7 @@ final class GoogleCalendarSource implements ExternalCalendarSource {
     Object error, {
     required bool events,
   }) {
+    if (error is GoogleCalendarSourceException) return error;
     if (error is GoogleCalendarAuthorizationException) {
       return const GoogleCalendarSourceException(
         GoogleCalendarSourceFailureKind.authorization,
@@ -855,12 +854,45 @@ final class GoogleCalendarSource implements ExternalCalendarSource {
         GoogleCalendarSourceFailureKind.malformedResponse,
       );
     }
+    if (error is GoogleCalendarApiException &&
+        error.kind == GoogleCalendarApiFailureKind.rateLimited) {
+      return const GoogleCalendarSourceException(
+        GoogleCalendarSourceFailureKind.rateLimited,
+      );
+    }
+    if (error is GoogleCalendarApiException &&
+        error.kind == GoogleCalendarApiFailureKind.network) {
+      return const GoogleCalendarSourceException(
+        GoogleCalendarSourceFailureKind.network,
+      );
+    }
     return GoogleCalendarSourceException(
       error is GoogleCalendarApiException
           ? (events
               ? GoogleCalendarSourceFailureKind.events
               : GoogleCalendarSourceFailureKind.calendarList)
           : GoogleCalendarSourceFailureKind.localStore,
+    );
+  }
+
+  GoogleCalendarSourceException _eventFailure(
+    List<GoogleCalendarSourceException> failures,
+  ) {
+    const priority = [
+      GoogleCalendarSourceFailureKind.authorization,
+      GoogleCalendarSourceFailureKind.rateLimited,
+      GoogleCalendarSourceFailureKind.network,
+      GoogleCalendarSourceFailureKind.malformedResponse,
+      GoogleCalendarSourceFailureKind.events,
+      GoogleCalendarSourceFailureKind.localStore,
+    ];
+    for (final kind in priority) {
+      for (final failure in failures) {
+        if (failure.kind == kind) return failure;
+      }
+    }
+    return const GoogleCalendarSourceException(
+      GoogleCalendarSourceFailureKind.events,
     );
   }
 
@@ -1043,9 +1075,6 @@ bool _eventOverlaps(
 ) =>
     event.startTime.isBefore(range.endExclusive) &&
     !event.endTime.isBefore(range.startInclusive);
-
-Uri? _httpsUri(Uri? uri) =>
-    uri != null && uri.scheme == 'https' && uri.host.isNotEmpty ? uri : null;
 
 String _cacheRangeKey(GoogleCalendarCachedRange range) =>
     '${range.range.startInclusive.microsecondsSinceEpoch}\u0000'

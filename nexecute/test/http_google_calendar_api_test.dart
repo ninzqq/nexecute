@@ -296,6 +296,24 @@ void main() {
     expect(delays, const [Duration(seconds: 1), Duration(seconds: 2)]);
   });
 
+  test('classifies an exhausted transport failure as network', () async {
+    final api = HttpGoogleCalendarApi(
+      client: MockClient((_) async => throw http.ClientException('private')),
+      delay: (_) async {},
+    );
+
+    await expectLater(
+      api.listCalendars(accessToken: 'secret-token'),
+      throwsA(
+        isA<GoogleCalendarApiException>().having(
+          (error) => error.kind,
+          'kind',
+          GoogleCalendarApiFailureKind.network,
+        ),
+      ),
+    );
+  });
+
   test('preserves DST offsets when normalizing RFC3339 instants', () async {
     final api = HttpGoogleCalendarApi(
       client: MockClient(

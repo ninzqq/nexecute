@@ -136,6 +136,12 @@ final class CalendarDisplayEvent {
   final Event? nativeEvent;
 
   CalendarEventSource get source => identity.source;
+
+  bool get canMutateNatively =>
+      source == CalendarEventSource.nexecute &&
+      nativeEvent != null &&
+      capabilities.canEdit &&
+      capabilities.canDelete;
 }
 
 int compareCalendarDisplayEvents(

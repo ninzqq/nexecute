@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:nexecute/domain/calendar/calendar_display_event.dart';
+import 'package:nexecute/domain/calendar/google_calendar_event_url.dart';
 import 'package:nexecute/home/bottomsheets/item_editor.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/event_reminder.dart';
@@ -13,6 +14,9 @@ import 'package:nexecute/shared/event_reminder_labels.dart';
 import 'package:nexecute/shared/event_recurrence_labels.dart';
 import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+typedef CalendarExternalUrlLauncher = Future<bool> Function(Uri uri);
 
 Future<void> showEventDetails(BuildContext context, Event event) {
   return showModalBottomSheet<void>(
@@ -56,18 +60,18 @@ class CalendarEventDetailsPanel extends StatelessWidget {
     required this.event,
     this.onClose,
     this.onDeleted,
+    this.onOpenExternalUrl,
   });
 
   final CalendarDisplayEvent event;
   final VoidCallback? onClose;
   final VoidCallback? onDeleted;
+  final CalendarExternalUrlLauncher? onOpenExternalUrl;
 
   @override
   Widget build(BuildContext context) {
     final nativeEvent = event.nativeEvent;
-    if (nativeEvent != null &&
-        event.capabilities.canEdit &&
-        event.capabilities.canDelete) {
+    if (nativeEvent != null && event.canMutateNatively) {
       return EventDetailsPanel(
         event: nativeEvent,
         onClose: onClose,
@@ -90,6 +94,8 @@ class CalendarEventDetailsPanel extends StatelessWidget {
                 date: _calendarDateLabel(event.startTime, event.endTime),
                 time: _calendarTimeLabel(event),
               ),
+              const SizedBox(height: 14),
+              _ExternalEventSourceCard(event: event),
               if (event.description.trim().isNotEmpty) ...[
                 const SizedBox(height: 20),
                 const _SectionHeading(
@@ -99,9 +105,137 @@ class CalendarEventDetailsPanel extends StatelessWidget {
                 const SizedBox(height: 10),
                 _DescriptionCard(description: event.description.trim()),
               ],
+              if (_safeExternalUrl(event) case final externalUrl?) ...[
+                const SizedBox(height: 22),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.tonalIcon(
+                    key: const Key('event-details-open-external-action'),
+                    onPressed: () => _openExternal(context, externalUrl),
+                    icon: const Icon(Icons.open_in_new_rounded),
+                    label: Text('Open in ${event.source.displayName}'),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Future<void> _openExternal(BuildContext context, Uri uri) async {
+    var opened = false;
+    try {
+      opened =
+          await (onOpenExternalUrl?.call(uri) ??
+              launchUrl(uri, mode: LaunchMode.externalApplication));
+    } catch (_) {
+      opened = false;
+    }
+    if (!context.mounted || opened) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Could not open Google Calendar')),
+    );
+  }
+}
+
+Uri? _safeExternalUrl(CalendarDisplayEvent event) =>
+    event.capabilities.canOpenExternally
+        ? safeGoogleCalendarEventUrl(event.externalUrl)
+        : null;
+
+class _ExternalEventSourceCard extends StatelessWidget {
+  const _ExternalEventSourceCard({required this.event});
+
+  final CalendarDisplayEvent event;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.appPalette;
+    final accent =
+        event.calendarColorValue == null
+            ? palette.secondary
+            : Color(event.calendarColorValue!);
+    return Container(
+      key: const Key('event-details-source-card'),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: palette.surfaceRaised.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: palette.outline.withValues(alpha: 0.65)),
+      ),
+      child: Column(
+        children: [
+          _ScheduleLine(
+            icon: Icons.cloud_outlined,
+            label: 'Source',
+            value: event.source.displayName,
+          ),
+          const _CardDivider(),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 28,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 3),
+                  child: ExcludeSemantics(
+                    child: Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: accent,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: palette.outline),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Calendar',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: palette.onSurface.withValues(alpha: 0.62),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(event.calendarName),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const _CardDivider(),
+          const _ScheduleLine(
+            icon: Icons.lock_outline_rounded,
+            label: 'Access',
+            value: 'Read-only',
+          ),
+          if (event.sourceTimeZone case final timeZone?) ...[
+            const _CardDivider(),
+            _ScheduleLine(
+              icon: Icons.public_rounded,
+              label: 'Time zone',
+              value: timeZone,
+            ),
+          ],
+          if (event.isStale) ...[
+            const _CardDivider(),
+            const _ScheduleLine(
+              icon: Icons.cloud_off_outlined,
+              label: 'Sync',
+              value: 'Saved copy; refresh for the latest version',
+            ),
+          ],
+        ],
       ),
     );
   }

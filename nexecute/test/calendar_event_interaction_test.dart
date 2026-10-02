@@ -1,3 +1,5 @@
+import 'dart:ui' show SemanticsAction;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,6 +15,7 @@ import 'package:nexecute/models/selected_day.dart';
 import 'package:nexecute/models/tag.dart' as models;
 import 'package:nexecute/repositories/calendar_read_source.dart';
 import 'package:nexecute/repositories/event_repository.dart';
+import 'package:nexecute/repositories/google_calendar_source.dart';
 import 'package:nexecute/themes.dart';
 import 'package:nexecute/ui/calendar/calendar.dart';
 import 'package:nexecute/ui/calendar/selected_day_agenda.dart';
@@ -509,6 +512,23 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(
+      find.byKey(const ValueKey('agenda-event-accent-google:google-event')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('month-event-accent-google:google-event')),
+      findsOneWidget,
+    );
+    final markerSemantics = tester.getSemantics(
+      find.byKey(const ValueKey('month-event-accent-google:google-event')),
+    );
+    expect(markerSemantics.label, contains('Work'));
+    expect(markerSemantics.label, contains('Read-only'));
+    expect(
+      markerSemantics.getSemanticsData().hasAction(SemanticsAction.tap),
+      isTrue,
+    );
     await tester.tap(
       find.byKey(const ValueKey('agenda-event-google:google-event')),
     );
@@ -516,8 +536,213 @@ void main() {
 
     expect(find.byKey(const Key('event-details-title')), findsOneWidget);
     expect(find.text('Read-only external event'), findsOneWidget);
+    expect(find.text('Google'), findsOneWidget);
+    expect(find.text('Work'), findsOneWidget);
+    expect(find.text('Read-only'), findsOneWidget);
     expect(find.byKey(const Key('event-details-edit-action')), findsNothing);
     expect(find.byKey(const Key('event-details-delete-action')), findsNothing);
+  });
+
+  testWidgets('external details safely open a validated HTTPS event URL', (
+    tester,
+  ) async {
+    const google = CalendarEventSource(
+      'google',
+      displayName: 'Google Calendar',
+    );
+    final uri = Uri.parse('https://calendar.google.com/event?eid=safe');
+    final event = CalendarDisplayEvent(
+      identity: const CalendarEventIdentity(
+        source: google,
+        sourceScopedId: 'safe-event',
+      ),
+      title: 'Planning',
+      startTime: DateTime(2026, 10, 1, 9),
+      endTime: DateTime(2026, 10, 1, 10),
+      isAllDay: false,
+      calendarName: 'Work',
+      calendarColorValue: 0xff4285f4,
+      sourceTimeZone: 'Europe/Helsinki',
+      externalUrl: uri,
+      isStale: true,
+      capabilities: const CalendarEventCapabilities(
+        canEdit: false,
+        canDelete: false,
+        canOpenExternally: true,
+      ),
+    );
+    Uri? opened;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppThemes.forPreset(AppThemePreset.midnight),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: CalendarEventDetailsPanel(
+              event: event,
+              onOpenExternalUrl: (uri) async {
+                opened = uri;
+                return true;
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Google Calendar'), findsOneWidget);
+    expect(find.text('Open in Google Calendar'), findsOneWidget);
+    expect(find.text('Work'), findsOneWidget);
+    expect(find.text('Read-only'), findsOneWidget);
+    expect(
+      find.text('Saved copy; refresh for the latest version'),
+      findsOneWidget,
+    );
+    await tester.ensureVisible(
+      find.byKey(const Key('event-details-open-external-action')),
+    );
+    await tester.tap(
+      find.byKey(const Key('event-details-open-external-action')),
+    );
+    await tester.pump();
+
+    expect(opened, uri);
+    expect(find.byKey(const Key('event-details-edit-action')), findsNothing);
+    expect(find.byKey(const Key('event-details-delete-action')), findsNothing);
+
+    final unsafeEvent = CalendarDisplayEvent(
+      identity: const CalendarEventIdentity(
+        source: google,
+        sourceScopedId: 'unsafe-event',
+      ),
+      title: 'Unsafe link',
+      startTime: DateTime(2026, 10, 1, 9),
+      endTime: DateTime(2026, 10, 1, 10),
+      isAllDay: false,
+      calendarName: 'Work',
+      externalUrl: Uri.parse('http://calendar.google.com/private'),
+      capabilities: const CalendarEventCapabilities(
+        canEdit: false,
+        canDelete: false,
+        canOpenExternally: true,
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: CalendarEventDetailsPanel(event: unsafeEvent)),
+      ),
+    );
+
+    expect(
+      find.byKey(const Key('event-details-open-external-action')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('Google refresh failure keeps native Calendar usable', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    final googleEvent = CalendarDisplayEvent(
+      identity: const CalendarEventIdentity(
+        source: GoogleCalendarSource.google,
+        sourceScopedId: 'stale-google-event',
+      ),
+      title: 'Saved Google event',
+      startTime: DateTime(now.year, now.month, now.day, 14),
+      endTime: DateTime(now.year, now.month, now.day, 15),
+      isAllDay: false,
+      calendarName: 'Work',
+      isStale: true,
+      capabilities: CalendarEventCapabilities.readOnly,
+    );
+    final snapshot = CalendarReadSnapshot(
+      events: [googleEvent],
+      sources: {
+        CalendarEventSource.nexecute: CalendarSourceSnapshot(
+          source: CalendarEventSource.nexecute,
+          events: const [],
+          loadState: CalendarSourceLoadState.empty,
+        ),
+        GoogleCalendarSource.google: CalendarSourceSnapshot(
+          source: GoogleCalendarSource.google,
+          events: [googleEvent],
+          loadState: CalendarSourceLoadState.failed,
+          failure: const CalendarSourceFailure(
+            GoogleCalendarSourceException(
+              GoogleCalendarSourceFailureKind.rateLimited,
+            ),
+          ),
+        ),
+      },
+    );
+    final source = _RecordingCalendarReadSource(snapshot);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<CalendarReadSource>.value(value: source),
+          ChangeNotifierProvider(create: (_) => SelectedDay()),
+        ],
+        child: MaterialApp(
+          theme: AppThemes.forPreset(AppThemePreset.midnight),
+          home: const CalendarPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Saved Google event'), findsWidgets);
+    expect(find.textContaining('temporarily rate limited'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('google-calendar-view-refresh')));
+    await tester.pump();
+
+    expect(source.refreshCount, 1);
+    expect(find.text('Saved Google event'), findsWidgets);
+
+    final offlineSource = _RecordingCalendarReadSource(
+      CalendarReadSnapshot(
+        events: [googleEvent],
+        sources: {
+          CalendarEventSource.nexecute: CalendarSourceSnapshot(
+            source: CalendarEventSource.nexecute,
+            events: const [],
+            loadState: CalendarSourceLoadState.empty,
+          ),
+          GoogleCalendarSource.google: CalendarSourceSnapshot(
+            source: GoogleCalendarSource.google,
+            events: [googleEvent],
+            loadState: CalendarSourceLoadState.failed,
+            failure: const CalendarSourceFailure(
+              GoogleCalendarSourceException(
+                GoogleCalendarSourceFailureKind.network,
+              ),
+            ),
+          ),
+        },
+      ),
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<CalendarReadSource>.value(value: offlineSource),
+          ChangeNotifierProvider(create: (_) => SelectedDay()),
+        ],
+        child: MaterialApp(
+          theme: AppThemes.forPreset(AppThemePreset.midnight),
+          home: const CalendarPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Google Calendar is offline. Saved events remain visible.'),
+      findsOneWidget,
+    );
+    expect(find.text('Saved Google event'), findsWidgets);
   });
 }
 
@@ -528,6 +753,22 @@ final class _FixedCalendarReadSource implements CalendarReadSource {
 
   @override
   Future<void> refresh(CalendarQueryRange range) async {}
+
+  @override
+  Stream<CalendarReadSnapshot> watchEvents(CalendarQueryRange range) =>
+      Stream.value(snapshot);
+}
+
+final class _RecordingCalendarReadSource implements CalendarReadSource {
+  _RecordingCalendarReadSource(this.snapshot);
+
+  final CalendarReadSnapshot snapshot;
+  int refreshCount = 0;
+
+  @override
+  Future<void> refresh(CalendarQueryRange range) async {
+    refreshCount += 1;
+  }
 
   @override
   Stream<CalendarReadSnapshot> watchEvents(CalendarQueryRange range) =>

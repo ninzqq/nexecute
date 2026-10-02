@@ -420,7 +420,7 @@ void main() {
       final api = _Api();
       api.eventPages['a'] = [GoogleCalendarPage(items: const [])];
       api.eventErrors['b'] = const GoogleCalendarApiException(
-        GoogleCalendarApiFailureKind.forbidden,
+        GoogleCalendarApiFailureKind.rateLimited,
       );
       final source = GoogleCalendarSource(
         authorization: auth,
@@ -442,6 +442,10 @@ void main() {
 
       expect(result.events.map((event) => event.title), ['failed cache']);
       expect(result.events.single.isStale, isTrue);
+      expect(
+        (result.failure!.error as GoogleCalendarSourceException).kind,
+        GoogleCalendarSourceFailureKind.rateLimited,
+      );
       expect(result.failure.toString(), isNot(contains('b')));
       final successfulRanges = store.states[owner]!.ranges.where(
         (cached) => cached.calendarId == 'a',

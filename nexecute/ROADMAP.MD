@@ -2191,27 +2191,37 @@ and visible source treatment, while signed live API acceptance remains Phase 5.
 
 #### Phase 4: Calendar and settings interface
 
-- [ ] Add a Google Calendar section under Calendar settings with connection
+- [x] Add a Google Calendar section under Calendar settings with connection
   status, connected account, Connect, Retry, Manage calendars, Refresh, and
   Disconnect actions.
-- [ ] Show selected calendars with accessible color indicators and explicit
+- [x] Show selected calendars with accessible color indicators and explicit
   enabled state.
-- [ ] Merge Google occurrences into month, week, and selected-day agenda views.
-- [ ] Give Google events a restrained source treatment using their calendar
+- [x] Merge Google occurrences into month, week, and selected-day agenda views.
+- [x] Give Google events a restrained source treatment using their calendar
   color without reducing title readability or theme contrast.
-- [ ] Show the source calendar and read-only status in event details.
-- [ ] Hide Nexecute Edit and Delete actions for Google events.
-- [ ] Add **Open in Google Calendar** only for validated public HTTPS URLs and
+- [x] Show the source calendar and read-only status in event details.
+- [x] Hide Nexecute Edit and Delete actions for Google events.
+- [x] Add **Open in Google Calendar** only for validated public HTTPS URLs and
   launch it externally.
-- [ ] Prevent every creation, update, deletion, reminder, conversion, and
+- [x] Prevent every creation, update, deletion, reminder, conversion, and
   repository command path from accepting a Google event.
-- [ ] Show source-specific authorization, offline, stale-cache, and rate-limit
+- [x] Show source-specific authorization, offline, stale-cache, and rate-limit
   states without obscuring native Nexecute events.
-- [ ] Preserve selected date, Calendar view mode, scroll position, and range
+- [x] Preserve selected date, Calendar view mode, scroll position, and range
   state while connection or refresh state changes.
 
 **Phase 4 gate:** Native and Google events appear together clearly, while every
 Google event remains visibly and technically read-only.
+
+**Phase 4 implementation complete:** Calendar settings now expose safe Google
+connection, account, catalog selection, refresh, retry, and disconnect controls.
+Google occurrences retain calendar-color accents across month, week, all-day,
+and agenda surfaces, while details identify their source, calendar, read-only
+state, time zone, and stale status. Validated HTTPS links open externally.
+Source-specific refresh, authorization, stale-cache, and rate-limit states stay
+secondary to usable native events. External source snapshots are validated at
+the read boundary so they cannot expose native edit, delete, reminder,
+conversion, or repository mutation paths.
 
 #### Phase 5: lifecycle and verification
 

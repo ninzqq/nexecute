@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:nexecute/ai/presentation/ai_settings_section.dart';
 import 'package:nexecute/home/widgets/event_reminder_settings_tile.dart';
+import 'package:nexecute/home/widgets/google_calendar_settings_section.dart';
 import 'package:nexecute/models/app_theme_controller.dart';
 import 'package:nexecute/models/calendar_settings_controller.dart';
+import 'package:nexecute/repositories/google_calendar_source.dart';
 import 'package:nexecute/shared/adaptive_navigation_shell.dart';
 import 'package:nexecute/services/event_reminder_scheduler.dart';
+import 'package:nexecute/services/google_calendar_authorization.dart';
 import 'package:nexecute/themes.dart';
 import 'package:provider/provider.dart';
 
@@ -18,6 +21,9 @@ class SettingsScreen extends StatelessWidget {
     final controller = context.watch<AppThemeController>();
     final calendarSettings = context.watch<CalendarSettingsController>();
     final reminderScheduler = context.read<EventReminderScheduler?>();
+    final googleAuthorization =
+        context.read<GoogleCalendarAuthorizationService?>();
+    final googleCalendarSource = context.read<GoogleCalendarSource?>();
 
     final content = SafeArea(
       top: false,
@@ -60,6 +66,10 @@ class SettingsScreen extends StatelessWidget {
               onChanged: calendarSettings.setShowWeekNumbers,
             ),
             EventReminderSettingsTile(scheduler: reminderScheduler),
+            GoogleCalendarSettingsSection(
+              authorization: googleAuthorization,
+              source: googleCalendarSource,
+            ),
             const SizedBox(height: 12),
             const Divider(),
             const SizedBox(height: 12),

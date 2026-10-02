@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:nexecute/domain/calendar/calendar_display_event.dart';
 import 'package:nexecute/themes.dart';
+import 'package:nexecute/ui/calendar/calendar_event_style.dart';
 import 'package:nexecute/ui/calendar/event_date_utils.dart';
 
 double selectedDayAgendaHeight(int eventCount) {
@@ -78,8 +79,9 @@ class SelectedDayAgenda extends StatelessWidget {
                 separatorBuilder: (_, _) => const SizedBox(height: 4),
                 itemBuilder: (context, index) {
                   final event = events[index];
+                  final accent = calendarEventAccent(context, event);
                   return Material(
-                    color: palette.surfaceRaised,
+                    color: calendarEventBackground(context, event),
                     borderRadius: BorderRadius.circular(8),
                     child: InkWell(
                       key: ValueKey(
@@ -94,6 +96,18 @@ class SelectedDayAgenda extends StatelessWidget {
                         ),
                         child: Row(
                           children: [
+                            Container(
+                              key: ValueKey(
+                                'agenda-event-accent-${event.identity}',
+                              ),
+                              width: 3,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                color: accent,
+                                borderRadius: BorderRadius.circular(99),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
                             SizedBox(
                               width: 72,
                               child: Text(
@@ -108,15 +122,36 @@ class SelectedDayAgenda extends StatelessWidget {
                             ),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: Text(
-                                event.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
+                              child: Semantics(
+                                label: calendarEventAccessibilityLabel(
+                                  event,
+                                  _timeLabel(event, day),
+                                ),
+                                excludeSemantics: true,
+                                child: Text(
+                                  event.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                             ),
+                            if (event.isStale)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 6),
+                                child: Tooltip(
+                                  message: 'Saved copy',
+                                  child: Icon(
+                                    Icons.cloud_off_outlined,
+                                    size: 16,
+                                    color: palette.onSurface.withValues(
+                                      alpha: 0.62,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             Icon(
                               Icons.chevron_right_rounded,
                               size: 20,

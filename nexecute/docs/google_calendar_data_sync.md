@@ -95,6 +95,25 @@ do not pass through `EventRepository` and are not copied to Firestore, search,
 widgets, reminders, Assistant context, or mutation commands. Access tokens are
 used only for an in-flight REST request and are never written to this cache.
 
+## Calendar interface
+
+Calendar settings expose connection state, the connected account, catalog
+refresh, explicit calendar selection, retry, and disconnect controls. Selection
+changes are saved atomically, and color indicators are accompanied by calendar
+names and enabled/disabled text.
+
+Selected Google events are merged with Nexecute events in month, week, all-day,
+and selected-day agenda views. Calendar color is used only as an accent so event
+titles retain theme contrast. Details identify Google Calendar, the source
+calendar, read-only access, source time zone, and stale saved-copy state. Edit and
+Delete actions are not available. An external action is shown only for a
+revalidated HTTPS event URL.
+
+Google refresh, authorization, stale-cache, and rate-limit messages use a
+source-specific status row and never replace usable native Calendar content.
+Refreshes reuse the active range stream, preserving the selected date, view
+mode, page, agenda state, and week scroll position.
+
 The cache marks fallback events with `CalendarDisplayEvent.isStale`. Phase 4 is
 responsible for presenting that state and the catalog controls in the Calendar
 and settings interface. Signed Android/macOS testing against real primary,
