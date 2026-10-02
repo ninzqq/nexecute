@@ -26,6 +26,7 @@ class NoteFolderField extends StatelessWidget {
       key: const Key('note-folder-field'),
       child: DropdownButtonFormField<String>(
         key: ValueKey('$selectedValue-${folders.length}'),
+        isExpanded: true,
         initialValue: selectedValue,
         decoration: const InputDecoration(
           labelText: 'Folder',

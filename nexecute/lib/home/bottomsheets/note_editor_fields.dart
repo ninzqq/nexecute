@@ -8,6 +8,7 @@ class NoteEditorFields extends StatelessWidget {
     required this.contentType,
     required this.descriptionController,
     this.descriptionHeight,
+    this.expandDescription = false,
     this.compactPresentation = false,
     required this.checklistItems,
     required this.onContentTypeChanged,
@@ -19,6 +20,7 @@ class NoteEditorFields extends StatelessWidget {
   final NoteContentType contentType;
   final TextEditingController descriptionController;
   final double? descriptionHeight;
+  final bool expandDescription;
   final bool compactPresentation;
   final List<NoteChecklistItem> checklistItems;
   final ValueChanged<NoteContentType> onContentTypeChanged;
@@ -91,23 +93,44 @@ class NoteEditorFields extends StatelessWidget {
             onItemRemoved: onChecklistItemRemoved,
             onItemAdded: onChecklistItemAdded,
           )
-        else
-          SizedBox(
-            height: descriptionHeight,
-            child: TextFormField(
-              key: const Key('note-description-field'),
-              controller: descriptionController,
-              textCapitalization: TextCapitalization.sentences,
-              textAlignVertical: TextAlignVertical.top,
-              decoration: const InputDecoration(
-                labelText: 'Description',
-                border: OutlineInputBorder(),
+        else ...[
+          if (expandDescription)
+            Expanded(
+              child: SizedBox(
+                width: double.infinity,
+                child: TextFormField(
+                  key: const Key('note-description-field'),
+                  controller: descriptionController,
+                  textCapitalization: TextCapitalization.sentences,
+                  textAlignVertical: TextAlignVertical.top,
+                  decoration: const InputDecoration(
+                    labelText: 'Description',
+                    border: OutlineInputBorder(),
+                  ),
+                  expands: true,
+                  minLines: null,
+                  maxLines: null,
+                ),
               ),
-              minLines: descriptionHeight == null ? 6 : null,
-              maxLines: descriptionHeight == null ? 18 : null,
-              expands: descriptionHeight != null,
+            )
+          else
+            SizedBox(
+              height: descriptionHeight,
+              child: TextFormField(
+                key: const Key('note-description-field'),
+                controller: descriptionController,
+                textCapitalization: TextCapitalization.sentences,
+                textAlignVertical: TextAlignVertical.top,
+                decoration: const InputDecoration(
+                  labelText: 'Description',
+                  border: OutlineInputBorder(),
+                ),
+                minLines: descriptionHeight == null ? 6 : null,
+                maxLines: descriptionHeight == null ? 18 : null,
+                expands: descriptionHeight != null,
+              ),
             ),
-          ),
+        ],
       ],
     );
   }

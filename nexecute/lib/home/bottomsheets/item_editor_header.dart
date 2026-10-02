@@ -80,7 +80,7 @@ class ItemEditorHeader extends StatelessWidget {
           ],
         );
 
-        if (!compactPresentation && constraints.maxWidth < 520) {
+        if (constraints.maxWidth < (compactPresentation ? 300 : 520)) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

@@ -290,11 +290,35 @@ void main() {
 
     expect(editableText.expands, isTrue);
     expect(tester.getSize(description).height, greaterThan(300));
+    final initialDescriptionHeight = tester.getSize(description).height;
     expect(
       editorSurface.top,
       tester.getRect(find.byKey(const Key('adaptive-navigation-content'))).top,
     );
     expect(actionBar.bottom, editorSurface.bottom);
+
+    tester.view.physicalSize = const Size(1200, 1100);
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getSize(description).height,
+      greaterThan(initialDescriptionHeight + 150),
+    );
+    expect(
+      tester
+          .getRect(find.byKey(const Key('item-editor-sticky-actions')))
+          .bottom,
+      tester.getRect(find.byKey(const Key('inline-note-editor'))).bottom,
+    );
+
+    tester.view.physicalSize = const Size(1200, 500);
+    await tester.pumpAndSettle();
+
+    expect(description, findsOneWidget);
+    expect(
+      find.byKey(const Key('item-editor-fields-scroll-view')),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 

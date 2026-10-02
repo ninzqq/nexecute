@@ -501,6 +501,99 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
     );
   }
 
+  Widget _stickyActionBar(BuildContext context) {
+    return DecoratedBox(
+      key: const Key('item-editor-sticky-actions'),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
+      ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          widget.desktopPresentation ? 24 : 16,
+          12,
+          widget.desktopPresentation ? 24 : 16,
+          16,
+        ),
+        child: _actionBar(),
+      ),
+    );
+  }
+
+  Widget _expandedDesktopTextNoteEditor(BuildContext context) {
+    final horizontalPadding = widget.inlinePresentation ? 16.0 : 24.0;
+    final topPadding = widget.inlinePresentation ? 12.0 : 24.0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              horizontalPadding,
+              topPadding,
+              horizontalPadding,
+              0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ItemEditorHeader(
+                  title: _editorTitle,
+                  type: _type,
+                  event: widget.event,
+                  note: widget.quicxec,
+                  onTypeChanged: onItemTypeChanged,
+                  onNoteArchived:
+                      widget.inlinePresentation ? widget.onArchived : null,
+                  compactPresentation: widget.inlinePresentation,
+                ),
+                SizedBox(height: widget.inlinePresentation ? 8 : 16),
+                TextFormField(
+                  controller: _titleController,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(
+                    labelText: 'Title',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                SizedBox(height: widget.inlinePresentation ? 8 : 16),
+                Expanded(
+                  child: NoteEditorFields(
+                    contentType: _noteContentType,
+                    descriptionController: _descriptionController,
+                    expandDescription: true,
+                    compactPresentation: widget.inlinePresentation,
+                    checklistItems: _checklistItems,
+                    onContentTypeChanged: _setNoteContentType,
+                    onChecklistItemChanged: _updateChecklistItem,
+                    onChecklistItemRemoved: _removeChecklistItem,
+                    onChecklistItemAdded: _addChecklistItem,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                NoteFolderField(
+                  folderState: context.watch<DataState<List<NoteFolder>>>(),
+                  selectedFolderId: _folderId,
+                  onChanged: (folderId) {
+                    _markDirty();
+                    setState(() => _folderId = folderId);
+                  },
+                ),
+                const SizedBox(height: 8),
+                EditorTagSelector(
+                  selectedTags: _tags,
+                  onTagToggled: _toggleTag,
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        ),
+        _stickyActionBar(context),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppEditorShortcutRegion(
@@ -527,6 +620,13 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
           key: _formKey,
           child: LayoutBuilder(
             builder: (context, constraints) {
+              if (widget.desktopPresentation &&
+                  constraints.hasBoundedHeight &&
+                  constraints.maxHeight >= 560 &&
+                  _type == ItemType.quicxec &&
+                  _noteContentType == NoteContentType.text) {
+                return _expandedDesktopTextNoteEditor(context);
+              }
               final noteDescriptionHeight =
                   widget.desktopPresentation && constraints.hasBoundedHeight
                       ? (constraints.maxHeight * 0.46)
@@ -591,24 +691,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                       ),
                     ),
                   ),
-                  DecoratedBox(
-                    key: const Key('item-editor-sticky-actions'),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      border: Border(
-                        top: BorderSide(color: Theme.of(context).dividerColor),
-                      ),
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(
-                        widget.desktopPresentation ? 24 : 16,
-                        12,
-                        widget.desktopPresentation ? 24 : 16,
-                        widget.desktopPresentation ? 16 : 16,
-                      ),
-                      child: _actionBar(),
-                    ),
-                  ),
+                  _stickyActionBar(context),
                 ],
               );
             },

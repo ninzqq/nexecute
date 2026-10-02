@@ -402,10 +402,10 @@ void main() {
     final description = tester.getRect(
       find.byKey(const Key('note-description-field')),
     );
-    expect(header.height, lessThanOrEqualTo(48));
+    expect(header.height, lessThanOrEqualTo(96));
     expect(format.height, lessThanOrEqualTo(40));
     expect(find.text('Note format'), findsNothing);
-    expect(description.top - editor.top, lessThan(200));
+    expect(description.top - editor.top, lessThan(250));
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Title'),
       'Updated note',
