@@ -378,6 +378,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
   List<Widget> _editorFields(
     BuildContext context, {
     double? noteDescriptionHeight,
+    required bool compactPresentation,
   }) {
     return [
       ItemEditorHeader(
@@ -387,9 +388,9 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
         note: widget.quicxec,
         onTypeChanged: onItemTypeChanged,
         onNoteArchived: widget.inlinePresentation ? widget.onArchived : null,
-        compactPresentation: widget.inlinePresentation,
+        compactPresentation: compactPresentation,
       ),
-      SizedBox(height: widget.inlinePresentation ? 8 : 16),
+      SizedBox(height: compactPresentation ? 8 : 16),
       TextFormField(
         controller: _titleController,
         textCapitalization: TextCapitalization.sentences,
@@ -405,13 +406,13 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
           return null;
         },
       ),
-      SizedBox(height: widget.inlinePresentation ? 8 : 16),
+      SizedBox(height: compactPresentation ? 8 : 16),
       if (_type == ItemType.quicxec)
         NoteEditorFields(
           contentType: _noteContentType,
           descriptionController: _descriptionController,
           descriptionHeight: noteDescriptionHeight,
-          compactPresentation: widget.inlinePresentation,
+          compactPresentation: compactPresentation,
           checklistItems: _checklistItems,
           onContentTypeChanged: _setNoteContentType,
           onChecklistItemChanged: _updateChecklistItem,
@@ -633,9 +634,12 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                           .clamp(240.0, 360.0)
                           .toDouble()
                       : null;
+              final compactPresentation =
+                  widget.inlinePresentation || constraints.maxWidth < 440;
               final fields = _editorFields(
                 context,
                 noteDescriptionHeight: noteDescriptionHeight,
+                compactPresentation: compactPresentation,
               );
               if (!constraints.hasBoundedHeight) {
                 return Padding(

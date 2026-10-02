@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nexecute/home/bottomsheets/item_editor_header.dart';
 import 'package:nexecute/home/bottomsheets/item_editor_sheet.dart';
 import 'package:nexecute/home/screens/tagsscreen.dart';
 import 'package:nexecute/models/data_state.dart';
@@ -107,6 +108,91 @@ void main() {
     description = _descriptionField(tester);
     expect(description.minLines, 4);
     expect(description.maxLines, 8);
+  });
+
+  testWidgets('item editor keeps selectors compact at narrow widths', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await _pumpItemEditor(
+      tester,
+      ItemEditorSheet(
+        quicxec: Quicxec(id: '', text: '', created: DateTime(2026, 8, 28)),
+      ),
+    );
+
+    final header = tester.getRect(find.byType(ItemEditorHeader));
+    final format = tester.getRect(
+      find.byKey(const Key('note-format-selector')),
+    );
+    final description = tester.getRect(
+      find.byKey(const Key('note-description-field')),
+    );
+
+    expect(header.height, lessThanOrEqualTo(40));
+    expect(format.height, lessThanOrEqualTo(40));
+    expect(find.text('Note format'), findsNothing);
+    expect(description.top, lessThan(200));
+
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('note-format-selector')),
+        matching: find.text('Checklist'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('note-checklist-editor')), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(const Key('note-format-selector'))).height,
+      lessThanOrEqualTo(40),
+    );
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(ItemEditorHeader),
+        matching: find.text('Event'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('note-format-selector')), findsNothing);
+    expect(
+      tester.getSize(find.byType(ItemEditorHeader)).height,
+      lessThanOrEqualTo(48),
+    );
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(ItemEditorHeader),
+        matching: find.text('Note'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    tester.view.physicalSize = const Size(280, 844);
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSize(find.byType(ItemEditorHeader)).height,
+      lessThanOrEqualTo(96),
+    );
+    expect(
+      tester.getSize(find.byKey(const Key('note-format-selector'))).height,
+      lessThanOrEqualTo(40),
+    );
+    expect(find.text('Note format'), findsNothing);
+
+    tester.view.physicalSize = const Size(440, 844);
+    await tester.pumpAndSettle();
+    expect(find.text('Note format'), findsOneWidget);
+
+    tester.view.physicalSize = const Size(700, 844);
+    await tester.pumpAndSettle();
+    expect(find.byType(ItemEditorHeader), findsOneWidget);
+    expect(find.byKey(const Key('note-format-selector')), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
 

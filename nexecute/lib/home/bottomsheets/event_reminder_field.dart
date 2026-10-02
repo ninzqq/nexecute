@@ -16,6 +16,7 @@ class EventReminderField extends StatelessWidget {
   Widget build(BuildContext context) {
     return DropdownButtonFormField<EventReminder>(
       key: ValueKey(reminder),
+      isExpanded: true,
       initialValue: reminder,
       decoration: const InputDecoration(
         labelText: 'Reminder',
