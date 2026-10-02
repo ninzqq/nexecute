@@ -374,6 +374,36 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('note tiles and preview arrange tags horizontally', (
+    tester,
+  ) async {
+    _setViewport(tester, const Size(1200, 900));
+    final note = Quicxec(
+      id: 'tagged-note',
+      title: 'Tagged note',
+      text: 'Body',
+      created: DateTime(2026, 8, 24),
+      tags: const ['alpha', 'beta', 'gamma'],
+    );
+    final controller = NotesController()..openAllNotes();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(_notesApp([note], controller: controller));
+    await tester.pumpAndSettle();
+
+    final tile = find.byType(QuicxecItem);
+    _expectHorizontalTags(tester, tile, note.tags);
+
+    controller.selectNote(note.id);
+    await tester.pumpAndSettle();
+
+    _expectHorizontalTags(
+      tester,
+      find.byKey(const Key('selected-note-preview')),
+      note.tags,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('wide note edits save in the pane and return to preview', (
     tester,
   ) async {
@@ -882,6 +912,23 @@ void main() {
     expect(find.text('Loading draft'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+}
+
+void _expectHorizontalTags(
+  WidgetTester tester,
+  Finder container,
+  List<String> tags,
+) {
+  final centers = [
+    for (final tag in tags)
+      tester.getCenter(
+        find.descendant(of: container, matching: find.text(tag)),
+      ),
+  ];
+  expect(centers.map((center) => center.dy).toSet(), hasLength(1));
+  for (var index = 1; index < centers.length; index++) {
+    expect(centers[index].dx, greaterThan(centers[index - 1].dx));
+  }
 }
 
 final _notes = [

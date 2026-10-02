@@ -33,6 +33,8 @@ class TagListItem extends StatelessWidget {
                     ? const EdgeInsets.symmetric(horizontal: 8, vertical: 4)
                     : const EdgeInsets.all(8),
             child: Center(
+              widthFactor: 1,
+              heightFactor: 1,
               child: Text(
                 tag.name,
                 style: compact ? Theme.of(context).textTheme.labelSmall : null,
