@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nexecute/home/bottomsheets/item_editor.dart';
 import 'package:nexecute/home/bottomsheets/item_editor_header.dart';
 import 'package:nexecute/home/bottomsheets/item_editor_sheet.dart';
 import 'package:nexecute/home/screens/tagsscreen.dart';
@@ -194,6 +195,83 @@ void main() {
     expect(find.byKey(const Key('note-format-selector')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('note description fills bounded phone and medium editors', (
+    tester,
+  ) async {
+    for (final width in [390.0, 700.0]) {
+      await _pumpBoundedNoteEditor(tester, Size(width, 500));
+
+      final description = find.byKey(const Key('note-description-field'));
+      final compactHeight = tester.getSize(description).height;
+      expect(_descriptionField(tester).expands, isTrue);
+      expect(compactHeight, greaterThan(40));
+      expect(
+        tester
+            .getRect(find.byKey(const Key('item-editor-sticky-actions')))
+            .bottom,
+        tester.getRect(find.byType(ItemEditorSheet)).bottom,
+      );
+      expect(tester.takeException(), isNull);
+
+      tester.view.physicalSize = Size(width, 844);
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getSize(description).height,
+        greaterThan(compactHeight + 250),
+      );
+      expect(tester.takeException(), isNull);
+    }
+  });
+
+  testWidgets('note description fills a short desktop dialog', (tester) async {
+    tester.view.physicalSize = const Size(1000, 500);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<DataState<models.Tags>>.value(
+            value: DataEmpty(models.Tags()),
+          ),
+          Provider<DataState<List<NoteFolder>>>.value(
+            value: const DataEmpty([]),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppThemes.forPreset(AppThemePreset.midnight),
+          home: Builder(
+            builder:
+                (context) => Scaffold(
+                  body: TextButton(
+                    onPressed:
+                        () => showItemEditor(
+                          context,
+                          quicxec: Quicxec(
+                            id: '',
+                            text: '',
+                            created: DateTime(2026, 8, 28),
+                          ),
+                        ),
+                    child: const Text('Open note'),
+                  ),
+                ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open note'));
+    await tester.pumpAndSettle();
+
+    final description = find.byKey(const Key('note-description-field'));
+    expect(find.byKey(const Key('desktop-item-editor-dialog')), findsOneWidget);
+    expect(_descriptionField(tester).expands, isTrue);
+    expect(tester.getSize(description).height, greaterThan(40));
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Future<void> _pumpItemEditor(WidgetTester tester, Widget editor) {
@@ -209,6 +287,30 @@ Future<void> _pumpItemEditor(WidgetTester tester, Widget editor) {
       ),
     ),
   );
+}
+
+Future<void> _pumpBoundedNoteEditor(WidgetTester tester, Size size) async {
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  await tester.pumpWidget(
+    MultiProvider(
+      providers: [
+        Provider<DataState<models.Tags>>.value(value: DataEmpty(models.Tags())),
+        Provider<DataState<List<NoteFolder>>>.value(value: const DataEmpty([])),
+      ],
+      child: MaterialApp(
+        theme: AppThemes.forPreset(AppThemePreset.midnight),
+        home: Scaffold(
+          body: ItemEditorSheet(
+            quicxec: Quicxec(id: '', text: '', created: DateTime(2026, 8, 28)),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
 }
 
 void _expectSentenceCapitalization(WidgetTester tester) {

@@ -5,6 +5,7 @@ import 'package:nexecute/models/data_state.dart';
 import 'package:nexecute/models/event.dart';
 import 'package:nexecute/models/event_reminder.dart';
 import 'package:nexecute/models/note_folder.dart';
+import 'package:nexecute/models/quicxec.dart';
 import 'package:nexecute/models/tag.dart' as models;
 import 'package:nexecute/repositories/event_repository.dart';
 import 'package:nexecute/themes.dart';
@@ -87,5 +88,69 @@ void main() {
     expect(repository.addedEvent?.title, 'Keyboard-safe event');
     expect(repository.addedEvent?.reminder, EventReminder.fifteenMinutesBefore);
     expect(find.text('Save'), findsNothing);
+  });
+
+  testWidgets('note description fills the space above the Android keyboard', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<DataState<models.Tags>>.value(
+            value: DataEmpty(models.Tags()),
+          ),
+          Provider<DataState<List<NoteFolder>>>.value(
+            value: const DataEmpty([]),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppThemes.forPreset(AppThemePreset.midnight),
+          home: Builder(
+            builder:
+                (context) => Scaffold(
+                  body: Center(
+                    child: FilledButton(
+                      onPressed:
+                          () => showItemEditor(
+                            context,
+                            quicxec: Quicxec(
+                              id: '',
+                              text: '',
+                              created: DateTime(2026, 9, 2),
+                            ),
+                          ),
+                      child: const Text('New note'),
+                    ),
+                  ),
+                ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('New note'));
+    await tester.pumpAndSettle();
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    await tester.pumpAndSettle();
+
+    final description = find.byKey(const Key('note-description-field'));
+    final editable = tester.widget<EditableText>(
+      find.descendant(of: description, matching: find.byType(EditableText)),
+    );
+    expect(editable.expands, isTrue);
+    expect(tester.getSize(description).height, greaterThan(40));
+    expect(
+      tester
+          .getBottomRight(find.byKey(const Key('item-editor-submit-button')))
+          .dy,
+      lessThanOrEqualTo(500),
+    );
+    expect(tester.takeException(), isNull);
   });
 }

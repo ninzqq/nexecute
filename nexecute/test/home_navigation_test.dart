@@ -317,8 +317,9 @@ void main() {
     expect(description, findsOneWidget);
     expect(
       find.byKey(const Key('item-editor-fields-scroll-view')),
-      findsOneWidget,
+      findsNothing,
     );
+    expect(tester.getSize(description).height, greaterThan(40));
     expect(tester.takeException(), isNull);
   });
 

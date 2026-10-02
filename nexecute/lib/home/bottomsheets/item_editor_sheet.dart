@@ -521,9 +521,19 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
     );
   }
 
-  Widget _expandedDesktopTextNoteEditor(BuildContext context) {
-    final horizontalPadding = widget.inlinePresentation ? 16.0 : 24.0;
-    final topPadding = widget.inlinePresentation ? 12.0 : 24.0;
+  Widget _expandedTextNoteEditor(
+    BuildContext context, {
+    required bool compactPresentation,
+  }) {
+    final desktopDialog =
+        widget.desktopPresentation && !widget.inlinePresentation;
+    final horizontalPadding = desktopDialog ? 24.0 : 16.0;
+    final topPadding =
+        widget.inlinePresentation
+            ? 12.0
+            : desktopDialog && !compactPresentation
+            ? 24.0
+            : 16.0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -546,9 +556,9 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                   onTypeChanged: onItemTypeChanged,
                   onNoteArchived:
                       widget.inlinePresentation ? widget.onArchived : null,
-                  compactPresentation: widget.inlinePresentation,
+                  compactPresentation: compactPresentation,
                 ),
-                SizedBox(height: widget.inlinePresentation ? 8 : 16),
+                SizedBox(height: compactPresentation ? 8 : 16),
                 TextFormField(
                   controller: _titleController,
                   textCapitalization: TextCapitalization.sentences,
@@ -557,13 +567,13 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                     border: OutlineInputBorder(),
                   ),
                 ),
-                SizedBox(height: widget.inlinePresentation ? 8 : 16),
+                SizedBox(height: compactPresentation ? 8 : 16),
                 Expanded(
                   child: NoteEditorFields(
                     contentType: _noteContentType,
                     descriptionController: _descriptionController,
                     expandDescription: true,
-                    compactPresentation: widget.inlinePresentation,
+                    compactPresentation: compactPresentation,
                     checklistItems: _checklistItems,
                     onContentTypeChanged: _setNoteContentType,
                     onChecklistItemChanged: _updateChecklistItem,
@@ -621,12 +631,17 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
           key: _formKey,
           child: LayoutBuilder(
             builder: (context, constraints) {
-              if (widget.desktopPresentation &&
-                  constraints.hasBoundedHeight &&
-                  constraints.maxHeight >= 560 &&
+              final compactPresentation =
+                  widget.inlinePresentation ||
+                  constraints.maxWidth < 440 ||
+                  constraints.maxHeight < 560;
+              if (constraints.hasBoundedHeight &&
                   _type == ItemType.quicxec &&
                   _noteContentType == NoteContentType.text) {
-                return _expandedDesktopTextNoteEditor(context);
+                return _expandedTextNoteEditor(
+                  context,
+                  compactPresentation: compactPresentation,
+                );
               }
               final noteDescriptionHeight =
                   widget.desktopPresentation && constraints.hasBoundedHeight
@@ -634,8 +649,6 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                           .clamp(240.0, 360.0)
                           .toDouble()
                       : null;
-              final compactPresentation =
-                  widget.inlinePresentation || constraints.maxWidth < 440;
               final fields = _editorFields(
                 context,
                 noteDescriptionHeight: noteDescriptionHeight,
