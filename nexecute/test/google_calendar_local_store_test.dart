@@ -90,6 +90,45 @@ void main() {
     }
   });
 
+  test(
+    'persisted schema excludes owner identifiers and token fields',
+    () async {
+      await store.saveMetadata(
+        owner,
+        GoogleCalendarSelectionMetadata(
+          calendars: const [
+            GoogleCalendarInfo(
+              id: 'calendar-1',
+              name: 'Team',
+              accessRole: 'reader',
+              defaultSelected: true,
+            ),
+          ],
+          selectedCalendarIds: const {'calendar-1'},
+          selectionEstablished: true,
+          updatedAt: now,
+        ),
+      );
+      await store.replaceRanges(owner, [_range('calendar-1', 1)]);
+
+      final ownerDirectory =
+          await root
+              .list()
+              .where((entity) => entity is Directory)
+              .cast<Directory>()
+              .single;
+      final persisted =
+          await File(
+            path.join(ownerDirectory.path, 'state.v1.json'),
+          ).readAsString();
+
+      expect(persisted, isNot(contains(owner.nexecuteUserId)));
+      expect(persisted, isNot(contains(owner.googleAccountId)));
+      expect(persisted.toLowerCase(), isNot(contains('accesstoken')));
+      expect(persisted.toLowerCase(), isNot(contains('refreshtoken')));
+    },
+  );
+
   test('replaces only an exact calendar and range key', () async {
     final original = _range('calendar-1', 1, title: 'old');
     final failedCalendar = _range('calendar-2', 1, title: 'preserved');
@@ -281,6 +320,42 @@ void main() {
       expect(loaded.ranges.single.calendarId, 'existing');
     },
   );
+
+  test('rejects oversized metadata without replacing existing data', () async {
+    await store.replaceRanges(owner, [_range('existing', 1)]);
+    final calendars = List.generate(
+      1001,
+      (index) => GoogleCalendarInfo(
+        id: 'calendar-$index',
+        name: 'Calendar $index',
+        accessRole: 'reader',
+        defaultSelected: false,
+      ),
+    );
+
+    await expectLater(
+      store.saveMetadata(
+        owner,
+        GoogleCalendarSelectionMetadata(
+          calendars: calendars,
+          selectedCalendarIds: const {},
+          selectionEstablished: true,
+          updatedAt: now,
+        ),
+      ),
+      throwsA(
+        isA<GoogleCalendarLocalStoreException>().having(
+          (error) => error.error,
+          'error',
+          GoogleCalendarLocalStoreError.corruptData,
+        ),
+      ),
+    );
+
+    final loaded = await store.load(owner);
+    expect(loaded.metadata, isNull);
+    expect(loaded.ranges.single.calendarId, 'existing');
+  });
 
   test('clearForAccount deletes only that hashed owner directory', () async {
     const otherOwner = GoogleCalendarCacheOwner(

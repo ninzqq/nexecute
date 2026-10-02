@@ -2225,26 +2225,33 @@ conversion, or repository mutation paths.
 
 #### Phase 5: lifecycle and verification
 
-- [ ] Test authorization success, cancellation, denial, expiration, revocation,
+- [x] Test authorization success, cancellation, denial, expiration, revocation,
   account mismatch, reconnect, disconnect, logout, and restored Firebase
   sessions.
-- [ ] Test calendar-list and event pagination, empty calendars, partial
+- [x] Test calendar-list and event pagination, empty calendars, partial
   failures, rate limits, malformed responses, and cache fallback.
-- [ ] Test timed events, all-day events, multi-day spans, source time zones, DST
+- [x] Test timed events, all-day events, multi-day spans, source time zones, DST
   boundaries, recurrence, exceptions, moved instances, and cancellations.
-- [ ] Test stable identities, overlapping range deduplication, selection
+- [x] Test stable identities, overlapping range deduplication, selection
   changes, stale-data removal, cache bounds, and account isolation.
-- [ ] Add widget tests for settings, selection, source styling, read-only
+- [x] Add widget tests for settings, selection, source styling, read-only
   details, external links, stale state, every theme, and compact/expanded
   layouts.
-- [ ] Verify that Google events never enter Firestore, Nexecute reminders,
+- [x] Verify that Google events never enter Firestore, Nexecute reminders,
   widgets, search, Assistant context, logs, or mutation commands.
-- [ ] Verify that Google API, authorization, and cache failures cannot prevent
+- [x] Verify that Google API, authorization, and cache failures cannot prevent
   Nexecute startup or native Calendar use.
 - [ ] Perform native acceptance testing on Android and macOS with primary,
   shared, recurring, all-day, and read-only calendars.
 - [ ] Record tested Flutter, Google Sign-In, Calendar API, Android, and macOS
   versions without committing tokens, account identifiers, or event content.
+
+Deterministic verification was completed on 2026-10-02. The focused Google
+Calendar lifecycle, source, cache, transport, merge, settings, interaction,
+theme, layout, and URL suites pass, and `flutter analyze` reports no issues.
+Environment details and the sanitized live-device procedure are recorded in
+`docs/google_calendar_acceptance.md`. Native acceptance and its version record
+remain open until both signed-device runs are complete.
 
 #### Future candidates
 

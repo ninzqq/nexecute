@@ -487,6 +487,32 @@ void main() {
     },
   );
 
+  test('occurrence identity is scoped to account and calendar', () async {
+    final event = _event('event-private', 'occurrence-private');
+    final sameTuple = await _fetchSingleId(owner, now, range, event);
+    final repeated = await _fetchSingleId(owner, now, range, event);
+    final otherAccount = await _fetchSingleId(
+      const GoogleCalendarCacheOwner(
+        nexecuteUserId: 'user-private',
+        googleAccountId: 'other-account-private',
+      ),
+      now,
+      range,
+      event,
+    );
+    final otherCalendar = await _fetchSingleId(
+      owner,
+      now,
+      range,
+      event,
+      calendarId: 'b',
+    );
+
+    expect(repeated, sameTuple);
+    expect(otherAccount, isNot(sameTuple));
+    expect(otherCalendar, isNot(sameTuple));
+  });
+
   test(
     'preserves gateway-normalized all-day dates and calendar timezone',
     () async {
@@ -569,6 +595,47 @@ void main() {
       expect(auth.expiredTokens.single.value, 'token-5');
     },
   );
+
+  test('repeated 401 keeps cached event stale and bounds retries', () async {
+    final auth = _Authorization(owner, expireRecoveredToken: true);
+    final store = _Store();
+    store.states[owner] = GoogleCalendarLocalState(
+      metadata: _metadata(now, [_calendar('a')], const {'a'}),
+      ranges: [
+        _cachedRange(range, 'a', now.subtract(const Duration(hours: 1))),
+      ],
+    );
+    final api = _Api()..unauthorizedEventCalls = 2;
+    final source = GoogleCalendarSource(
+      authorization: auth,
+      api: api,
+      store: store,
+      clock: () => now,
+    );
+    addTearDown(source.dispose);
+    final snapshots = <CalendarSourceSnapshot>[];
+    final subscription = source.watchEvents(range).listen(snapshots.add);
+    addTearDown(subscription.cancel);
+
+    final failed = await _waitFor(
+      snapshots,
+      (snapshot) =>
+          snapshot.loadState == CalendarSourceLoadState.failed &&
+          snapshot.failure?.error is GoogleCalendarSourceException,
+    );
+
+    expect(failed.events.single.title, 'cached');
+    expect(failed.events.single.isStale, isTrue);
+    expect(
+      (failed.failure!.error as GoogleCalendarSourceException).kind,
+      GoogleCalendarSourceFailureKind.authorization,
+    );
+    expect(api.eventCalendarIds, ['a', 'a']);
+    expect(auth.refreshedTokens, hasLength(2));
+    expect(auth.expiredTokens.single.value, 'token-2');
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    expect(api.eventCalendarIds, hasLength(2));
+  });
 
   test('empty selection is authoritative and makes no event request', () async {
     final auth = _Authorization(owner);
@@ -754,16 +821,17 @@ Future<String> _fetchSingleId(
   GoogleCalendarCacheOwner owner,
   DateTime now,
   CalendarQueryRange range,
-  GoogleCalendarRemoteEvent event,
-) async {
+  GoogleCalendarRemoteEvent event, {
+  String calendarId = 'a',
+}) async {
   final auth = _Authorization(owner);
   final store = _Store();
   store.states[owner] = GoogleCalendarLocalState(
-    metadata: _metadata(now, [_calendar('a')], const {'a'}),
+    metadata: _metadata(now, [_calendar(calendarId)], {calendarId}),
     ranges: const [],
   );
   final api = _Api();
-  api.eventPages['a'] = [
+  api.eventPages[calendarId] = [
     GoogleCalendarPage(items: [event]),
   ];
   final source = GoogleCalendarSource(
@@ -784,12 +852,13 @@ Future<String> _fetchSingleId(
 }
 
 final class _Authorization implements GoogleCalendarAuthorizationService {
-  _Authorization(this.cacheOwner);
+  _Authorization(this.cacheOwner, {this.expireRecoveredToken = false});
 
   final controller =
       StreamController<GoogleCalendarAuthorizationState>.broadcast(sync: true);
   final List<GoogleCalendarAccessToken> refreshedTokens = [];
   final List<GoogleCalendarAccessToken> expiredTokens = [];
+  final bool expireRecoveredToken;
   int token = 0;
 
   @override
@@ -817,6 +886,12 @@ final class _Authorization implements GoogleCalendarAuthorizationService {
     GoogleCalendarAccessToken rejectedToken,
   ) async {
     refreshedTokens.add(rejectedToken);
+    if (expireRecoveredToken && refreshedTokens.length > 1) {
+      await markAuthorizationExpired(rejectedToken);
+      throw const GoogleCalendarAuthorizationException(
+        GoogleCalendarAuthorizationIssue.accessTokenUnavailable,
+      );
+    }
     return GoogleCalendarAccessToken('token-${++token}');
   }
 

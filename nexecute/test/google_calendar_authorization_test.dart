@@ -84,6 +84,26 @@ void main() {
   });
 
   test(
+    'restored Firebase session does not authorize Calendar implicitly',
+    () async {
+      final restored = googleUser();
+      firebase.currentUserValue = restored;
+
+      firebaseUsers.add(restored);
+      await pumpEventQueue();
+
+      expect(
+        service.state.status,
+        GoogleCalendarAuthorizationStatus.disconnected,
+      );
+      expect(provider.currentAccountReadCount, 0);
+      expect(provider.silentSignInCount, 0);
+      expect(provider.interactiveSignInCount, 0);
+      expect(provider.requestScopesCount, 0);
+    },
+  );
+
+  test(
     'matches the stable Google provider uid, not Firebase uid or email',
     () async {
       firebase.currentUserValue = googleUser(

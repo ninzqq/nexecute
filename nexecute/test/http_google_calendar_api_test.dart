@@ -66,7 +66,7 @@ void main() {
     expect(page.items.single.isPrimary, isTrue);
   });
 
-  test('bounds and normalizes timed and all-day events', () async {
+  test('normalizes expanded recurring, timed, and all-day events', () async {
     late http.Request sent;
     final api = HttpGoogleCalendarApi(
       client: MockClient((request) async {
@@ -76,6 +76,7 @@ void main() {
             'items': [
               {
                 'id': 'timed',
+                'recurringEventId': 'recurring-series',
                 'status': 'confirmed',
                 'summary': 'Offset event',
                 'description': 'Details',
@@ -85,7 +86,7 @@ void main() {
                   'timeZone': 'Europe/Helsinki',
                 },
                 'end': {'dateTime': '2026-10-01T13:30:00+03:00'},
-                'originalStartTime': {'dateTime': '2026-10-01T12:30:00+03:00'},
+                'originalStartTime': {'dateTime': '2026-10-01T08:30:00+03:00'},
               },
               {
                 'id': 'all-day',
@@ -127,7 +128,7 @@ void main() {
     expect(page.items, hasLength(2));
     expect(page.items.first.startTime, DateTime.utc(2026, 10, 1, 9, 30));
     expect(page.items.first.endTime, DateTime.utc(2026, 10, 1, 10, 30));
-    expect(page.items.first.occurrenceKey, '2026-10-01T09:30:00.000Z');
+    expect(page.items.first.occurrenceKey, '2026-10-01T05:30:00.000Z');
     expect(page.items.first.sourceTimeZone, 'Europe/Helsinki');
     expect(page.items.first.externalUrl?.scheme, 'https');
     expect(page.items.last.occurrenceKey, 'all-day');
