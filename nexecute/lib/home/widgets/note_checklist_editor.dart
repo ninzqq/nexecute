@@ -160,7 +160,7 @@ class _ChecklistEditorRow extends StatelessWidget {
               border: InputBorder.none,
               filled: false,
               isDense: true,
-              contentPadding: EdgeInsets.symmetric(vertical: 4),
+              contentPadding: EdgeInsets.symmetric(vertical: 4, horizontal: 4),
             ),
             onChanged: (text) => onChanged(item.copyWith(text: text)),
             onEditingComplete: onSubmitted,
