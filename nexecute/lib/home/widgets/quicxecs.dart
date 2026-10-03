@@ -45,6 +45,7 @@ class _QuicxecsState extends State<Quicxecs> {
   static const _previewWidthPreferenceKey = 'notes_preview_pane_width';
 
   final _searchController = TextEditingController();
+  final _searchBoxKey = GlobalKey(debugLabel: 'Notes search');
   final _inlineEditorController = ItemEditorController();
   final _inlineEditorHostKey = GlobalKey();
   final _dividerFocusNode = FocusNode(debugLabel: 'Notes pane divider');
@@ -897,6 +898,7 @@ class _QuicxecsState extends State<Quicxecs> {
   );
 
   Widget _searchBox() => SearchBox(
+    key: _searchBoxKey,
     hintText: 'Search notes',
     controller: _searchController,
     onChanged: (value) => setState(() => _searchQuery = value),

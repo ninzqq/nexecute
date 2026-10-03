@@ -23,6 +23,36 @@ void main() {
 
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
+  testWidgets(
+    'root search keeps its input connection when the first character shows results',
+    (tester) async {
+      final controller = NotesController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(_notesApp(_notes, controller: controller));
+      await tester.pumpAndSettle();
+
+      final search = find.widgetWithText(TextField, 'Search notes');
+      await tester.showKeyboard(search);
+      tester.testTextInput.enterText('s');
+      await tester.pump();
+
+      expect(find.text('Search results'), findsOneWidget);
+      expect(tester.testTextInput.hasAnyClients, isTrue);
+
+      tester.testTextInput.enterText('sh');
+      await tester.pump();
+
+      expect(
+        tester
+            .widget<TextField>(find.widgetWithText(TextField, 'Search notes'))
+            .controller
+            ?.text,
+        'sh',
+      );
+      expect(tester.testTextInput.hasAnyClients, isTrue);
+    },
+  );
+
   testWidgets('folder tiles use larger names on phones', (tester) async {
     _setViewport(tester, const Size(390, 844));
     final controller = NotesController();
