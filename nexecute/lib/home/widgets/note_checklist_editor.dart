@@ -9,12 +9,14 @@ class NoteChecklistEditor extends StatefulWidget {
     required this.onItemChanged,
     required this.onItemRemoved,
     required this.onItemAdded,
+    required this.onItemSubmitted,
   });
 
   final List<NoteChecklistItem> items;
   final ValueChanged<NoteChecklistItem> onItemChanged;
   final ValueChanged<String> onItemRemoved;
   final VoidCallback onItemAdded;
+  final ValueChanged<String> onItemSubmitted;
 
   @override
   State<NoteChecklistEditor> createState() => _NoteChecklistEditorState();
@@ -92,6 +94,7 @@ class _NoteChecklistEditorState extends State<NoteChecklistEditor> {
               focusNode: _itemFocusNodes[item.id]!,
               onChanged: widget.onItemChanged,
               onRemoved: () => widget.onItemRemoved(item.id),
+              onSubmitted: () => widget.onItemSubmitted(item.id),
             ),
           Align(
             alignment: Alignment.centerLeft,
@@ -115,12 +118,14 @@ class _ChecklistEditorRow extends StatelessWidget {
     required this.focusNode,
     required this.onChanged,
     required this.onRemoved,
+    required this.onSubmitted,
   });
 
   final NoteChecklistItem item;
   final FocusNode focusNode;
   final ValueChanged<NoteChecklistItem> onChanged;
   final VoidCallback onRemoved;
+  final VoidCallback onSubmitted;
 
   @override
   Widget build(BuildContext context) {
@@ -158,6 +163,7 @@ class _ChecklistEditorRow extends StatelessWidget {
               contentPadding: EdgeInsets.symmetric(vertical: 4),
             ),
             onChanged: (text) => onChanged(item.copyWith(text: text)),
+            onEditingComplete: onSubmitted,
           ),
         ),
         IconButton(

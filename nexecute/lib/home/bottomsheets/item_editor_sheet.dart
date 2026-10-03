@@ -214,6 +214,18 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
     });
   }
 
+  void _submitChecklistItem(String id) {
+    final index = _checklistItems.indexWhere((item) => item.id == id);
+    if (index == -1 || _checklistItems[index].text.trim().isEmpty) return;
+    _markDirty();
+    setState(() {
+      _checklistItems.insert(
+        index + 1,
+        NoteChecklistItem(id: _newChecklistItemId(), text: ''),
+      );
+    });
+  }
+
   void _toggleTag(String tag) {
     _markDirty();
     setState(() {
@@ -418,6 +430,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
           onChecklistItemChanged: _updateChecklistItem,
           onChecklistItemRemoved: _removeChecklistItem,
           onChecklistItemAdded: _addChecklistItem,
+          onChecklistItemSubmitted: _submitChecklistItem,
         )
       else ...[
         TextFormField(
@@ -579,6 +592,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                     onChecklistItemChanged: _updateChecklistItem,
                     onChecklistItemRemoved: _removeChecklistItem,
                     onChecklistItemAdded: _addChecklistItem,
+                    onChecklistItemSubmitted: _submitChecklistItem,
                   ),
                 ),
                 const SizedBox(height: 8),

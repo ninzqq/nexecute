@@ -12,7 +12,7 @@ void main() {
   testWidgets('converts plain note lines into editable checklist items', (
     tester,
   ) async {
-    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -62,7 +62,8 @@ void main() {
       lessThanOrEqualTo(42),
     );
 
-    await tester.tap(find.byKey(const Key('add-checklist-item')));
+    await tester.tap(itemFields.at(1));
+    await tester.testTextInput.receiveAction(TextInputAction.next);
     await tester.pumpAndSettle();
 
     expect(find.byTooltip('Remove checklist item'), findsNWidgets(3));
@@ -79,10 +80,30 @@ void main() {
 
     expect(find.text('Eggs'), findsOneWidget);
 
+    await tester.testTextInput.receiveAction(TextInputAction.next);
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Remove checklist item'), findsNWidgets(4));
+    final appendedFields = find.descendant(
+      of: find.byKey(const Key('note-checklist-editor')),
+      matching: find.byType(EditableText),
+    );
+    expect(
+      tester.widget<EditableText>(appendedFields.last).focusNode.hasFocus,
+      isTrue,
+    );
+
+    await tester.testTextInput.receiveAction(TextInputAction.next);
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Remove checklist item'), findsNWidgets(4));
+    expect(
+      tester.widget<EditableText>(appendedFields.last).focusNode.hasFocus,
+      isTrue,
+    );
+
     await tester.tap(find.byTooltip('Remove checklist item').last);
     await tester.pump();
 
-    expect(find.byTooltip('Remove checklist item'), findsNWidgets(2));
+    expect(find.byTooltip('Remove checklist item'), findsNWidgets(3));
     expect(tester.takeException(), isNull);
   });
 

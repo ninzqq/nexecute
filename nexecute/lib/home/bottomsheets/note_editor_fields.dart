@@ -15,6 +15,7 @@ class NoteEditorFields extends StatelessWidget {
     required this.onChecklistItemChanged,
     required this.onChecklistItemRemoved,
     required this.onChecklistItemAdded,
+    required this.onChecklistItemSubmitted,
   });
 
   final NoteContentType contentType;
@@ -27,6 +28,7 @@ class NoteEditorFields extends StatelessWidget {
   final ValueChanged<NoteChecklistItem> onChecklistItemChanged;
   final ValueChanged<String> onChecklistItemRemoved;
   final VoidCallback onChecklistItemAdded;
+  final ValueChanged<String> onChecklistItemSubmitted;
 
   @override
   Widget build(BuildContext context) {
@@ -92,6 +94,7 @@ class NoteEditorFields extends StatelessWidget {
             onItemChanged: onChecklistItemChanged,
             onItemRemoved: onChecklistItemRemoved,
             onItemAdded: onChecklistItemAdded,
+            onItemSubmitted: onChecklistItemSubmitted,
           )
         else ...[
           if (expandDescription)
